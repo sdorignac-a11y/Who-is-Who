@@ -83,7 +83,10 @@
     <div style="max-width:900px;margin:0 auto;background:#0b203a;border:1px solid rgba(128,180,255,.3);border-radius:18px;height:86vh;display:flex;flex-direction:column">
       <div style="padding:14px 16px;border-bottom:1px solid rgba(128,180,255,.15);display:flex;justify-content:space-between;align-items:center">
         <h2 style="margin:0">Debate</h2>
-        <small id="cooldownHint" style="opacity:.7"></small>
+        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <small id="turnHint" style="opacity:.85"></small>
+          <small id="cooldownHint" style="opacity:.7"></small>
+        </div>
       </div>
       <div id="firstWordTip" class="tip" style="display:none">Primero, cada jugador debe enviar <strong>UNA</strong> palabra (2–24 letras). Después, chat libre.</div>
       <div id="chatList" style="flex:1;overflow:auto;padding:14px"></div>
@@ -126,6 +129,14 @@
       a10:"avatars/a10.png", a11:"avatars/a11.png", a12:"avatars/a12.png"
     };
 
+    const $ = s => document.querySelector(s);
+    const playersWrap = $("#players");
+    const roomCodeEl  = $("#roomCode");
+    const impostoresEl = $("#impostoresVal");
+    const jugadoresEl  = $("#jugadoresVal");
+    const temaEl       = $("#temaVal");
+    const meNameEl     = document.getElementById("meName");
+
     function getStoredName(){
       const qp = new URLSearchParams(location.search);
       const qName = qp.get("name");
@@ -166,16 +177,7 @@
       return genCode(8);
     }
 
-    const $ = s => document.querySelector(s);
-    const playersWrap = $("#players");
-    const roomCodeEl  = $("#roomCode");
-    const impostoresEl = $("#impostoresVal");
-    const jugadoresEl  = $("#jugadoresVal");
-    const temaEl       = $("#temaVal");
-    const meNameEl     = document.getElementById("meName");
-
     let lastPlayers = [];
-
     function drawPlayers(maxCount, list){
       const ordered = (list || []).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
       playersWrap.innerHTML = "";
@@ -234,15 +236,24 @@
       temaEl.textContent       = state.temas[state.temaIndex];
       drawPlayers(state.jugadores, lastPlayers);
     }
-    render();
 
-    await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
+    const appInit = await initialize();
+    async function initialize(){
+      const app = initializeApp(firebaseConfig);
+      const authInst = getAuth(app);
+      const dbInst = getFirestore(app);
+      await signInAnonymously(authInst).catch(e=>console.warn("Anon auth:", e));
+      return {app:app, auth:authInst, db:dbInst};
+    }
+
+    const authRef = auth;
+    const dbRef = db;
 
     const urlCode = new URLSearchParams(location.search).get("code");
     let isHost = false;
 
     if (!urlCode) {
-      state.code = await createUniqueRoomCode(db);
+      state.code = await createUniqueRoomCode(dbRef);
       isHost = true;
     } else {
       state.code = urlCode.toUpperCase();
@@ -250,34 +261,34 @@
     }
     render();
 
-    const roomRef = doc(db, "rooms", state.code);
+    const roomRef = doc(dbRef, "rooms", state.code);
 
     const firstSnap = await getDoc(roomRef);
     if (!firstSnap.exists() && isHost) {
       await setDoc(roomRef, {
-        hostUid: auth.currentUser.uid,
+        hostUid: authRef.currentUser.uid,
         status: "lobby",
         createdAt: Date.now(),
         settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
       }, { merge:true });
     }
     if (firstSnap.exists()) {
-      isHost = firstSnap.data().hostUid === auth.currentUser.uid;
+      isHost = firstSnap.data().hostUid === authRef.currentUser.uid;
     }
 
     const myName   = getStoredName();
     const myAvatar = getStoredAvatar();
-    if (meNameEl) meNameEl.textContent = myName;
+    meNameEl.textContent = myName;
 
-    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
-      uid: auth.currentUser.uid,
+    await setDoc(doc(dbRef,"rooms",state.code,"players",authRef.currentUser.uid), {
+      uid: authRef.currentUser.uid,
       name: myName,
       avatarKey: myAvatar || null,
       slot: isHost ? 1 : Date.now(),
       online: true
     }, { merge:true });
 
-    const playerRef = doc(db,"rooms",state.code,"players",auth.currentUser.uid);
+    const playerRef = doc(dbRef,"rooms",state.code,"players",authRef.currentUser.uid);
     document.getElementById("editName")?.addEventListener("click", ()=> editAndSaveName(playerRef));
 
     function setArrowsEnabled(enabled){
@@ -312,7 +323,7 @@
       if(!s.exists()) return;
       const data = s.data();
       const before = isHost;
-      isHost = (data.hostUid === auth.currentUser.uid);
+      isHost = (data.hostUid === authRef.currentUser.uid);
       if (before !== isHost) setArrowsEnabled(isHost);
 
       const st = data.settings || {};
@@ -325,7 +336,7 @@
       render();
     });
 
-    onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
+    onSnapshot(collection(dbRef,"rooms",state.code,"players"), snap=>{
       lastPlayers = snap.docs.map(d=>d.data());
       drawPlayers(state.jugadores, lastPlayers);
     });
@@ -342,6 +353,7 @@
       return a;
     }
 
+    // ======== START: asigna roles + crea ronda con ORDEN y status "reveal"
     let starting = false;
     document.getElementById("startBtn").addEventListener("click", async ()=>{
       if (!isHost){ alert("Solo el host puede iniciar"); return; }
@@ -361,7 +373,7 @@
           starting = false; return;
         }
 
-        const ps = await getDocs(collection(db, "rooms", state.code, "players"));
+        const ps = await getDocs(collection(dbRef, "rooms", state.code, "players"));
         const players = ps.docs
           .map(d => ({ id: d.id, ...d.data() }))
           .filter(p => p.id && p.online !== false);
@@ -370,11 +382,15 @@
         if (K >= players.length){ alert("Impostores debe ser menor que jugadores."); starting = false; return; }
 
         const palabra = pickWord(tema);
-        const order   = shuffleInPlace(players.slice());
-        const impostorIds = new Set(order.slice(0, K).map(p => p.id));
+
+        // orden aleatorio UNA vez (ids)
+        const order = shuffleInPlace(players.map(p=>p.id));
+
+        // elegir impostores (primeros K del order)
+        const impostorIds = new Set(order.slice(0, K));
 
         const nextRound = (room.round || 0) + 1;
-        const batch = writeBatch(db);
+        const batch = writeBatch(dbRef);
 
         batch.update(roomRef, {
           status: "playing",
@@ -383,7 +399,7 @@
         });
 
         players.forEach(p=>{
-          const aRef = doc(db, "rooms", state.code, "assignments", p.id);
+          const aRef = doc(dbRef, "rooms", state.code, "assignments", p.id);
           batch.set(aRef, {
             round: nextRound,
             uid: p.id,
@@ -398,8 +414,23 @@
           });
         });
 
+        const roundRef = doc(dbRef,"rooms",state.code,"rounds", String(nextRound));
+        batch.set(roundRef, {
+          status:"reveal",
+          createdAt: serverTimestamp(),
+          order,
+          turnIndex: 0
+        });
+
         await batch.commit();
-        console.log("Roles asignados y partida iniciada.");
+
+        // tras 10s pasamos a PROMPT
+        setTimeout(async ()=>{
+          try{
+            await updateDoc(roundRef, { status:"prompt", promptStartedAt: serverTimestamp() });
+          }catch(e){ console.warn(e); }
+        }, 10000);
+
       }catch(e){
         console.error(e);
         alert(e.message || "No pude iniciar la partida.");
@@ -408,8 +439,8 @@
       }
     });
 
-    // ===== Overlay de rol + countdown de 10s
-    onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
+    // ===== Overlay de rol + countdown de 10s (visual)
+    onSnapshot(doc(dbRef,"rooms",state.code,"assignments",authRef.currentUser.uid), s=>{
       if(!s.exists()) return;
       const a = s.data();
       const overlay = document.getElementById("reveal");
@@ -447,70 +478,71 @@
       },1000);
     });
 
-    // ===== Host: crea ronda directamente en DISCUSS a los 10s
-    onSnapshot(roomRef, async snap=>{
-      if (!snap.exists()) return;
-      const room = snap.data();
-      if (room.status !== "playing") return;
+    // ===== Orquestación por estado de sala + ronda
+    let currentRound = 0;
+    let roundState = null;
 
-      const roundIdx = room.round || 0;
-      if (!isHost) return;
-
-      const roundRef = doc(db,"rooms",state.code,"rounds", String(roundIdx));
-      const roundDoc = await getDoc(roundRef);
-      if (roundDoc.exists()) return;
-
-      // Espera 10s (coincide con el overlay) y crea discuss
-      setTimeout(async ()=>{
-        try {
-          const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
-          const asg = asgSnap.docs.map(d=>d.data());
-          const order = asg.map(a=>a.uid).sort(()=>Math.random()-0.5);
-
-          await setDoc(roundRef, {
-            status:"discuss",
-            createdAt: serverTimestamp(),
-            discussStartedAt: serverTimestamp(),
-            order,
-            turnIndex: 0
-          });
-          console.log("Ronda creada en DISCUSS automáticamente");
-        } catch (e) {
-          console.warn("Error al crear round:", e);
-        }
-      }, 10000);
-    });
-
-    // ===== Orquestación por estado (ya no usamos PROMPT)
     onSnapshot(roomRef, async s=>{
       if(!s.exists()) return;
       const data = s.data();
-      const currentRound = data.round || 0;
+      currentRound = data.round || 0;
 
-      const roundRef = doc(db,"rooms",state.code,"rounds", String(currentRound));
+      if (!currentRound) return;
+      const roundRef = doc(dbRef,"rooms",state.code,"rounds", String(currentRound));
       const rdoc = await getDoc(roundRef);
       if (!rdoc.exists()) return;
-      const r = rdoc.data();
+      roundState = rdoc.data();
 
-      if (r.status === "discuss") {
-        document.getElementById("phaseDiscuss").style.display = "block";
-      } else if (r.status === "vote") {
-        document.getElementById("phaseDiscuss").style.display = "block";
+      // Pintar fase
+      const phase = roundState.status;
+      if (phase === "reveal") {
+        showDiscuss(false);
+      }
+      if (phase === "prompt") {
+        showDiscuss(true);
+        ui.chatInput.placeholder = "Primero UNA palabra (2–24 letras)…";
+        document.getElementById("firstWordTip").style.display = "block";
+        const idx = roundState.turnIndex ?? 0;
+        const uidTurno = (roundState.order||[])[idx];
+        ui.turnHint.textContent = uidTurno ? `Turno de: ${await nameOf(uidTurno)}` : "";
+      }
+      if (phase === "discuss") {
+        showDiscuss(true);
+        document.getElementById("firstWordTip").style.display = "none";
+        ui.turnHint.textContent = "Chat libre";
+        ui.chatInput.placeholder = "Decí tu pista/sospecha (3s cooldown)";
+      }
+      if (phase === "vote") {
+        showDiscuss(true);
+        ui.turnHint.textContent = "Votación";
       }
     });
 
-    // ===== Chat: primera palabra obligatoria
-    let cooldownUntil = 0;
+    function showDiscuss(show){ document.getElementById("phaseDiscuss").style.display = show ? "block":"none"; }
+
+    // ===== Util para obtener nombre por uid (desde players)
+    async function nameOf(uid){
+      try{
+        const docRef = doc(dbRef,"rooms",state.code,"players", uid);
+        const snap = await getDoc(docRef);
+        return (snap.exists() && (snap.data().name||"Jugador")) || "Jugador";
+      }catch{ return "Jugador"; }
+    }
+
+    // ===== UI / helpers chat
     const ui = {
       chatForm: document.getElementById("chatForm"),
       chatInput: document.getElementById("chatInput"),
       chatList: document.getElementById("chatList"),
       voteBar: document.getElementById("voteBar"),
       cooldownHint: document.getElementById("cooldownHint"),
+      turnHint: document.getElementById("turnHint"),
     };
 
+    let cooldownUntil = 0;
     function canSendNow(){
       const now = Date.now();
+      if (roundState?.status === "prompt") return true; // sin cooldown en prompt
       if (now < cooldownUntil) {
         const left = Math.ceil((cooldownUntil - now)/1000);
         ui.cooldownHint.textContent = `Esperá ${left}s para volver a enviar`;
@@ -520,72 +552,91 @@
       return true;
     }
 
-    // Saber si este jugador ya envió su "primera palabra"
-    let hasFirstWord = false;
-    function watchFirstWord(roundId){
-      const flagRef = doc(db,"rooms",state.code,"rounds", String(roundId), "firstWords", auth.currentUser.uid);
-      onSnapshot(flagRef, fs=>{
-        hasFirstWord = fs.exists();
-        const tip = document.getElementById("firstWordTip");
-        if (hasFirstWord) {
-          tip.style.display = "none";
-          ui.chatInput.placeholder = "Decí tu pista/sospecha (3s cooldown)";
-        } else {
-          tip.style.display = "block";
-          ui.chatInput.placeholder = "Primero UNA palabra (2–24 letras)…";
-        }
-      });
+    function isOneWordLatin(str){
+      return /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,24}$/.test(str);
     }
 
-    // Arrancá watcher de firstWord cuando haya ronda
-    onSnapshot(roomRef, async snap=>{
-      if (!snap.exists()) return;
-      const roundId = (snap.data().round || 0);
-      if (roundId) watchFirstWord(roundId);
-    });
-
+    // ===== Chat submit: PROMPT por turno → DISCUSS
     ui.chatForm.addEventListener("submit", async (e)=>{
       e.preventDefault();
-      if (!canSendNow()) return;
+      if (!roundState) return;
 
-      let msg = (ui.chatInput.value || "").trim();
+      const msg = (ui.chatInput.value || "").trim();
       if (!msg) return;
 
-      // Round actual
-      const roomSnap = await getDoc(roomRef);
-      const roundId = roomSnap.data().round || 0;
+      const myUid = authRef.currentUser?.uid;
+      const roundId = String(currentRound);
 
-      // Si NO mandó primera palabra: validar que sea UNA palabra (2–24 letras)
-      if (!hasFirstWord) {
-        const isOneWord = /^[\p{L}]{2,24}$/u.test(msg);
-        if (!isOneWord) {
-          ui.cooldownHint.textContent = "Primero enviá UNA sola palabra (2–24 letras, sin espacios).";
+      if (roundState.status === "prompt") {
+        const idx = roundState.turnIndex ?? 0;
+        const order = roundState.order || [];
+        const uidTurno = order[idx];
+
+        if (myUid !== uidTurno) {
+          ui.cooldownHint.textContent = `Esperá tu turno. Ahora: ${await nameOf(uidTurno)}.`;
           return;
         }
-        // Guardar bandera de primera palabra
-        const flagRef = doc(db,"rooms",state.code,"rounds", String(roundId), "firstWords", auth.currentUser.uid);
-        await setDoc(flagRef, { at: serverTimestamp(), text: msg });
-        hasFirstWord = true;
+        if (!isOneWordLatin(msg)) {
+          ui.cooldownHint.textContent = "Enviá UNA sola palabra (2–24 letras, sin espacios).";
+          return;
+        }
+
+        // guardar primera palabra (flag + mensaje visible)
+        await setDoc(doc(dbRef,"rooms",state.code,"rounds", roundId,"firstWords", myUid), {
+          uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp()
+        });
+        const msgRef = doc(collection(dbRef,"rooms",state.code,"rounds", roundId, "chat"));
+        await setDoc(msgRef, {
+          uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"firstword"
+        });
+
+        ui.chatInput.value = "";
+
+        // avanzar turno o cerrar prompt -> discuss (solo host)
+        if (isHost) {
+          const nextIdx = idx + 1;
+          if (nextIdx < order.length) {
+            await updateDoc(doc(dbRef,"rooms",state.code,"rounds", roundId), { turnIndex: nextIdx });
+          } else {
+            await updateDoc(doc(dbRef,"rooms",state.code,"rounds", roundId), { status:"discuss", discussStartedAt: serverTimestamp() });
+          }
+        }
+        return;
       }
 
-      const msgRef = doc(collection(db,"rooms",state.code,"rounds", String(roundId), "chat"));
-      await setDoc(msgRef, {
-        uid: auth.currentUser.uid,
-        name: getStoredName(),
-        text: msg,
-        at: serverTimestamp()
-      });
+      if (!canSendNow()) return;
+      if (roundState.status === "discuss") {
+        const msgRef = doc(collection(dbRef,"rooms",state.code,"rounds", roundId, "chat"));
+        await setDoc(msgRef, {
+          uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"chat"
+        });
+        ui.chatInput.value = "";
+        cooldownUntil = Date.now() + 3000;
+        canSendNow();
+        return;
+      }
 
-      ui.chatInput.value = "";
-      cooldownUntil = Date.now() + 3000;
-      canSendNow();
+      ui.cooldownHint.textContent = "No podés enviar ahora.";
     });
 
-    // stream de chat
+    // ===== Refrescar hint de turno en vivo
+    onSnapshot(doc(dbRef,"rooms",state.code,"rounds", String(()=>currentRound ? currentRound : 0)()), rdoc=>{
+      if(!rdoc.exists()) return;
+      const r = rdoc.data();
+      roundState = r;
+      if (r.status === "prompt") {
+        const idx = r.turnIndex ?? 0;
+        const uidTurno = (r.order||[])[idx];
+        if (uidTurno) nameOf(uidTurno).then(n=> ui.turnHint.textContent = `Turno de: ${n}`);
+      }
+    });
+
+    // ===== Stream de chat actual
     onSnapshot(roomRef, async s=>{
       if(!s.exists()) return;
-      const currentRound = s.data().round || 0;
-      onSnapshot(collection(db,"rooms",state.code,"rounds", String(currentRound), "chat"), snap=>{
+      const rId = s.data().round || 0;
+      if (!rId) return;
+      onSnapshot(collection(dbRef,"rooms",state.code,"rounds", String(rId), "chat"), snap=>{
         const items = snap.docs
           .map(d=>({id:d.id, ...d.data()}))
           .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
@@ -601,7 +652,7 @@
 
     // ===== Votación (igual que antes)
     async function renderVoteBar(){
-      const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+      const asgSnap = await getDocs(collection(dbRef,"rooms",state.code,"assignments"));
       const players = asgSnap.docs.map(d=>d.data()).filter(p=>p.alive!==false);
       document.getElementById("voteBar").innerHTML = players.map(p=>{
         const src = (p.avatarKey && AVATAR_MAP[p.avatarKey]) ? AVATAR_MAP[p.avatarKey] : "";
@@ -618,9 +669,9 @@
           const votedUid = btn.getAttribute("data-vote");
           const roomSnap = await getDoc(roomRef);
           const roundId = roomSnap.data().round || 0;
-          const myVoteRef = doc(db,"rooms",state.code,"rounds", String(roundId), "votes", auth.currentUser.uid);
+          const myVoteRef = doc(dbRef,"rooms",state.code,"rounds", String(roundId), "votes", authRef.currentUser.uid);
           try{
-            await setDoc(myVoteRef, { voter: auth.currentUser.uid, target: votedUid, at: serverTimestamp() });
+            await setDoc(myVoteRef, { voter: authRef.currentUser.uid, target: votedUid, at: serverTimestamp() });
             document.querySelectorAll("[data-vote]").forEach(b=>b.style.opacity=".6");
             btn.style.opacity = "1";
           }catch(e){ console.warn(e); }
@@ -631,7 +682,7 @@
     onSnapshot(roomRef, async s=>{
       if(!s.exists()) return;
       const data = s.data();
-      const roundRef = doc(db,"rooms",state.code,"rounds", String(data.round || 0));
+      const roundRef = doc(dbRef,"rooms",state.code,"rounds", String(data.round || 0));
       const rdoc = await getDoc(roundRef);
       if(!rdoc.exists()) return;
       const r = rdoc.data();
@@ -645,17 +696,17 @@
       if(!s.exists()) return;
       const data = s.data();
       const roundId = data.round || 0;
-      onSnapshot(collection(db,"rooms",state.code,"rounds", String(roundId), "votes"), async snap=>{
+      onSnapshot(collection(dbRef,"rooms",state.code,"rounds", String(roundId), "votes"), async snap=>{
         const voted = new Set(snap.docs.map(d=>d.id));
-        const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+        const asgSnap = await getDocs(collection(dbRef,"rooms",state.code,"assignments"));
         const players = asgSnap.docs.map(d=>d.id).filter(Boolean);
         if (isHost && players.length>0 && players.every(id=>voted.has(id))) {
-          await updateDoc(doc(db,"rooms",state.code,"rounds", String(roundId)), { status:"results", resultsAt: serverTimestamp() });
+          await updateDoc(doc(dbRef,"rooms",state.code,"rounds", String(roundId)), { status:"results", resultsAt: serverTimestamp() });
         }
       });
     });
 
-    // Copiar / Compartir
+    // ===== Copiar / Compartir
     document.getElementById("copyBtn").addEventListener("click", async ()=>{
       try{ await navigator.clipboard.writeText(state.code); }catch{}
     });
@@ -664,6 +715,7 @@
       if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); } catch{} }
       else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); } catch{ alert(joinUrl); } }
     });
+
   </script>
 </body>
 </html>
