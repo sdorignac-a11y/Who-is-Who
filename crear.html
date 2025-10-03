@@ -307,12 +307,12 @@
     btn.addEventListener("click", async ()=>{
       const inc = btn.dataset.inc, dec = btn.dataset.dec;
       if(inc==="impostores") state.impostores = Math.min(3, state.impostores+1);
-      if(dec==="impostores") state.impostores = Math.max(1, state.impostores-1);
+      if(dec==="impostores") state.impostores = Math.max(0, state.impostores-1);
       if(inc==="jugadores")  state.jugadores  = Math.min(10,state.jugadores+1);
       if(dec==="jugadores")  state.jugadores  = Math.max(4, state.jugadores-1);
       if(inc==="tema")       state.temaIndex  = (state.temaIndex+1)%state.temas.length;
       if(dec==="tema")       state.temaIndex  = (state.temaIndex-1+state.temas.length)%state.temas.length;
-      if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
+     if(state.impostores >= state.jugadores) state.impostores = Math.max(0, state.jugadores-1);
       // nunca achicar por debajo de los ya conectados
       state.jugadores = Math.max(state.jugadores, lastPlayers.length);
 
@@ -379,7 +379,9 @@ document.getElementById("startBtn").addEventListener("click", async ()=>{
     const room = roomSnap.data();
     const st   = room.settings || {};
     const tema = st.tema || "Clubes";
-    const K    = st.impostors || 1;
+   const Kraw = typeof st.impostors === "number" ? st.impostors : 1;
+const K    = Math.max(0, Math.min(Kraw, Math.max(players.length - 1, 0)));
+
 
     if (room.status === "playing"){
       alert("La partida ya está en curso.");
@@ -389,9 +391,6 @@ document.getElementById("startBtn").addEventListener("click", async ()=>{
     // 2) Leer jugadores
     const ps = await getDocs(collection(db, "rooms", state.code, "players"));
     const players = ps.docs.map(d=>d.data()).filter(p => p.online !== false);
-
-    if (players.length < 3){ alert("Se necesitan al menos 3 jugadores."); starting = false; return; }
-    if (K >= players.length){ alert("Impostores debe ser menor que jugadores."); starting = false; return; }
 
     // 3) Sorteo
     const palabra = pickWord(tema);
