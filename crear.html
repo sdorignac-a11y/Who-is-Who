@@ -131,705 +131,695 @@
     </div>
   </div>
 
-  <!-- ============ SCRIPT AL FINAL ============ -->
   <script type="module">
-    // ===== Firebase =====
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import {
-      getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot,
-      collection, getDocs, writeBatch, serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  // ===== Firebase =====
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import {
+    getAuth, signInAnonymously, onAuthStateChanged,
+    setPersistence, browserLocalPersistence
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot,
+    collection, getDocs, writeBatch, serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
-      authDomain: "who-is-who-6ea99.firebaseapp.com",
-      projectId: "who-is-who-6ea99",
-      storageBucket: "who-is-who-6ea99.firebasestorage.app",
-      messagingSenderId: "718537140049",
-      appId: "1:718537140049:web:7400ec7e5467b387f8d570",
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
+    authDomain: "who-is-who-6ea99.firebaseapp.com",
+    projectId: "who-is-who-6ea99",
+    storageBucket: "who-is-who-6ea99.firebasestorage.app",
+    messagingSenderId: "718537140049",
+    appId: "1:718537140049:web:7400ec7e5467b387f8d570",
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
 
-    const AVATAR_MAP = { a1:"avatars/a1.png",a2:"avatars/a2.png",a3:"avatars/a3.png",a4:"avatars/a4.png",a5:"avatars/a5.png",a6:"avatars/a6.png",a7:"avatars/a7.png",a8:"avatars/a8.png",a9:"avatars/a9.png",a10:"avatars/a10.png",a11:"avatars/a11.png",a12:"avatars/a12.png" };
-
-    const $ = s => document.querySelector(s);
-    const playersWrap = $("#players");
-    const roomCodeEl  = $("#roomCode");
-    const impostoresEl = $("#impostoresVal");
-    const jugadoresEl  = $("#jugadoresVal");
-    const temaEl       = $("#temaVal");
-    const meNameEl     = document.getElementById("meName");
-
-    function getStoredName(){
-      const qp = new URLSearchParams(location.search);
-      const qName = qp.get("name");
-      if (qName && qName.trim()) localStorage.setItem("displayName", qName.trim());
-      const s = localStorage.getItem("displayName") || "";
-      return (s.trim().length>=2 && s.trim().length<=16) ? s.trim() : "Jugador";
+  // ✅ Persistir el mismo usuario anónimo entre recargas
+  await setPersistence(auth, browserLocalPersistence);
+  async function ensureAuth() {
+    const user = await new Promise((resolve) => {
+      const unsub = onAuthStateChanged(auth, (u) => { unsub(); resolve(u); });
+    });
+    if (!user) {
+      const cred = await signInAnonymously(auth);
+      return cred.user;
     }
-    function getStoredAvatar(){
-      const qp = new URLSearchParams(location.search);
-      const qAvatar = qp.get("avatar");
-      if (qAvatar && AVATAR_MAP[qAvatar]) localStorage.setItem("avatarKey", qAvatar);
-      const k = localStorage.getItem("avatarKey") || "";
-      return AVATAR_MAP[k] ? k : "";
+    return user;
+  }
+  const user = await ensureAuth();
+
+  const AVATAR_MAP = { a1:"avatars/a1.png",a2:"avatars/a2.png",a3:"avatars/a3.png",a4:"avatars/a4.png",a5:"avatars/a5.png",a6:"avatars/a6.png",a7:"avatars/a7.png",a8:"avatars/a8.png",a9:"avatars/a9.png",a10:"avatars/a10.png",a11:"avatars/a11.png",a12:"avatars/a12.png" };
+
+  const $ = s => document.querySelector(s);
+  const playersWrap = $("#players");
+  const roomCodeEl  = $("#roomCode");
+  const impostoresEl = $("#impostoresVal");
+  const jugadoresEl  = $("#jugadoresVal");
+  const temaEl       = $("#temaVal");
+  const meNameEl     = document.getElementById("meName");
+
+  function getStoredName(){
+    const qp = new URLSearchParams(location.search);
+    const qName = qp.get("name");
+    if (qName && qName.trim()) localStorage.setItem("displayName", qName.trim());
+    const s = localStorage.getItem("displayName") || "";
+    return (s.trim().length>=2 && s.trim().length<=16) ? s.trim() : "Jugador";
+  }
+  function getStoredAvatar(){
+    const qp = new URLSearchParams(location.search);
+    const qAvatar = qp.get("avatar");
+    if (qAvatar && AVATAR_MAP[qAvatar]) localStorage.setItem("avatarKey", qAvatar);
+    const k = localStorage.getItem("avatarKey") || "";
+    return AVATAR_MAP[k] ? k : "";
+  }
+
+  async function editAndSaveName(playerRef){
+    const prev = getStoredName();
+    const nuevo = prompt("Tu nombre para mostrar (2–16 chars):", prev) ?? "";
+    const v = nuevo.trim();
+    if (v.length<2 || v.length>16) return;
+    localStorage.setItem("displayName", v);
+    document.getElementById("meName").textContent = v;
+    try{ if(playerRef) await updateDoc(playerRef, { name: v }); }catch(e){ console.warn(e); }
+  }
+
+  function genCode(len = 6){
+    const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let s = ""; for (let i=0;i<len;i++) s += A[Math.floor(Math.random()*A.length)];
+    return s;
+  }
+  async function createUniqueRoomCode(db, tries = 10){
+    for(let i=0;i<tries;i++){
+      const candidate = genCode(6);
+      const ref = doc(db, "rooms", candidate);
+      const snap = await getDoc(ref);
+      if(!snap.exists()) return candidate;
     }
+    return genCode(8);
+  }
 
-    async function editAndSaveName(playerRef){
-      const prev = getStoredName();
-      const nuevo = prompt("Tu nombre para mostrar (2–16 chars):", prev) ?? "";
-      const v = nuevo.trim();
-      if (v.length<2 || v.length>16) return;
-      localStorage.setItem("displayName", v);
-      document.getElementById("meName").textContent = v;
-      try{ if(playerRef) await updateDoc(playerRef, { name: v }); }catch(e){ console.warn(e); }
-    }
+  let lastPlayers = [];
+  function drawPlayers(maxCount, list){
+    const ordered = (list || []).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
+    playersWrap.innerHTML = "";
+    for (let i = 0; i < maxCount; i++){
+      const p = ordered[i];
+      const card = document.createElement("div"); card.className = "player";
+      const av = document.createElement("div");
+      const label = document.createElement("small");
 
-    function genCode(len = 6){
-      const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-      let s = ""; for (let i=0;i<len;i++) s += A[Math.floor(Math.random()*A.length)];
-      return s;
-    }
-    async function createUniqueRoomCode(db, tries = 10){
-      for(let i=0;i<tries;i++){
-        const candidate = genCode(6);
-        const ref = doc(db, "rooms", candidate);
-        const snap = await getDoc(ref);
-        if(!snap.exists()) return candidate;
-      }
-      return genCode(8);
-    }
-
-    let lastPlayers = [];
-    function drawPlayers(maxCount, list){
-      const ordered = (list || []).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
-      playersWrap.innerHTML = "";
-      for (let i = 0; i < maxCount; i++){
-        const p = ordered[i];
-        const card = document.createElement("div"); card.className = "player";
-        const av = document.createElement("div");
-        const label = document.createElement("small");
-
-        if (p){
-          if (p.avatarKey && AVATAR_MAP[p.avatarKey]){
-            av.className = "avatar";
-            const img = document.createElement("img");
-            img.className = "avatar-img";
-            img.src = AVATAR_MAP[p.avatarKey];
-            img.alt = p.name || "avatar";
-            av.appendChild(img);
-          } else {
-            av.className = "avatar placeholder";
-          }
-
-          if (p.uid === (auth.currentUser && auth.currentUser.uid)){
-            card.classList.add("me-outline");
-            label.innerHTML = `${p.name || `Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
-          } else {
-            label.textContent = p.name || `Jugador ${i+1}`;
-          }
+      if (p){
+        if (p.avatarKey && AVATAR_MAP[p.avatarKey]){
+          av.className = "avatar";
+          const img = document.createElement("img");
+          img.className = "avatar-img";
+          img.src = AVATAR_MAP[p.avatarKey];
+          img.alt = p.name || "avatar";
+          av.appendChild(img);
         } else {
           av.className = "avatar placeholder";
-          label.textContent = `Jugador ${i+1}`;
         }
 
-        card.append(av,label);
-        playersWrap.append(card);
+        if (p.uid === (auth.currentUser && auth.currentUser.uid)){
+          card.classList.add("me-outline");
+          label.innerHTML = `${p.name || `Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
+        } else {
+          label.textContent = p.name || `Jugador ${i+1}`;
+        }
+      } else {
+        av.className = "avatar placeholder";
+        label.textContent = `Jugador ${i+1}`;
+      }
+
+      card.append(av,label);
+      playersWrap.append(card);
+    }
+  }
+
+  const state = { code:"", impostores:1, jugadores:8, temas:["Clubes","Jugadores","Mundiales"], temaIndex:0 };
+
+  const POOLS = {
+    Clubes:["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"],
+    Jugadores:["Lionel Messi","Cristiano Ronaldo","Diego Maradona","Pelé","Kylian Mbappé","Erling Haaland","Neymar","Zinedine Zidane","Ronaldinho","Ronaldo Nazário"],
+    Mundiales:["Mundial 2002","Mundial 2006","Mundial 2010","Mundial 2014","Mundial 2018","Mundial 2022"]
+  };
+
+  function render(){
+    roomCodeEl.textContent = state.code || "—";
+    impostoresEl.textContent = state.impostores;
+    jugadoresEl.textContent  = state.jugadores;
+    temaEl.textContent       = state.temas[state.temaIndex];
+    drawPlayers(state.jugadores, lastPlayers);
+  }
+
+  // ===== Reusar la MISMA sala al recargar (URL + localStorage)
+  const lsKey = "lastRoomCode";
+  let isHost = false;
+
+  function putCodeInUrl(code){
+    try { history.replaceState(null, "", `?code=${code}`); } catch {}
+  }
+
+  let urlCode = new URLSearchParams(location.search).get("code");
+
+  // 1) Si viene por URL, usarlo
+  if (urlCode && urlCode.trim()) {
+    state.code = urlCode.trim().toUpperCase();
+    isHost = false;
+  } else {
+    // 2) Sin URL: intentar reusar el último de localStorage
+    const prev = localStorage.getItem(lsKey);
+    if (prev) {
+      const prevRef = doc(db, "rooms", prev);
+      const prevSnap = await getDoc(prevRef);
+      if (prevSnap.exists()) {
+        state.code = prev;
+        isHost = (prevSnap.data().hostUid === (auth.currentUser && auth.currentUser.uid));
+        putCodeInUrl(state.code);
       }
     }
-
-    const state = { code:"", impostores:1, jugadores:8, temas:["Clubes","Jugadores","Mundiales"], temaIndex:0 };
-
-    const POOLS = {
-      Clubes:["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"],
-      Jugadores:["Lionel Messi","Cristiano Ronaldo","Diego Maradona","Pelé","Kylian Mbappé","Erling Haaland","Neymar","Zinedine Zidane","Ronaldinho","Ronaldo Nazário"],
-      Mundiales:["Mundial 2002","Mundial 2006","Mundial 2010","Mundial 2014","Mundial 2018","Mundial 2022"]
-    };
-
-    function render(){
-      roomCodeEl.textContent = state.code || "—";
-      impostoresEl.textContent = state.impostores;
-      jugadoresEl.textContent  = state.jugadores;
-      temaEl.textContent       = state.temas[state.temaIndex];
-      drawPlayers(state.jugadores, lastPlayers);
-    }
-
-    // ===== Init auth/db + room
-    await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
-
-   const lsKey = "lastRoomCode";
-let isHost = false;
-
-function putCodeInUrl(code){
-  try { history.replaceState(null, "", `?code=${code}`); } catch {}
-}
-
-let urlCode = new URLSearchParams(location.search).get("code");
-
-// 1) Si viene por URL, usarlo
-if (urlCode && urlCode.trim()) {
-  state.code = urlCode.trim().toUpperCase();
-  isHost = false;
-} else {
-  // 2) Si no hay URL, intentar reusar el último de localStorage
-  const prev = localStorage.getItem(lsKey);
-  if (prev) {
-    const prevRef = doc(db, "rooms", prev);
-    const prevSnap = await getDoc(prevRef);
-    if (prevSnap.exists()) {
-      state.code = prev;
-      // sos host si coincide hostUid con tu uid
-      isHost = (prevSnap.data().hostUid === (auth.currentUser && auth.currentUser.uid));
+    // 3) Si tampoco hay previo válido → crear una nueva sala (host)
+    if (!state.code) {
+      state.code = await createUniqueRoomCode(db);
+      isHost = true;
+      localStorage.setItem(lsKey, state.code);
       putCodeInUrl(state.code);
     }
   }
-  // 3) Si tampoco hay previo válido, crear una nueva sala (host)
-  if (!state.code) {
-    state.code = await createUniqueRoomCode(db);
-    isHost = true;
+
+  render();
+
+  const roomRef = doc(db, "rooms", state.code);
+
+  const firstSnap = await getDoc(roomRef);
+  if (!firstSnap.exists() && isHost) {
+    await setDoc(roomRef, {
+      hostUid: auth.currentUser.uid,
+      status: "lobby",
+      createdAt: Date.now(),
+      settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
+    }, { merge:true });
+  }
+  if (firstSnap.exists()) {
+    isHost = firstSnap.data().hostUid === auth.currentUser.uid;
+  }
+  if (isHost) {
     localStorage.setItem(lsKey, state.code);
     putCodeInUrl(state.code);
   }
-}
 
-render();
+  const myName   = getStoredName();
+  const myAvatar = getStoredAvatar();
+  meNameEl.textContent = myName;
 
-const roomRef = doc(db, "rooms", state.code);
-
-// si la sala no existe y sos host → crear doc base
-const firstSnap = await getDoc(roomRef);
-if (!firstSnap.exists() && isHost) {
-  await setDoc(roomRef, {
-    hostUid: auth.currentUser.uid,
-    status: "lobby",
-    createdAt: Date.now(),
-    settings: {
-      maxPlayers: state.jugadores,
-      impostors: state.impostores,
-      tema: state.temas[state.temaIndex]
-    }
+  await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
+    uid: auth.currentUser.uid,
+    name: myName,
+    avatarKey: myAvatar || null,
+    slot: isHost ? 1 : Date.now(),
+    online: true
   }, { merge:true });
-}
 
-// si ya existía, recalcular isHost según el doc
-if (firstSnap.exists()) {
-  isHost = firstSnap.data().hostUid === auth.currentUser.uid;
-}
+  const playerRef = doc(db,"rooms",state.code,"players",auth.currentUser.uid);
+  document.getElementById("editName")?.addEventListener("click", ()=> editAndSaveName(playerRef));
 
-// cada vez que seas host (creaste sala nueva), guardá el código
-if (isHost) {
-  localStorage.setItem(lsKey, state.code);
-  putCodeInUrl(state.code);
-}
-
-
-    const firstSnap = await getDoc(roomRef);
-    if (!firstSnap.exists() && isHost) {
-      await setDoc(roomRef, {
-        hostUid: auth.currentUser.uid,
-        status: "lobby",
-        createdAt: Date.now(),
-        settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
-      }, { merge:true });
-    }
-    if (firstSnap.exists()) {
-      isHost = firstSnap.data().hostUid === auth.currentUser.uid;
-    }
-
-    const myName   = getStoredName();
-    const myAvatar = getStoredAvatar();
-    meNameEl.textContent = myName;
-
-    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
-      uid: auth.currentUser.uid,
-      name: myName,
-      avatarKey: myAvatar || null,
-      slot: isHost ? 1 : Date.now(),
-      online: true
-    }, { merge:true });
-
-    const playerRef = doc(db,"rooms",state.code,"players",auth.currentUser.uid);
-    document.getElementById("editName")?.addEventListener("click", ()=> editAndSaveName(playerRef));
-
-    function setArrowsEnabled(enabled){
-      document.querySelectorAll(".arrow").forEach(b=>{
-        b.style.pointerEvents = enabled ? "auto" : "none";
-        b.style.opacity = enabled ? "1" : ".55";
-      });
-    }
-    setArrowsEnabled(isHost);
-
-    document.querySelectorAll(".arrow").forEach(btn=>{
-      btn.addEventListener("click", async ()=>{
-        const inc = btn.dataset.inc, dec = btn.dataset.dec;
-        if(inc==="impostores") state.impostores = Math.min(3, state.impostores+1);
-        if(dec==="impostores") state.impostores = Math.max(1, state.impostores-1);
-        if(inc==="jugadores")  state.jugadores  = Math.min(10,state.jugadores+1);
-        if(dec==="jugadores")  state.jugadores  = Math.max(4, state.jugadores-1);
-        if(inc==="tema")       state.temaIndex  = (state.temaIndex+1)%state.temas.length;
-        if(dec==="tema")       state.temaIndex  = (state.temaIndex-1+state.temas.length)%state.temas.length;
-        if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
-        state.jugadores = Math.max(state.jugadores, lastPlayers.length);
-        render();
-        if (isHost){
-          await setDoc(roomRef, { settings:{ maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] } }, { merge:true });
-        }
-      });
+  function setArrowsEnabled(enabled){
+    document.querySelectorAll(".arrow").forEach(b=>{
+      b.style.pointerEvents = enabled ? "auto" : "none";
+      b.style.opacity = enabled ? "1" : ".55";
     });
+  }
+  setArrowsEnabled(isHost);
 
-    onSnapshot(roomRef, s=>{
-      if(!s.exists()) return;
-      const data = s.data();
-      const before = isHost;
-      isHost = (data.hostUid === auth.currentUser.uid);
-      if (before !== isHost) setArrowsEnabled(isHost);
-
-      const st = data.settings || {};
-      state.jugadores  = st.maxPlayers ?? state.jugadores;
-      state.impostores = st.impostors  ?? state.impostores;
-      if (st.tema) {
-        const idx = state.temas.indexOf(st.tema);
-        state.temaIndex = idx >= 0 ? idx : 0;
-      }
+  document.querySelectorAll(".arrow").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const inc = btn.dataset.inc, dec = btn.dataset.dec;
+      if(inc==="impostores") state.impostores = Math.min(3, state.impostores+1);
+      if(dec==="impostores") state.impostores = Math.max(1, state.impostores-1);
+      if(inc==="jugadores")  state.jugadores  = Math.min(10,state.jugadores+1);
+      if(dec==="jugadores")  state.jugadores  = Math.max(4, state.jugadores-1);
+      if(inc==="tema")       state.temaIndex  = (state.temaIndex+1)%state.temas.length;
+      if(dec==="tema")       state.temaIndex  = (state.temaIndex-1+state.temas.length)%state.temas.length;
+      if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
+      state.jugadores = Math.max(state.jugadores, lastPlayers.length);
       render();
+      if (isHost){
+        await setDoc(roomRef, { settings:{ maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] } }, { merge:true });
+      }
     });
+  });
 
-    onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
-      lastPlayers = snap.docs.map(d=>d.data());
-      drawPlayers(state.jugadores, lastPlayers);
-    });
+  onSnapshot(roomRef, s=>{
+    if(!s.exists()) return;
+    const data = s.data();
+    const before = isHost;
+    isHost = (data.hostUid === auth.currentUser.uid);
+    if (before !== isHost) setArrowsEnabled(isHost);
 
-    function pickWord(tema){
-      const pool = POOLS[tema] || ["Balón"];
-      return pool[Math.floor(Math.random() * pool.length)];
+    const st = data.settings || {};
+    state.jugadores  = st.maxPlayers ?? state.jugadores;
+    state.impostores = st.impostors  ?? state.impostores;
+    if (st.tema) {
+      const idx = state.temas.indexOf(st.tema);
+      state.temaIndex = idx >= 0 ? idx : 0;
     }
-    function shuffleInPlace(a){
-      for (let i = a.length - 1; i > 0; i--){
-        const j = Math.floor(Math.random() * (i + 1));
-        [a[i], a[j]] = [a[j], a[i]];
-      }
-      return a;
+    render();
+  });
+
+  onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
+    lastPlayers = snap.docs.map(d=>d.data());
+    drawPlayers(state.jugadores, lastPlayers);
+  });
+
+  function pickWord(tema){
+    const pool = POOLS[tema] || ["Balón"];
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+  function shuffleInPlace(a){
+    for (let i = a.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
     }
+    return a;
+  }
 
-    // ======== START: roles + ronda con ORDEN y status "reveal" -> (después) "draw"
-    let starting = false;
-    document.getElementById("startBtn").addEventListener("click", async ()=>{
-      if (!isHost){ alert("Solo el host puede iniciar"); return; }
-      if (starting) return; starting = true;
+  // ======== START: roles + ronda con ORDEN y status "reveal" -> (después) "draw"
+  let starting = false;
+  document.getElementById("startBtn").addEventListener("click", async ()=>{
+    if (!isHost){ alert("Solo el host puede iniciar"); return; }
+    if (starting) return; starting = true;
 
-      try{
-        const roomSnap = await getDoc(roomRef);
-        if (!roomSnap.exists()){ alert("Sala no encontrada."); starting = false; return; }
-
-        const room = roomSnap.data();
-        const st   = room.settings || {};
-        const tema = st.tema || "Clubes";
-        const K    = st.impostors || 1;
-
-        if (room.status === "playing"){
-          alert("La partida ya está en curso.");
-          starting = false; return;
-        }
-
-        const ps = await getDocs(collection(db, "rooms", state.code, "players"));
-        const players = ps.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.id && p.online !== false);
-
-        if (players.length < 3){ alert("Se necesitan al menos 3 jugadores."); starting = false; return; }
-        if (K >= players.length){ alert("Impostores debe ser menor que jugadores."); starting = false; return; }
-
-        const palabra = pickWord(tema);
-        const order   = shuffleInPlace(players.map(p=>p.id)); // orden aleatorio UNA sola vez
-        const impostorIds = new Set(order.slice(0, K));       // primeros K = impostores
-
-        const nextRound = (room.round || 0) + 1;
-        const batch = writeBatch(db);
-
-        batch.update(roomRef, { status: "playing", round: nextRound, startedAt: serverTimestamp() });
-
-        players.forEach(p=>{
-          const aRef = doc(db, "rooms", state.code, "assignments", p.id);
-          batch.set(aRef, {
-            round: nextRound, uid: p.id, name: p.name || "Jugador", avatarKey: p.avatarKey || null,
-            role: impostorIds.has(p.id) ? "IMPOSTOR" : "CIVIL",
-            word: impostorIds.has(p.id) ? null : palabra, tema,
-            alive: true, vote: null, revealedAt: null
-          });
-        });
-
-        const roundRef = doc(db,"rooms",state.code,"rounds", String(nextRound));
-        batch.set(roundRef, { status:"reveal", createdAt: serverTimestamp(), order, turnIndex: 0 });
-
-        await batch.commit();
-
-        // 10s para ver el rol -> luego lanzamos sorteo "draw"
-        setTimeout(async ()=>{
-          try{ await updateDoc(roundRef, { status:"draw", drawStartedAt: serverTimestamp() }); }catch(e){ console.warn(e); }
-        }, 10000);
-
-      }catch(e){
-        console.error(e);
-        alert(e.message || "No pude iniciar la partida.");
-      }finally{
-        starting = false;
-      }
-    });
-
-    // ===== Overlay de rol + countdown de 10s (visual)
-    onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
-      if(!s.exists()) return;
-      const a = s.data();
-      const overlay = document.getElementById("reveal");
-      const box = document.getElementById("revContent");
-
-      let avatarHtml = "";
-      if (a.avatarKey && AVATAR_MAP[a.avatarKey]){
-        avatarHtml = `<div class="rev-avatar"><img src="${AVATAR_MAP[a.avatarKey]}" alt="${a.name || 'avatar'}"></div>`;
-      }
-      const nameHtml = `<div class="rev-name">${a.name || "Jugador"}</div>`;
-
-      overlay.style.display = "grid";
-      if(a.role === "IMPOSTOR"){
-        box.innerHTML = `${avatarHtml}${nameHtml}
-          <div style="font-size:38px;font-weight:900;color:#ff6b6b;margin:6px 0 8px">IMPOSTOR</div>
-          <div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>`;
-      }else{
-        box.innerHTML = `${avatarHtml}${nameHtml}
-          <div style="opacity:.75;font-size:14px;margin:6px 0">Palabra secreta (${a.tema})</div>
-          <div style="font-size:34px;font-weight:900;color:#7cf062">${a.word}</div>`;
-      }
-
-      let secs = 10;
-      const countdownEl = document.getElementById("countdown");
-      countdownEl.textContent = `Pasando en ${secs}s...`;
-      const interval = setInterval(()=>{
-        secs--;
-        countdownEl.textContent = `Pasando en ${secs}s...`;
-        if(secs <= 0){
-          clearInterval(interval);
-          overlay.style.display = "none";
-        }
-      },1000);
-    });
-
-    // ====== Sorteo del orden (animación sincronizada)
-    function sanitize(str){ return (str||"").replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s])); }
-    async function nameOf(uid){
-      try{ const snap = await getDoc(doc(db,"rooms",state.code,"players", uid)); return (snap.exists() && (snap.data().name||"Jugador")) || "Jugador"; }
-      catch{ return "Jugador"; }
-    }
-
-    async function startDrawAnimation(order){
-      const draw = document.getElementById("drawOverlay");
-      const slip = document.getElementById("slip");
-      const list = document.getElementById("orderList");
-      list.innerHTML = "";
-      draw.style.display = "grid";
-
-      // Precreamos placeholders en la lista
-      const names = await Promise.all(order.map(uid=>nameOf(uid)));
-      names.forEach((n,i)=>{
-        const item = document.createElement("div");
-        item.className = "order-item";
-        item.innerHTML = `<div class="order-badge">${i+1}</div><div class="order-name" id="ord-${i}">—</div>`;
-        list.appendChild(item);
-      });
-
-      // Revelamos uno por uno
-      for (let i=0;i<order.length;i++){
-        const n = names[i];
-        slip.textContent = n;
-        slip.classList.remove("reveal");
-        void slip.offsetWidth; // reiniciar animación
-        slip.classList.add("reveal");
-        await new Promise(r=>setTimeout(r, 900));
-        const slot = document.getElementById(`ord-${i}`);
-        if (slot) slot.textContent = n;
-        await new Promise(r=>setTimeout(r, 450));
-      }
-
-      // Al terminar: host pasa a PROMPT
+    try{
       const roomSnap = await getDoc(roomRef);
-      const roundId = String(roomSnap.data().round || 0);
-      if (isHost && roundId !== "0"){
-        await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { status:"prompt", promptStartedAt: serverTimestamp(), turnIndex: 0 });
+      if (!roomSnap.exists()){ alert("Sala no encontrada."); starting = false; return; }
+
+      const room = roomSnap.data();
+      const st   = room.settings || {};
+      const tema = st.tema || "Clubes";
+      const K    = st.impostors || 1;
+
+      if (room.status === "playing"){
+        alert("La partida ya está en curso.");
+        starting = false; return;
       }
-      setTimeout(()=>{ draw.style.display = "none"; }, 600);
-    }
 
-    // ===== Orquestación por estado de sala + ronda
-    let currentRound = 0;
-    let roundState = null;
-    let drawPlayedForRound = 0; // evita repetir el bolillero por ronda
+      const ps = await getDocs(collection(db, "rooms", state.code, "players"));
+      const players = ps.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.id && p.online !== false);
 
-    // Suscriptores que limpiaremos al cambiar de ronda
-    let unsubscribeRoundHint = null;
-    let unsubscribeChat = null;
+      if (players.length < 3){ alert("Se necesitan al menos 3 jugadores."); starting = false; return; }
+      if (K >= players.length){ alert("Impostores debe ser menor que jugadores."); starting = false; return; }
 
-    function subscribeRoundHint(roundId){
-      if (unsubscribeRoundHint) unsubscribeRoundHint();
-      unsubscribeRoundHint = onSnapshot(
-        doc(db, "rooms", state.code, "rounds", String(roundId)),
-        (rdoc) => {
-          if (!rdoc.exists()) return;
-          const r = rdoc.data();
-          roundState = r;
-          if (r.status === "prompt") {
-            const idx = r.turnIndex ?? 0;
-            const uidTurno = (r.order || [])[idx];
-            if (uidTurno) nameOf(uidTurno).then(n => {
-              ui.turnHint.textContent = `Turno de: ${n}`;
-            });
-          }
-        }
-      );
-    }
+      const palabra = pickWord(tema);
+      const order   = shuffleInPlace(players.map(p=>p.id)); // orden aleatorio UNA sola vez
+      const impostorIds = new Set(order.slice(0, K));       // primeros K = impostores
 
-    function subscribeChat(roundId){
-      if (unsubscribeChat) unsubscribeChat();
-      unsubscribeChat = onSnapshot(
-        collection(db,"rooms",state.code,"rounds", String(roundId), "chat"),
-        snap=>{
-          const items = snap.docs.map(d=>({id:d.id, ...d.data()}))
-            .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
-          ui.chatList.innerHTML = items.map(m=>`
-            <div style="margin:6px 0;padding:8px 10px;border-radius:12px;background:#0a2747;border:1px solid rgba(128,180,255,.18)">
-              <strong style="opacity:.9">${sanitize(m.name) || "Jugador"}</strong>
-              <div>${sanitize(m.text||"")}</div>
-            </div>`).join("");
-          ui.chatList.scrollTop = ui.chatList.scrollHeight;
-        }
-      );
-    }
+      const nextRound = (room.round || 0) + 1;
+      const batch = writeBatch(db);
 
-    onSnapshot(roomRef, async s=>{
-      if(!s.exists()) return;
-      const data = s.data();
-      const newRound = data.round || 0;
+      batch.update(roomRef, { status: "playing", round: nextRound, startedAt: serverTimestamp() });
 
-      // Si cambió la ronda, (re)conectar hint + chat
-      if (newRound && newRound !== currentRound){
-        currentRound = newRound;
-        subscribeRoundHint(currentRound);
-        subscribeChat(currentRound);
-      } else {
-        currentRound = newRound;
-      }
-      if (!currentRound) return;
-
-      const roundRef = doc(db,"rooms",state.code,"rounds", String(currentRound));
-      const rdoc = await getDoc(roundRef);
-      if (!rdoc.exists()) return;
-      roundState = rdoc.data();
-
-      const phase = roundState.status;
-      if (phase === "reveal") {
-        document.getElementById("phaseDiscuss").style.display = "none";
-      }
-      if (phase === "draw") {
-        document.getElementById("phaseDiscuss").style.display = "none";
-        if (drawPlayedForRound !== currentRound) {
-          drawPlayedForRound = currentRound;
-          startDrawAnimation(roundState.order || []);
-        }
-      }
-      if (phase === "prompt") {
-        document.getElementById("phaseDiscuss").style.display = "block";
-        document.getElementById("firstWordTip").style.display = "block";
-        ui.chatInput.placeholder = "Primero UNA palabra (2–24 letras)…";
-        const idx = roundState.turnIndex ?? 0;
-        const uidTurno = (roundState.order||[])[idx];
-        ui.turnHint.textContent = uidTurno ? `Turno de: ${await nameOf(uidTurno)}` : "";
-      }
-      if (phase === "discuss") {
-        document.getElementById("phaseDiscuss").style.display = "block";
-        document.getElementById("firstWordTip").style.display = "none";
-        ui.turnHint.textContent = "Chat libre";
-        ui.chatInput.placeholder = "Decí tu pista/sospecha (3s cooldown)";
-      }
-      if (phase === "vote") {
-        document.getElementById("phaseDiscuss").style.display = "block";
-        ui.turnHint.textContent = "Votación";
-      }
-    });
-
-    // ===== Fallbacks de fase (solo host) =====
-    onSnapshot(roomRef, async (snap) => {
-      if (!snap.exists()) return;
-      if (!isHost) return;
-
-      const data = snap.data();
-      const rId = data.round || 0;
-      if (!rId) return;
-
-      const rRef = doc(db, "rooms", state.code, "rounds", String(rId));
-      const rDoc = await getDoc(rRef);
-      if (!rDoc.exists()) return;
-
-      const r = rDoc.data();
-      const toMs = (ts) => ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds * 1000 : (typeof ts === "number" ? ts : 0));
-
-      const now       = Date.now();
-      const createdMs = toMs(r.createdAt);
-      const drawMs    = toMs(r.drawStartedAt);
-
-      if (r.status === "reveal" && createdMs && now - createdMs > 11000) {
-        try { await updateDoc(rRef, { status: "draw", drawStartedAt: serverTimestamp() }); } catch {}
-      }
-      if (r.status === "draw" && drawMs && now - drawMs > 20000) {
-        try { await updateDoc(rRef, { status: "prompt", promptStartedAt: serverTimestamp(), turnIndex: 0 }); } catch {}
-      }
-    });
-
-    // ===== UI / helpers chat
-    const ui = {
-      chatForm: document.getElementById("chatForm"),
-      chatInput: document.getElementById("chatInput"),
-      chatList: document.getElementById("chatList"),
-      voteBar: document.getElementById("voteBar"),
-      cooldownHint: document.getElementById("cooldownHint"),
-      turnHint: document.getElementById("turnHint"),
-    };
-
-    let cooldownUntil = 0;
-    function canSendNow(){
-      const now = Date.now();
-      if (roundState?.status === "prompt") return true;
-      if (now < cooldownUntil) {
-        const left = Math.ceil((cooldownUntil - now)/1000);
-        ui.cooldownHint.textContent = `Esperá ${left}s para volver a enviar`;
-        return false;
-      }
-      ui.cooldownHint.textContent = "";
-      return true;
-    }
-
-    function isOneWordLatin(str){
-      return /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,24}$/.test(str);
-    }
-
-    // ===== Chat submit: PROMPT por turno → DISCUSS
-    document.getElementById("chatForm").addEventListener("submit", async (e)=>{
-      e.preventDefault();
-      if (!roundState) return;
-
-      const msg = (ui.chatInput.value || "").trim();
-      if (!msg) return;
-
-      const myUid = auth.currentUser?.uid;
-      const roundId = String(currentRound);
-
-      if (roundState.status === "prompt") {
-        const idx = roundState.turnIndex ?? 0;
-        const order = roundState.order || [];
-        const uidTurno = order[idx];
-
-        if (myUid !== uidTurno) {
-          ui.cooldownHint.textContent = `Esperá tu turno. Ahora: ${await nameOf(uidTurno)}.`;
-          return;
-        }
-        if (!isOneWordLatin(msg)) {
-          ui.cooldownHint.textContent = "Enviá UNA sola palabra (2–24 letras, sin espacios).";
-          return;
-        }
-
-        await setDoc(doc(db,"rooms",state.code,"rounds", roundId,"firstWords", myUid), {
-          uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp()
+      players.forEach(p=>{
+        const aRef = doc(db, "rooms", state.code, "assignments", p.id);
+        batch.set(aRef, {
+          round: nextRound, uid: p.id, name: p.name || "Jugador", avatarKey: p.avatarKey || null,
+          role: impostorIds.has(p.id) ? "IMPOSTOR" : "CIVIL",
+          word: impostorIds.has(p.id) ? null : palabra, tema,
+          alive: true, vote: null, revealedAt: null
         });
-        const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
-        await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"firstword" });
-        ui.chatInput.value = "";
+      });
 
-        if (isHost) {
-          const nextIdx = idx + 1;
-          if (nextIdx < order.length) {
-            await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { turnIndex: nextIdx });
-          } else {
-            await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { status:"discuss", discussStartedAt: serverTimestamp() });
-          }
-        }
-        return;
+      const roundRef = doc(db,"rooms",state.code,"rounds", String(nextRound));
+      batch.set(roundRef, { status:"reveal", createdAt: serverTimestamp(), order, turnIndex: 0 });
+
+      await batch.commit();
+
+      // 10s para ver el rol -> luego lanzamos sorteo "draw"
+      setTimeout(async ()=>{
+        try{ await updateDoc(roundRef, { status:"draw", drawStartedAt: serverTimestamp() }); }catch(e){ console.warn(e); }
+      }, 10000);
+
+    }catch(e){
+      console.error(e);
+      alert(e.message || "No pude iniciar la partida.");
+    }finally{
+      starting = false;
+    }
+  });
+
+  // ===== Overlay de rol + countdown de 10s (visual)
+  onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
+    if(!s.exists()) return;
+    const a = s.data();
+    const overlay = document.getElementById("reveal");
+    const box = document.getElementById("revContent");
+
+    let avatarHtml = "";
+    if (a.avatarKey && AVATAR_MAP[a.avatarKey]){
+      avatarHtml = `<div class="rev-avatar"><img src="${AVATAR_MAP[a.avatarKey]}" alt="${a.name || 'avatar'}"></div>`;
+    }
+    const nameHtml = `<div class="rev-name">${a.name || "Jugador"}</div>`;
+
+    overlay.style.display = "grid";
+    if(a.role === "IMPOSTOR"){
+      box.innerHTML = `${avatarHtml}${nameHtml}
+        <div style="font-size:38px;font-weight:900;color:#ff6b6b;margin:6px 0 8px">IMPOSTOR</div>
+        <div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>`;
+    }else{
+      box.innerHTML = `${avatarHtml}${nameHtml}
+        <div style="opacity:.75;font-size:14px;margin:6px 0">Palabra secreta (${a.tema})</div>
+        <div style="font-size:34px;font-weight:900;color:#7cf062">${a.word}</div>`;
+    }
+
+    let secs = 10;
+    const countdownEl = document.getElementById("countdown");
+    countdownEl.textContent = `Pasando en ${secs}s...`;
+    const interval = setInterval(()=>{
+      secs--;
+      countdownEl.textContent = `Pasando en ${secs}s...`;
+      if(secs <= 0){
+        clearInterval(interval);
+        overlay.style.display = "none";
       }
+    },1000);
+  });
 
-      if (!canSendNow()) return;
-      if (roundState.status === "discuss") {
-        const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
-        await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"chat" });
-        ui.chatInput.value = "";
-        cooldownUntil = Date.now() + 3000;
-        canSendNow();
-        return;
-      }
+  // ====== Sorteo del orden (animación sincronizada)
+  function sanitize(str){ return (str||"").replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s])); }
+  async function nameOf(uid){
+    try{ const snap = await getDoc(doc(db,"rooms",state.code,"players", uid)); return (snap.exists() && (snap.data().name||"Jugador")) || "Jugador"; }
+    catch{ return "Jugador"; }
+  }
 
-      ui.cooldownHint.textContent = "No podés enviar ahora.";
+  async function startDrawAnimation(order){
+    const draw = document.getElementById("drawOverlay");
+    const slip = document.getElementById("slip");
+    const list = document.getElementById("orderList");
+    list.innerHTML = "";
+    draw.style.display = "grid";
+
+    // Precreamos placeholders en la lista
+    const names = await Promise.all(order.map(uid=>nameOf(uid)));
+    names.forEach((n,i)=>{
+      const item = document.createElement("div");
+      item.className = "order-item";
+      item.innerHTML = `<div class="order-badge">${i+1}</div><div class="order-name" id="ord-${i}">—</div>`;
+      list.appendChild(item);
     });
 
-    // ===== Votación
-    async function renderVoteBar(){
+    // Revelamos uno por uno
+    for (let i=0;i<order.length;i++){
+      const n = names[i];
+      slip.textContent = n;
+      slip.classList.remove("reveal");
+      void slip.offsetWidth; // reiniciar animación
+      slip.classList.add("reveal");
+      await new Promise(r=>setTimeout(r, 900));
+      const slot = document.getElementById(`ord-${i}`);
+      if (slot) slot.textContent = n;
+      await new Promise(r=>setTimeout(r, 450));
+    }
+
+    // Al terminar: host pasa a PROMPT
+    const roomSnap = await getDoc(roomRef);
+    const roundId = String(roomSnap.data().round || 0);
+    if (isHost && roundId !== "0"){
+      await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { status:"prompt", promptStartedAt: serverTimestamp(), turnIndex: 0 });
+    }
+    setTimeout(()=>{ draw.style.display = "none"; }, 600);
+  }
+
+  // ===== Orquestación por estado de sala + ronda
+  let currentRound = 0;
+  let roundState = null;
+  let drawPlayedForRound = 0; // evita repetir el bolillero por ronda
+
+  // Suscriptores que limpiaremos al cambiar de ronda
+  let unsubscribeRoundHint = null;
+  let unsubscribeChat = null;
+
+  function subscribeRoundHint(roundId){
+    if (unsubscribeRoundHint) unsubscribeRoundHint();
+    unsubscribeRoundHint = onSnapshot(
+      doc(db, "rooms", state.code, "rounds", String(roundId)),
+      (rdoc) => {
+        if (!rdoc.exists()) return;
+        const r = rdoc.data();
+        roundState = r;
+        if (r.status === "prompt") {
+          const idx = r.turnIndex ?? 0;
+          const uidTurno = (r.order || [])[idx];
+          if (uidTurno) nameOf(uidTurno).then(n => {
+            ui.turnHint.textContent = `Turno de: ${n}`;
+          });
+        }
+      }
+    );
+  }
+
+  function subscribeChat(roundId){
+    if (unsubscribeChat) unsubscribeChat();
+    unsubscribeChat = onSnapshot(
+      collection(db,"rooms",state.code,"rounds", String(roundId), "chat"),
+      snap=>{
+        const items = snap.docs.map(d=>({id:d.id, ...d.data()}))
+          .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
+        ui.chatList.innerHTML = items.map(m=>`
+          <div style="margin:6px 0;padding:8px 10px;border-radius:12px;background:#0a2747;border:1px solid rgba(128,180,255,.18)">
+            <strong style="opacity:.9">${sanitize(m.name) || "Jugador"}</strong>
+            <div>${sanitize(m.text||"")}</div>
+          </div>`).join("");
+        ui.chatList.scrollTop = ui.chatList.scrollHeight;
+      }
+    );
+  }
+
+  onSnapshot(roomRef, async s=>{
+    if(!s.exists()) return;
+    const data = s.data();
+    const newRound = data.round || 0;
+
+    // Si cambió la ronda, (re)conectar hint + chat
+    if (newRound && newRound !== currentRound){
+      currentRound = newRound;
+      subscribeRoundHint(currentRound);
+      subscribeChat(currentRound);
+    } else {
+      currentRound = newRound;
+    }
+    if (!currentRound) return;
+
+    const roundRef = doc(db,"rooms",state.code,"rounds", String(currentRound));
+    const rdoc = await getDoc(roundRef);
+    if (!rdoc.exists()) return;
+    roundState = rdoc.data();
+
+    const phase = roundState.status;
+    if (phase === "reveal") {
+      document.getElementById("phaseDiscuss").style.display = "none";
+    }
+    if (phase === "draw") {
+      document.getElementById("phaseDiscuss").style.display = "none";
+      if (drawPlayedForRound !== currentRound) {
+        drawPlayedForRound = currentRound;
+        startDrawAnimation(roundState.order || []);
+      }
+    }
+    if (phase === "prompt") {
+      document.getElementById("phaseDiscuss").style.display = "block";
+      document.getElementById("firstWordTip").style.display = "block";
+      ui.chatInput.placeholder = "Primero UNA palabra (2–24 letras)…";
+      const idx = roundState.turnIndex ?? 0;
+      const uidTurno = (roundState.order||[])[idx];
+      ui.turnHint.textContent = uidTurno ? `Turno de: ${await nameOf(uidTurno)}` : "";
+    }
+    if (phase === "discuss") {
+      document.getElementById("phaseDiscuss").style.display = "block";
+      document.getElementById("firstWordTip").style.display = "none";
+      ui.turnHint.textContent = "Chat libre";
+      ui.chatInput.placeholder = "Decí tu pista/sospecha (3s cooldown)";
+    }
+    if (phase === "vote") {
+      document.getElementById("phaseDiscuss").style.display = "block";
+      ui.turnHint.textContent = "Votación";
+    }
+  });
+
+  // ===== Fallbacks de fase (solo host) =====
+  onSnapshot(roomRef, async (snap) => {
+    if (!snap.exists()) return;
+    if (!isHost) return;
+
+    const data = snap.data();
+    const rId = data.round || 0;
+    if (!rId) return;
+
+    const rRef = doc(db, "rooms", state.code, "rounds", String(rId));
+    const rDoc = await getDoc(rRef);
+    if (!rDoc.exists()) return;
+
+    const r = rDoc.data();
+    const toMs = (ts) => ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds * 1000 : (typeof ts === "number" ? ts : 0));
+
+    const now       = Date.now();
+    const createdMs = toMs(r.createdAt);
+    const drawMs    = toMs(r.drawStartedAt);
+
+    if (r.status === "reveal" && createdMs && now - createdMs > 11000) {
+      try { await updateDoc(rRef, { status: "draw", drawStartedAt: serverTimestamp() }); } catch {}
+    }
+    if (r.status === "draw" && drawMs && now - drawMs > 20000) {
+      try { await updateDoc(rRef, { status: "prompt", promptStartedAt: serverTimestamp(), turnIndex: 0 }); } catch {}
+    }
+  });
+
+  // ===== UI / helpers chat
+  const ui = {
+    chatForm: document.getElementById("chatForm"),
+    chatInput: document.getElementById("chatInput"),
+    chatList: document.getElementById("chatList"),
+    voteBar: document.getElementById("voteBar"),
+    cooldownHint: document.getElementById("cooldownHint"),
+    turnHint: document.getElementById("turnHint"),
+  };
+
+  let cooldownUntil = 0;
+  function canSendNow(){
+    const now = Date.now();
+    if (roundState?.status === "prompt") return true;
+    if (now < cooldownUntil) {
+      const left = Math.ceil((cooldownUntil - now)/1000);
+      ui.cooldownHint.textContent = `Esperá ${left}s para volver a enviar`;
+      return false;
+    }
+    ui.cooldownHint.textContent = "";
+    return true;
+  }
+
+  function isOneWordLatin(str){
+    return /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,24}$/.test(str);
+  }
+
+  // ===== Chat submit: PROMPT por turno → DISCUSS
+  document.getElementById("chatForm").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    if (!roundState) return;
+
+    const msg = (ui.chatInput.value || "").trim();
+    if (!msg) return;
+
+    const myUid = auth.currentUser?.uid;
+    const roundId = String(currentRound);
+
+    if (roundState.status === "prompt") {
+      const idx = roundState.turnIndex ?? 0;
+      const order = roundState.order || [];
+      const uidTurno = order[idx];
+
+      if (myUid !== uidTurno) {
+        ui.cooldownHint.textContent = `Esperá tu turno. Ahora: ${await nameOf(uidTurno)}.`;
+        return;
+      }
+      if (!isOneWordLatin(msg)) {
+        ui.cooldownHint.textContent = "Enviá UNA sola palabra (2–24 letras, sin espacios).";
+        return;
+      }
+
+      await setDoc(doc(db,"rooms",state.code,"rounds", roundId,"firstWords", myUid), {
+        uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp()
+      });
+      const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
+      await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"firstword" });
+      ui.chatInput.value = "";
+
+      if (isHost) {
+        const nextIdx = idx + 1;
+        if (nextIdx < order.length) {
+          await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { turnIndex: nextIdx });
+        } else {
+          await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { status:"discuss", discussStartedAt: serverTimestamp() });
+        }
+      }
+      return;
+    }
+
+    if (!canSendNow()) return;
+    if (roundState.status === "discuss") {
+      const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
+      await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"chat" });
+      ui.chatInput.value = "";
+      cooldownUntil = Date.now() + 3000;
+      canSendNow();
+      return;
+    }
+
+    ui.cooldownHint.textContent = "No podés enviar ahora.";
+  });
+
+  // ===== Votación
+  async function renderVoteBar(){
+    const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+    const players = asgSnap.docs.map(d=>d.data()).filter(p=>p.alive!==false);
+    document.getElementById("voteBar").innerHTML = players.map(p=>{
+      const src = (p.avatarKey && AVATAR_MAP[p.avatarKey]) ? AVATAR_MAP[p.avatarKey] : "";
+      return `
+        <button class="btn" data-vote="${p.uid}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px">
+          <span style="width:28px;height:28px;border-radius:50%;overflow:hidden;display:inline-grid;place-items:center;background:#0a213b;border:1px solid rgba(128,180,255,.25)">
+            ${src ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover">` : "?"}
+          </span>
+          ${sanitize(p.name) || "Jugador"}
+        </button>`;
+    }).join("");
+    document.querySelectorAll("[data-vote]").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        const votedUid = btn.getAttribute("data-vote");
+        const roomSnap = await getDoc(roomRef);
+        const roundId = roomSnap.data().round || 0;
+        const myVoteRef = doc(db,"rooms",state.code,"rounds", String(roundId), "votes", auth.currentUser.uid);
+        try{
+          await setDoc(myVoteRef, { voter: auth.currentUser.uid, target: votedUid, at: serverTimestamp() });
+          document.querySelectorAll("[data-vote]").forEach(b=>b.style.opacity=".6");
+          btn.style.opacity = "1";
+        }catch(e){ console.warn(e); }
+      });
+    });
+  }
+
+  onSnapshot(roomRef, async s=>{
+    if(!s.exists()) return;
+    const data = s.data();
+    const roundRef = doc(db,"rooms",state.code,"rounds", String(data.round || 0));
+    const rdoc = await getDoc(roundRef);
+    if(!rdoc.exists()) return;
+    const r = rdoc.data();
+    if (r.status === "vote") {
+      document.getElementById("phaseDiscuss").style.display = "block";
+      renderVoteBar();
+    }
+  });
+
+  onSnapshot(roomRef, async s=>{
+    if(!s.exists()) return;
+    const data = s.data();
+    const roundId = data.round || 0;
+    onSnapshot(collection(db,"rooms",state.code,"rounds", String(roundId), "votes"), async snap=>{
+      const voted = new Set(snap.docs.map(d=>d.id));
       const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
-      const players = asgSnap.docs.map(d=>d.data()).filter(p=>p.alive!==false);
-      document.getElementById("voteBar").innerHTML = players.map(p=>{
-        const src = (p.avatarKey && AVATAR_MAP[p.avatarKey]) ? AVATAR_MAP[p.avatarKey] : "";
-        return `
-          <button class="btn" data-vote="${p.uid}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px">
-            <span style="width:28px;height:28px;border-radius:50%;overflow:hidden;display:inline-grid;place-items:center;background:#0a213b;border:1px solid rgba(128,180,255,.25)">
-              ${src ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover">` : "?"}
-            </span>
-            ${sanitize(p.name) || "Jugador"}
-          </button>`;
-      }).join("");
-      document.querySelectorAll("[data-vote]").forEach(btn=>{
-        btn.addEventListener("click", async ()=>{
-          const votedUid = btn.getAttribute("data-vote");
-          const roomSnap = await getDoc(roomRef);
-          const roundId = roomSnap.data().round || 0;
-          const myVoteRef = doc(db,"rooms",state.code,"rounds", String(roundId), "votes", auth.currentUser.uid);
-          try{
-            await setDoc(myVoteRef, { voter: auth.currentUser.uid, target: votedUid, at: serverTimestamp() });
-            document.querySelectorAll("[data-vote]").forEach(b=>b.style.opacity=".6");
-            btn.style.opacity = "1";
-          }catch(e){ console.warn(e); }
-        });
-      });
-    }
-
-    onSnapshot(roomRef, async s=>{
-      if(!s.exists()) return;
-      const data = s.data();
-      const roundRef = doc(db,"rooms",state.code,"rounds", String(data.round || 0));
-      const rdoc = await getDoc(roundRef);
-      if(!rdoc.exists()) return;
-      const r = rdoc.data();
-      if (r.status === "vote") {
-        document.getElementById("phaseDiscuss").style.display = "block";
-        renderVoteBar();
+      const players = asgSnap.docs.map(d=>d.id).filter(Boolean);
+      if (isHost && players.length>0 && players.every(id=>voted.has(id))) {
+        await updateDoc(doc(db,"rooms",state.code,"rounds", String(roundId)), { status:"results", resultsAt: serverTimestamp() });
       }
     });
+  });
 
-    onSnapshot(roomRef, async s=>{
-      if(!s.exists()) return;
-      const data = s.data();
-      const roundId = data.round || 0;
-      onSnapshot(collection(db,"rooms",state.code,"rounds", String(roundId), "votes"), async snap=>{
-        const voted = new Set(snap.docs.map(d=>d.id));
-        const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
-        const players = asgSnap.docs.map(d=>d.id).filter(Boolean);
-        if (isHost && players.length>0 && players.every(id=>voted.has(id))) {
-          await updateDoc(doc(db,"rooms",state.code,"rounds", String(roundId)), { status:"results", resultsAt: serverTimestamp() });
-        }
-      });
-    });
-
-    // Copiar / Compartir
-    document.getElementById("copyBtn").addEventListener("click", async ()=>{ try{ await navigator.clipboard.writeText(state.code); }catch{} });
-    document.getElementById("shareBtn").addEventListener("click", async ()=>{
-      const joinUrl = `${location.origin}/ingresar.html?code=${state.code}`;
-      if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); } catch{} }
-      else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); } catch{ alert(joinUrl); } }
-    });
-  </script>
+  // Copiar / Compartir
+  document.getElementById("copyBtn").addEventListener("click", async ()=>{ try{ await navigator.clipboard.writeText(state.code); }catch{} });
+  document.getElementById("shareBtn").addEventListener("click", async ()=>{
+    const joinUrl = `${location.origin}/ingresar.html?code=${state.code}`;
+    if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); } catch{} }
+    else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); } catch{ alert(joinUrl); } }
+  });
+</script>
 </body>
 </html>
