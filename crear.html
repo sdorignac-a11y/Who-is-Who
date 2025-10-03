@@ -153,6 +153,33 @@
   const meNameEl     = document.getElementById("meName");
   const editNameBtn  = document.getElementById("editName");
 
+// === Cache y dibujado de jugadores ===
+let lastPlayers = []; // se actualiza con el snapshot de players
+
+function drawPlayers(maxCount, list){
+  const ordered = (list || []).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
+  playersWrap.innerHTML = "";
+  for (let i = 0; i < maxCount; i++){
+    const p = ordered[i];
+    const card = document.createElement("div"); card.className = "player";
+    const av = document.createElement("div"); av.className = p ? "avatar" : "avatar placeholder";
+    const label = document.createElement("small");
+
+    if (p){
+      if (p.uid === auth.currentUser.uid){
+        card.classList.add("me-outline");
+        label.innerHTML = `${p.name || `Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
+      } else {
+        label.textContent = p.name || `Jugador ${i+1}`;
+      }
+    } else {
+      label.textContent = `Jugador ${i+1}`;
+    }
+    card.append(av,label); playersWrap.append(card);
+  }
+}
+
+  
   const state = {
     code: "",
     impostores: 1,
@@ -170,22 +197,15 @@
   const sample=a=>a[r(a.length)];
   const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=r(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
 
-  function renderPlayers(n){
-    playersWrap.innerHTML="";
-    for(let i=1;i<=n;i++){
-      const card=document.createElement("div"); card.className="player";
-      const av=document.createElement("div"); av.className="avatar placeholder";
-      const label=document.createElement("small"); label.textContent=`Jugador ${i}`;
-      card.append(av,label); playersWrap.append(card);
-    }
-  }
+
   function render(){
-    roomCodeEl.textContent = state.code || "—";
-    impostoresEl.textContent = state.impostores;
-    jugadoresEl.textContent  = state.jugadores;
-    temaEl.textContent       = state.temas[state.temaIndex];
-    renderPlayers(state.jugadores);
-  }
+  roomCodeEl.textContent = state.code || "—";
+  impostoresEl.textContent = state.impostores;
+  jugadoresEl.textContent  = state.jugadores;
+  temaEl.textContent       = state.temas[state.temaIndex];
+  drawPlayers(state.jugadores, lastPlayers);
+}
+
   render();
 
   // ===== Auth y setup de room/host =====
@@ -271,50 +291,32 @@
     });
   });
 
-  // ===== Sincronía del room (única) =====
-  onSnapshot(roomRef, s=>{
-    if(!s.exists()) return;
-    const data = s.data();
+ onSnapshot(roomRef, s=>{
+  if(!s.exists()) return;
+  const data = s.data();
 
-    // host dinámico
-    const before = isHost;
-    isHost = (data.hostUid === auth.currentUser.uid);
-    if (before !== isHost) setArrowsEnabled(isHost);
+  // host dinámico (si lo usás)
+  const before = isHost;
+  isHost = (data.hostUid === auth.currentUser.uid);
+  if (before !== isHost) setArrowsEnabled(isHost);
 
-    const st = data.settings || {};
-    state.jugadores  = st.maxPlayers ?? state.jugadores;
-    state.impostores = st.impostors  ?? state.impostores;
-    if (st.tema) {
-      const idx = state.temas.indexOf(st.tema);
-      state.temaIndex = idx >= 0 ? idx : 0;
-    }
-    render();
-  });
+  const st = data.settings || {};
+  state.jugadores  = st.maxPlayers ?? state.jugadores;
+  state.impostores = st.impostors  ?? state.impostores;
+  if (st.tema) {
+    const idx = state.temas.indexOf(st.tema);
+    state.temaIndex = idx >= 0 ? idx : 0;
+  }
 
-  // ===== Lista de jugadores =====
-  onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
-    const list = snap.docs.map(d=>d.data()).sort((a,b)=>(a.slot||0)-(b.slot||0));
-    playersWrap.innerHTML = "";
-    for(let i=0;i<state.jugadores;i++){
-      const p = list[i];
-      const card=document.createElement("div"); card.className="player";
-      const av=document.createElement("div"); av.className=p?"avatar":"avatar placeholder";
-      const label=document.createElement("small");
+  render(); // repinta usando el cache lastPlayers
+});
 
-      if(p){
-        if(p.uid === auth.currentUser.uid){
-          card.classList.add("me-outline");
-          label.innerHTML = `${p.name || `Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
-        }else{
-          label.textContent = p.name || `Jugador ${i+1}`;
-        }
-      }else{
-        label.textContent = `Jugador ${i+1}`;
-      }
 
-      card.append(av,label); playersWrap.append(card);
-    }
-  });
+ onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
+  lastPlayers = snap.docs.map(d=>d.data());
+  drawPlayers(state.jugadores, lastPlayers);
+});
+
 
   // ===== Empezar partida (solo host) =====
   $("#startBtn").addEventListener("click", async ()=>{
