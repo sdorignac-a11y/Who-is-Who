@@ -261,19 +261,71 @@
     // ===== Init auth/db + room
     await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
 
-    const urlCode = new URLSearchParams(location.search).get("code");
-    let isHost = false;
+   const lsKey = "lastRoomCode";
+let isHost = false;
 
-    if (!urlCode) {
-      state.code = await createUniqueRoomCode(db);
-      isHost = true;
-    } else {
-      state.code = urlCode.toUpperCase();
-      isHost = false;
+function putCodeInUrl(code){
+  try { history.replaceState(null, "", `?code=${code}`); } catch {}
+}
+
+let urlCode = new URLSearchParams(location.search).get("code");
+
+// 1) Si viene por URL, usarlo
+if (urlCode && urlCode.trim()) {
+  state.code = urlCode.trim().toUpperCase();
+  isHost = false;
+} else {
+  // 2) Si no hay URL, intentar reusar el último de localStorage
+  const prev = localStorage.getItem(lsKey);
+  if (prev) {
+    const prevRef = doc(db, "rooms", prev);
+    const prevSnap = await getDoc(prevRef);
+    if (prevSnap.exists()) {
+      state.code = prev;
+      // sos host si coincide hostUid con tu uid
+      isHost = (prevSnap.data().hostUid === (auth.currentUser && auth.currentUser.uid));
+      putCodeInUrl(state.code);
     }
-    render();
+  }
+  // 3) Si tampoco hay previo válido, crear una nueva sala (host)
+  if (!state.code) {
+    state.code = await createUniqueRoomCode(db);
+    isHost = true;
+    localStorage.setItem(lsKey, state.code);
+    putCodeInUrl(state.code);
+  }
+}
 
-    const roomRef = doc(db, "rooms", state.code);
+render();
+
+const roomRef = doc(db, "rooms", state.code);
+
+// si la sala no existe y sos host → crear doc base
+const firstSnap = await getDoc(roomRef);
+if (!firstSnap.exists() && isHost) {
+  await setDoc(roomRef, {
+    hostUid: auth.currentUser.uid,
+    status: "lobby",
+    createdAt: Date.now(),
+    settings: {
+      maxPlayers: state.jugadores,
+      impostors: state.impostores,
+      tema: state.temas[state.temaIndex]
+    }
+  }, { merge:true });
+}
+
+// si ya existía, recalcular isHost según el doc
+if (firstSnap.exists()) {
+  isHost = firstSnap.data().hostUid === auth.currentUser.uid;
+}
+
+// cada vez que seas host (creaste sala nueva), guardá el código
+if (isHost) {
+  localStorage.setItem(lsKey, state.code);
+  putCodeInUrl(state.code);
+}
+
 
     const firstSnap = await getDoc(roomRef);
     if (!firstSnap.exists() && isHost) {
