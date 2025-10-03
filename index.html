@@ -6,100 +6,21 @@
   <title>Impostor Fútbol – Menú</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    body {
-      margin: 0;
-      font-family: "Outfit", sans-serif;
-      background: url("fondo-cancha.png") no-repeat center center fixed;
-      background-size: cover;
-      color: #fff;
-      text-align: center;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-    }
-
-    .title {
-      font-size: 60px;
-      font-weight: 900;
-      text-transform: uppercase;
-      text-shadow: 0 4px 12px rgba(0,0,0,0.6);
-      margin-bottom: 40px;
-    }
-    .title span {
-      color: #4ade80; /* verde */
-    }
-
-    .menu-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      width: 320px;
-      padding: 16px 24px;
-      margin: 12px 0;
-      font-size: 24px;
-      font-weight: 800;
-      border-radius: 12px;
-      cursor: pointer;
-      border: 2px solid #ffd43b;
-      color: #fff;
-      background: linear-gradient(180deg, #1e40af, #1e3a8a);
-      box-shadow: 0 6px 16px rgba(0,0,0,0.5);
-      transition: transform 0.1s ease, filter 0.2s ease;
-      text-decoration: none;
-    }
-    .menu-btn:hover {
-      filter: brightness(1.1);
-    }
-    .menu-btn:active {
-      transform: translateY(2px);
-    }
-
-    .yellow {
-      background: linear-gradient(180deg, #facc15, #eab308);
-      color: #111;
-      border-color: #fff176;
-    }
-
-    .icon {
-      font-size: 28px;
-    }
-
-    .footer-menu {
-      position: absolute;
-      bottom: 20px;
-      display: flex;
-      gap: 40px;
-      font-size: 28px;
-    }
-    .footer-menu i {
-      cursor: pointer;
-      filter: drop-shadow(0 0 6px rgba(0,0,0,0.6));
-    }
+    body{margin:0;font-family:"Outfit",sans-serif;background:url("fondo-cancha.png") center/cover fixed no-repeat;color:#fff;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+    .title{font-size:60px;font-weight:900;text-transform:uppercase;text-shadow:0 4px 12px rgba(0,0,0,.6);margin-bottom:40px}
+    .title span{color:#4ade80}
+    .menu-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:320px;padding:16px 24px;margin:12px 0;font-size:24px;font-weight:800;border-radius:12px;cursor:pointer;border:2px solid #ffd43b;color:#fff;background:linear-gradient(180deg,#1e40af,#1e3a8a);box-shadow:0 6px 16px rgba(0,0,0,.5);transition:.1s}
+    .menu-btn:hover{filter:brightness(1.1)} .menu-btn:active{transform:translateY(2px)}
+    .yellow{background:linear-gradient(180deg,#facc15,#eab308);color:#111;border-color:#fff176}
   </style>
 </head>
 <body>
   <div class="title">Impostor <span>Fútbol</span> ⚽</div>
 
-  <button id="btn-crear" class="menu-btn yellow">
-    🏟️ CREAR SALA
-  </button>
-  <button id="btn-ingresar" class="menu-btn">
-    🔑 INGRESAR A SALA
-  </button>
-  <button id="btn-azar" class="menu-btn yellow">
-    🎲 UNIRSE AL AZAR
-  </button>
+  <button id="btn-crear" class="menu-btn yellow">🏟️ CREAR SALA</button>
+  <a class="menu-btn" href="ingresar.html">🔑 INGRESAR A SALA</a>
+  <button id="btn-azar" class="menu-btn yellow">🎲 UNIRSE AL AZAR</button>
 
-  <div class="footer-menu">
-    <i>⚙️</i>
-    <i>👤</i>
-    <i>📖</i>
-  </div>
-
-  <!-- Firebase SDK -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -114,33 +35,22 @@
       appId: "1:718537140049:web:7400ec7e5467b387f8d570",
       measurementId: "G-KNC4FJXXBN"
     };
-
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-
-    // login anónimo
     await signInAnonymously(auth);
 
-    // Botones
-    document.getElementById("btn-crear").addEventListener("click", () => {
-      window.location.href = "crear.html";
+    document.getElementById("btn-crear").addEventListener("click", ()=>{
+      // host -> abre lobby sin code (crea sala)
+      location.href = "crear.html";
     });
 
-    document.getElementById("btn-ingresar").addEventListener("click", async () => {
-      const code = prompt("Ingresá el código de sala:");
-      if(code){
-        window.location.href = `crear.html?code=${code.trim().toUpperCase()}`;
-      }
-    });
-
-    document.getElementById("btn-azar").addEventListener("click", async () => {
-      // traer salas
+    document.getElementById("btn-azar").addEventListener("click", async ()=>{
       const snap = await getDocs(collection(db,"rooms"));
-      if(snap.empty){ alert("No hay salas disponibles"); return; }
+      if(snap.empty){ alert("No hay salas disponibles todavía."); return; }
       const rooms = snap.docs.map(d=>d.id);
-      const randomCode = rooms[Math.floor(Math.random()*rooms.length)];
-      window.location.href = `crear.html?code=${randomCode}`;
+      const code = rooms[Math.floor(Math.random()*rooms.length)];
+      location.href = "crear.html?code="+code;
     });
   </script>
 </body>
