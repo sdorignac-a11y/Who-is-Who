@@ -21,8 +21,9 @@
   .btn{background:linear-gradient(180deg,#1e68d6,#184fa5);border:1px solid rgba(110,178,255,.65);color:#eaf2ff;font-weight:700;padding:12px 16px;border-radius:12px;box-shadow:0 6px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);cursor:pointer}
   .players{display:grid;grid-template-columns:repeat(8,1fr);gap:16px;padding:0 4px}
   .player{background:linear-gradient(180deg,rgba(14,39,70,.9),rgba(10,30,53,.85));border:1px solid rgba(128,180,255,.25);border-radius:16px;padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:108px}
-  .avatar{width:56px;height:56px;border-radius:50%;background:radial-gradient(36px 24px at 50% 30%,#ffd6b4 0 60%,#e9b089 61% 100%),radial-gradient(80px 40px at 50% 105%,#222 0 60%,transparent 61%),linear-gradient(180deg,#e23a3a,#a61e1e)}
+  .avatar{width:56px;height:56px;border-radius:50%;background:radial-gradient(36px 24px at 50% 30%,#ffd6b4 0 60%,#e9b089 61% 100%),radial-gradient(80px 40px at 50% 105%,#222 0 60%,transparent 61%),linear-gradient(180deg,#e23a3a,#a61e1e);display:grid;place-items:center;overflow:hidden}
   .avatar.placeholder{background:radial-gradient(28px 28px at 50% 40%,#2f4b73 0 60%,#203a5e 61% 100%),radial-gradient(48px 48px at 50% 110%,#162b4a 0 58%,transparent 59%)}
+  .avatar-img{width:100%;height:100%;object-fit:cover;display:block}
   .player small{color:var(--muted);font-weight:600}
   .settings{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
   .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid rgba(128,180,255,.25);border-radius:16px;padding:14px}
@@ -58,7 +59,6 @@
     <div class="room-card">
       <div class="brand"><div class="ball"></div><h1>Impostor <span>Fútbol</span></h1></div>
       <div class="code-box"><strong style="opacity:.7">CÓDIGO:</strong><div class="room-code" id="roomCode">—</div><button id="copyBtn" class="btn">Copiar</button></div>
-      <!-- Nombre + editar + compartir -->
       <div class="user-area">
         <div class="userbox">👤 <span id="meName">—</span> <button id="editName" class="mini-btn">Editar</button></div>
         <button id="shareBtn" class="btn">Compartir enlace</button>
@@ -109,7 +109,15 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // ===== Nombre (localStorage + prompt) =====
+  // ===== Avatares disponibles (clave -> ruta) =====
+  const AVATAR_MAP = {
+    a1: "avatars/a1.png",  a2: "avatars/a2.png",  a3: "avatars/a3.png",
+    a4: "avatars/a4.png",  a5: "avatars/a5.png",  a6: "avatars/a6.png",
+    a7: "avatars/a7.png",  a8: "avatars/a8.png",  a9: "avatars/a9.png",
+    a10:"avatars/a10.png", a11:"avatars/a11.png", a12:"avatars/a12.png"
+  };
+
+  // ===== Nombre y avatar (URL -> localStorage) =====
   function getStoredName(){
     const qp = new URLSearchParams(location.search);
     const qName = qp.get("name");
@@ -117,6 +125,14 @@
     const s = localStorage.getItem("displayName") || "";
     return (s.trim().length>=2 && s.trim().length<=16) ? s.trim() : "Jugador";
   }
+  function getStoredAvatar(){
+    const qp = new URLSearchParams(location.search);
+    const qAvatar = qp.get("avatar");
+    if (qAvatar && AVATAR_MAP[qAvatar]) localStorage.setItem("avatarKey", qAvatar);
+    const k = localStorage.getItem("avatarKey") || "";
+    return AVATAR_MAP[k] ? k : ""; // si no existe, vacío -> placeholder
+  }
+
   async function editAndSaveName(playerRef){
     const prev = getStoredName();
     const nuevo = prompt("Tu nombre para mostrar (2–16 chars):", prev) ?? "";
@@ -153,33 +169,47 @@
   const meNameEl     = document.getElementById("meName");
   const editNameBtn  = document.getElementById("editName");
 
-// === Cache y dibujado de jugadores ===
-let lastPlayers = []; // se actualiza con el snapshot de players
+  // === Cache y dibujado de jugadores ===
+  let lastPlayers = []; // se actualiza con el snapshot de players
 
-function drawPlayers(maxCount, list){
-  const ordered = (list || []).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
-  playersWrap.innerHTML = "";
-  for (let i = 0; i < maxCount; i++){
-    const p = ordered[i];
-    const card = document.createElement("div"); card.className = "player";
-    const av = document.createElement("div"); av.className = p ? "avatar" : "avatar placeholder";
-    const label = document.createElement("small");
+  function drawPlayers(maxCount, list){
+    const ordered = (list || []).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
+    playersWrap.innerHTML = "";
+    for (let i = 0; i < maxCount; i++){
+      const p = ordered[i];
+      const card = document.createElement("div"); card.className = "player";
+      const av = document.createElement("div"); 
+      const label = document.createElement("small");
 
-    if (p){
-      if (p.uid === auth.currentUser.uid){
-        card.classList.add("me-outline");
-        label.innerHTML = `${p.name || `Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
+      if (p){
+        // avatar: si hay clave válida, mostramos imagen
+        if (p.avatarKey && AVATAR_MAP[p.avatarKey]){
+          av.className = "avatar";
+          const img = document.createElement("img");
+          img.className = "avatar-img";
+          img.src = AVATAR_MAP[p.avatarKey];
+          img.alt = p.name || "avatar";
+          av.appendChild(img);
+        } else {
+          av.className = "avatar placeholder";
+        }
+
+        if (p.uid === auth.currentUser.uid){
+          card.classList.add("me-outline");
+          label.innerHTML = `${p.name || `Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
+        } else {
+          label.textContent = p.name || `Jugador ${i+1}`;
+        }
       } else {
-        label.textContent = p.name || `Jugador ${i+1}`;
+        av.className = "avatar placeholder";
+        label.textContent = `Jugador ${i+1}`;
       }
-    } else {
-      label.textContent = `Jugador ${i+1}`;
-    }
-    card.append(av,label); playersWrap.append(card);
-  }
-}
 
-  
+      card.append(av,label); 
+      playersWrap.append(card);
+    }
+  }
+
   const state = {
     code: "",
     impostores: 1,
@@ -197,15 +227,13 @@ function drawPlayers(maxCount, list){
   const sample=a=>a[r(a.length)];
   const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=r(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
 
-
   function render(){
-  roomCodeEl.textContent = state.code || "—";
-  impostoresEl.textContent = state.impostores;
-  jugadoresEl.textContent  = state.jugadores;
-  temaEl.textContent       = state.temas[state.temaIndex];
-  drawPlayers(state.jugadores, lastPlayers);
-}
-
+    roomCodeEl.textContent = state.code || "—";
+    impostoresEl.textContent = state.impostores;
+    jugadoresEl.textContent  = state.jugadores;
+    temaEl.textContent       = state.temas[state.temaIndex];
+    drawPlayers(state.jugadores, lastPlayers);
+  }
   render();
 
   // ===== Auth y setup de room/host =====
@@ -243,17 +271,19 @@ function drawPlayers(maxCount, list){
   }
 
   // ===== Crear/Unirse: registrar jugador =====
-  const myName = getStoredName();
+  const myName   = getStoredName();
+  const myAvatar = getStoredAvatar(); // clave (ej. "a3") o ""
   if (meNameEl) meNameEl.textContent = myName;
 
   await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
     uid: auth.currentUser.uid,
     name: myName,
+    avatarKey: myAvatar || null,
     slot: isHost ? 1 : Date.now(),
     online: true
   }, { merge:true });
 
-  // Editar nombre
+  // Editar nombre (no cambia avatar)
   const playerRef = doc(db,"rooms",state.code,"players",auth.currentUser.uid);
   editNameBtn?.addEventListener("click", ()=> editAndSaveName(playerRef));
 
@@ -277,9 +307,10 @@ function drawPlayers(maxCount, list){
       if(inc==="tema")       state.temaIndex  = (state.temaIndex+1)%state.temas.length;
       if(dec==="tema")       state.temaIndex  = (state.temaIndex-1+state.temas.length)%state.temas.length;
       if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
-      
-     state.jugadores = Math.max(state.jugadores, lastPlayers.length);
-      
+
+      // nunca achicar por debajo de los ya conectados
+      state.jugadores = Math.max(state.jugadores, lastPlayers.length);
+
       render();
 
       if (isHost){
@@ -294,32 +325,29 @@ function drawPlayers(maxCount, list){
     });
   });
 
- onSnapshot(roomRef, s=>{
-  if(!s.exists()) return;
-  const data = s.data();
+  // ===== Sincronías =====
+  onSnapshot(roomRef, s=>{
+    if(!s.exists()) return;
+    const data = s.data();
 
-  // host dinámico (si lo usás)
-  const before = isHost;
-  isHost = (data.hostUid === auth.currentUser.uid);
-  if (before !== isHost) setArrowsEnabled(isHost);
+    const before = isHost;
+    isHost = (data.hostUid === auth.currentUser.uid);
+    if (before !== isHost) setArrowsEnabled(isHost);
 
-  const st = data.settings || {};
-  state.jugadores  = st.maxPlayers ?? state.jugadores;
-  state.impostores = st.impostors  ?? state.impostores;
-  if (st.tema) {
-    const idx = state.temas.indexOf(st.tema);
-    state.temaIndex = idx >= 0 ? idx : 0;
-  }
+    const st = data.settings || {};
+    state.jugadores  = st.maxPlayers ?? state.jugadores;
+    state.impostores = st.impostors  ?? state.impostores;
+    if (st.tema) {
+      const idx = state.temas.indexOf(st.tema);
+      state.temaIndex = idx >= 0 ? idx : 0;
+    }
+    render();
+  });
 
-  render(); // repinta usando el cache lastPlayers
-});
-
-
- onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
-  lastPlayers = snap.docs.map(d=>d.data());
-  drawPlayers(state.jugadores, lastPlayers);
-});
-
+  onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
+    lastPlayers = snap.docs.map(d=>d.data());
+    drawPlayers(state.jugadores, lastPlayers);
+  });
 
   // ===== Empezar partida (solo host) =====
   $("#startBtn").addEventListener("click", async ()=>{
@@ -349,7 +377,6 @@ function drawPlayers(maxCount, list){
       });
       batch.update(roomRef, { status:"playing" });
       await batch.commit();
-      console.log("Roles asignados.");
     }catch(e){
       console.error("Error al iniciar:", e);
       alert("No pude iniciar la partida. Revisá la consola.");
