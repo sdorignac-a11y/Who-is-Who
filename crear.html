@@ -24,25 +24,26 @@
   }
 
   *{box-sizing:border-box}
- html,body{
-  height:100%;
-  margin:0;
-  font-family:"Outfit",system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
-  color:var(--text);
-  background: url("fondo-cancha.png") no-repeat center center fixed;
-  background-size: cover;
-  overflow:hidden;
-}
-body::before{
-  content:"";
-  position:fixed; inset:0;
-  background:
-    radial-gradient(1200px 420px at 15% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
-    radial-gradient(1200px 420px at 85% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
-    linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.25) 40%, rgba(0,0,0,.45));
-  pointer-events:none;
-  z-index:-1;
-}
+  html,body{
+    height:100%;
+    margin:0;
+    font-family:"Outfit",system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+    color:var(--text);
+    background: url("fondo-cancha.png") no-repeat center center fixed;
+    background-size: cover;
+    overflow:hidden;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background:
+      radial-gradient(1200px 420px at 15% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
+      radial-gradient(1200px 420px at 85% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
+      linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.25) 40%, rgba(0,0,0,.45));
+    pointer-events:none;
+    z-index:-1;
+  }
+
   .container{
     width:min(1200px, 92vw);
     margin:0 auto;
@@ -65,10 +66,7 @@ body::before{
     gap:16px;
   }
 
-  .brand{
-    display:flex; align-items:center; gap:10px;
-    white-space:nowrap;
-  }
+  .brand{ display:flex; align-items:center; gap:10px; white-space:nowrap; }
   .brand .ball{
     width:44px; height:44px; border-radius:50%;
     background:
@@ -78,8 +76,7 @@ body::before{
   }
   .brand h1{
     margin:0; letter-spacing:.5px; line-height:1;
-    font-size:28px; font-weight:800;
-    text-transform:uppercase;
+    font-size:28px; font-weight:800; text-transform:uppercase;
     text-shadow: 0 3px 0 rgba(0,0,0,.5);
   }
   .brand h1 span{ color:#7cf062 }
@@ -89,12 +86,9 @@ body::before{
     border:1px solid rgba(128,180,255,.28);
     border-radius:12px;
     padding:12px 16px;
-    display:flex; align-items:center; gap:12px;
-    justify-content:center;
+    display:flex; align-items:center; gap:12px; justify-content:center;
   }
-  .room-code{
-    font-size:36px; font-weight:800; letter-spacing:2px;
-  }
+  .room-code{ font-size:36px; font-weight:800; letter-spacing:2px; }
 
   .qr{
     width:72px; height:72px; border-radius:10px;
@@ -108,42 +102,33 @@ body::before{
     filter: drop-shadow(0 0 10px rgba(160,200,255,.35));
   }
 
-  .actions{
-    display:flex; gap:12px; align-items:center; justify-content:flex-end;
-  }
+  .actions{ display:flex; gap:12px; align-items:center; justify-content:flex-end; }
   .btn{
     --bg: linear-gradient(180deg, #1e68d6, #184fa5);
-    --border: #6eb2ff;
     background: var(--bg);
     border:1px solid rgba(110,178,255,.65);
-    color:#eaf2ff;
-    font-weight:700; letter-spacing:.3px;
+    color:#eaf2ff; font-weight:700; letter-spacing:.3px;
     padding:12px 16px; border-radius:12px;
     box-shadow: 0 6px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
     cursor:pointer; transition: transform .05s ease, filter .15s ease;
   }
   .btn:hover{ filter:brightness(1.08) }
   .btn:active{ transform:translateY(1px) }
-
   .btn-secondary{
     --bg: linear-gradient(180deg, #142840, #0f2237);
     border-color:rgba(128,180,255,.35);
-    color:var(--muted);
-    font-weight:600;
+    color:var(--muted); font-weight:600;
   }
 
   /* players row */
   .players{
-    display:grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap:16px;
-    padding:0 4px;
+    display:grid; grid-template-columns: repeat(8, 1fr);
+    gap:16px; padding:0 4px;
   }
   .player{
     background: linear-gradient(180deg, rgba(14,39,70,.9), rgba(10,30,53,.85));
     border:1px solid rgba(128,180,255,.25);
-    border-radius:16px;
-    padding:10px 8px;
+    border-radius:16px; padding:10px 8px;
     display:flex; flex-direction:column; align-items:center; gap:8px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
     min-height:108px;
@@ -161,23 +146,14 @@ body::before{
                 radial-gradient(48px 48px at 50% 110%, #162b4a 0 58%, transparent 59%);
     filter: saturate(.9);
   }
-  .player small{
-    color:var(--muted);
-    font-weight:600;
-    letter-spacing:.2px;
-  }
+  .player small{ color:var(--muted); font-weight:600; letter-spacing:.2px; }
 
   /* settings panel */
-  .settings{
-    display:grid; grid-template-columns: 1fr 1fr 1fr;
-    gap:18px; margin-top:6px;
-  }
+  .settings{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:18px; margin-top:6px; }
   .card{
     background: linear-gradient(180deg, var(--panel), var(--panel-2));
-    border:1px solid rgba(128,180,255,.25);
-    border-radius:16px;
-    padding:14px;
-    box-shadow: 0 8px 20px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
+    border:1px solid rgba(128,180,255,.25); border-radius:16px;
+    padding:14px; box-shadow: 0 8px 20px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
   }
   .card h3{
     margin:0 0 8px; font-size:16px; letter-spacing:.3px; color:#cce0ff;
@@ -186,33 +162,26 @@ body::before{
   .selector{
     display:flex; align-items:center; justify-content:space-between; gap:8px;
     background: linear-gradient(180deg, #0b2441, #0a213b);
-    border:1px solid rgba(128,180,255,.28);
-    border-radius:12px; padding:10px 10px;
+    border:1px solid rgba(128,180,255,.28); border-radius:12px; padding:10px 10px;
   }
-  .selector .value{
-    font-size:28px; font-weight:800; letter-spacing:.6px;
-  }
+  .selector .value{ font-size:28px; font-weight:800; letter-spacing:.6px; }
   .selector .arrow{
     width:40px; height:40px; border-radius:10px;
     background: linear-gradient(180deg, #1e68d6, #184fa5);
     border:1px solid rgba(110,178,255,.7);
     box-shadow: 0 6px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.1);
-    display:grid; place-items:center;
-    cursor:pointer; user-select:none;
+    display:grid; place-items:center; cursor:pointer; user-select:none;
     font-size:20px; font-weight:900;
   }
   .selector .arrow:active{ transform:translateY(1px) }
 
   /* CTA */
-  .cta{
-    margin-top:8px; display:flex; justify-content:center;
-  }
+  .cta{ margin-top:8px; display:flex; justify-content:center; }
   .btn-cta{
     background: linear-gradient(180deg, var(--yellow), var(--yellow-2));
     border:1px solid rgba(255,210,80,.9);
     color:#10223b; font-weight:900; letter-spacing:.6px;
-    font-size:28px;
-    padding:16px 34px; border-radius:16px;
+    font-size:28px; padding:16px 34px; border-radius:16px;
     box-shadow: 0 18px 40px rgba(0,0,0,.45), inset 0 1px 0 #fff4c2;
     cursor:pointer; transition:transform .04s ease, filter .12s ease;
   }
@@ -229,68 +198,47 @@ body::before{
     .settings{ grid-template-columns: 1fr; }
     body{ overflow:auto; }
   }
+
   /* Overlay full-screen */
-#reveal{
-  position:fixed; inset:0; z-index:1000;
-  background: radial-gradient(1200px 420px at 15% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
-              radial-gradient(1200px 420px at 85% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
-              rgba(0,10,20,.9);
-  display:grid; place-items:center;
-}
-
-/* Tarjeta central */
-.rev-card{
-  width:min(680px, 92vw);
-  background: linear-gradient(180deg, #0d2747, #0b203a);
-  border:1px solid rgba(128,180,255,.30);
-  border-radius:20px;
-  box-shadow: 0 20px 60px rgba(0,0,0,.6);
-  padding:24px;
-  text-align:center;
-}
-.rev-card h2{
-  margin:0 0 12px;
-  font-size:28px; font-weight:900; letter-spacing:.5px;
-}
-
-.rev-content{
-  padding:18px;
-  background: linear-gradient(180deg, #102c4f, #0c2441);
-  border:1px solid rgba(128,180,255,.25);
-  border-radius:16px;
-  font-size:26px; font-weight:800;
-  min-height:110px; display:grid; place-items:center;
-}
-
-/* Botones overlay */
-.rev-actions{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:16px }
-.btn-ghost{
-  background: linear-gradient(180deg, #142840, #0f2237);
-  border:1px solid rgba(128,180,255,.35);
-  color:#cfe2ff; font-weight:700;
-  padding:12px 16px; border-radius:12px; cursor:pointer;
-}
-.btn-primary{
-  background: linear-gradient(180deg, #1e68d6, #184fa5);
-  border:1px solid rgba(110,178,255,.7);
-  color:#eaf2ff; font-weight:800;
-  padding:12px 18px; border-radius:12px; cursor:pointer;
-  box-shadow:0 6px 16px rgba(0,0,0,.45);
-}
-.btn-cta{
-  background: linear-gradient(180deg, var(--yellow), var(--yellow-2));
-  border:1px solid rgba(255,210,80,.9);
-  color:#10223b; font-weight:900;
-  padding:12px 18px; border-radius:12px; cursor:pointer;
-  box-shadow:0 12px 30px rgba(0,0,0,.5);
-}
-
+  #reveal{
+    position:fixed; inset:0; z-index:1000;
+    background: radial-gradient(1200px 420px at 15% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
+                radial-gradient(1200px 420px at 85% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
+                rgba(0,10,20,.9);
+    display:none; place-items:center;
+  }
+  .rev-card{
+    width:min(680px, 92vw);
+    background: linear-gradient(180deg, #0d2747, #0b203a);
+    border:1px solid rgba(128,180,255,.30);
+    border-radius:20px; box-shadow: 0 20px 60px rgba(0,0,0,.6);
+    padding:24px; text-align:center;
+  }
+  .rev-card h2{ margin:0 0 12px; font-size:28px; font-weight:900; letter-spacing:.5px; }
+  .rev-content{
+    padding:18px; background: linear-gradient(180deg, #102c4f, #0c2441);
+    border:1px solid rgba(128,180,255,.25); border-radius:16px;
+    font-size:26px; font-weight:800; min-height:110px; display:grid; place-items:center;
+  }
+  .rev-actions{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:16px }
+  .btn-ghost{
+    background: linear-gradient(180deg, #142840, #0f2237);
+    border:1px solid rgba(128,180,255,.35);
+    color:#cfe2ff; font-weight:700; padding:12px 16px; border-radius:12px; cursor:pointer;
+  }
+  .btn-primary{
+    background: linear-gradient(180deg, #1e68d6, #184fa5);
+    border:1px solid rgba(110,178,255,.7);
+    color:#eaf2ff; font-weight:800; padding:12px 18px; border-radius:12px; cursor:pointer;
+    box-shadow:0 6px 16px rgba(0,0,0,.45);
+  }
+  .btn-cta{ background: linear-gradient(180deg, var(--yellow), var(--yellow-2));
+    border:1px solid rgba(255,210,80,.9); color:#10223b; font-weight:900;
+    padding:12px 18px; border-radius:12px; cursor:pointer; box-shadow:0 12px 30px rgba(0,0,0,.5);
+  }
 </style>
 </head>
 <body>
-  <div class="stadium-lights"></div>
-  <div class="stadium-lights r"></div>
-
   <div class="container">
 
     <!-- Header / Room -->
@@ -313,22 +261,9 @@ body::before{
     </div>
 
     <!-- Players -->
-    <div class="players" id="players">
-      <div class="player">
-        <div class="avatar" title="Host"></div>
-        <small>Jugador 1</small>
-      </div>
-      <!-- placeholders -->
-      <div class="player"><div class="avatar placeholder"></div><small>Jugador 2</small></div>
-      <div class="player"><div class="avatar placeholder"></div><small>Jugador 3</small></div>
-      <div class="player"><div class="avatar placeholder"></div><small>Jugador 4</small></div>
-      <div class="player"><div class="avatar placeholder"></div><small>Jugador 5</small></div>
-      <div class="player"><div class="avatar placeholder"></div><small>Jugador 6</small></div>
-      <div class="player"><div class="avatar placeholder"></div><small>Jugador 7</small></div>
-      <div class="player"><div class="avatar placeholder"></div><small>Jugador 8</small></div>
-    </div>
+    <div class="players" id="players"></div>
 
-    <!-- Settings (Impostores, Jugadores, Tema) -->
+    <!-- Settings -->
     <div class="settings">
       <div class="card">
         <h3>Impostores</h3>
@@ -364,8 +299,19 @@ body::before{
     </div>
   </div>
 
+<!-- OVERLAY DE REVELACIÓN (por-dispositivo) -->
+<div id="reveal">
+  <div class="rev-card">
+    <h2 id="revTitle">Tu rol</h2>
+    <div id="revContent" class="rev-content"></div>
+    <div class="rev-actions">
+      <button id="btnComenzarRonda" class="btn-cta">🚀 Comenzar ronda</button>
+    </div>
+  </div>
+</div>
+
 <script>
-  // Estado
+  // ------- Estado local de la UI (host puede editar) -------
   const state = {
     code: "TCZLPQ",
     impostores: 1,       // 1–3
@@ -374,29 +320,16 @@ body::before{
     temaIndex: 0
   };
 
-  const $ = sel => document.querySelector(sel);
+  const $ = s => document.querySelector(s);
   const impostoresEl = $("#impostoresVal");
   const jugadoresEl  = $("#jugadoresVal");
   const temaEl       = $("#temaVal");
   const roomCodeEl   = $("#roomCode");
+  const playersWrap  = $("#players");
 
-  // Actualiza UI
-  function render(){
-    impostoresEl.textContent = state.impostores;
-    jugadoresEl.textContent  = state.jugadores;
-    temaEl.textContent       = state.temas[state.temaIndex];
-    roomCodeEl.textContent   = state.code;
-
-    // Mostrar cantidad de slots de jugadores según "jugadores"
-    const playersWrap = $("#players");
-    const curr = playersWrap.children.length;
-    const desired = state.jugadores;
-    // Siempre mostramos 1 host + (desired-1) placeholders, máximo 10
-    while(playersWrap.children.length > desired){
-      playersWrap.removeChild(playersWrap.lastElementChild);
-    }
-    while(playersWrap.children.length < desired){
-      const i = playersWrap.children.length + 1;
+  function renderPlayers(count){
+    playersWrap.innerHTML = "";
+    for(let i=1;i<=count;i++){
       const card = document.createElement("div");
       card.className = "player";
       const av = document.createElement("div");
@@ -408,37 +341,31 @@ body::before{
     }
   }
 
-  // Flechas
+  function render(){
+    impostoresEl.textContent = state.impostores;
+    jugadoresEl.textContent  = state.jugadores;
+    temaEl.textContent       = state.temas[state.temaIndex];
+    roomCodeEl.textContent   = state.code;
+    renderPlayers(state.jugadores);
+  }
+  render();
+
+  // Controles (se habilitan/deshabilitan más abajo según host)
   document.querySelectorAll(".arrow").forEach(btn=>{
     btn.addEventListener("click", ()=>{
       const incKey = btn.dataset.inc;
       const decKey = btn.dataset.dec;
 
-      if(incKey === "impostores"){
-        state.impostores = Math.min(3, state.impostores + 1);
-      }
-      if(decKey === "impostores"){
-        state.impostores = Math.max(1, state.impostores - 1);
-      }
+      if(incKey === "impostores") state.impostores = Math.min(3, state.impostores + 1);
+      if(decKey === "impostores") state.impostores = Math.max(1, state.impostores - 1);
 
-      if(incKey === "jugadores"){
-        state.jugadores = Math.min(10, state.jugadores + 1);
-      }
-      if(decKey === "jugadores"){
-        state.jugadores = Math.max(4, state.jugadores - 1);
-      }
+      if(incKey === "jugadores")  state.jugadores  = Math.min(10, state.jugadores + 1);
+      if(decKey === "jugadores")  state.jugadores  = Math.max(4, state.jugadores - 1);
 
-      if(incKey === "tema"){
-        state.temaIndex = (state.temaIndex + 1) % state.temas.length;
-      }
-      if(decKey === "tema"){
-        state.temaIndex = (state.temaIndex - 1 + state.temas.length) % state.temas.length;
-      }
+      if(incKey === "tema") state.temaIndex = (state.temaIndex + 1) % state.temas.length;
+      if(decKey === "tema") state.temaIndex = (state.temaIndex - 1 + state.temas.length) % state.temas.length;
 
-      // Validación: impostores < jugadores
-      if(state.impostores >= state.jugadores){
-        state.impostores = Math.max(1, state.jugadores - 1);
-      }
+      if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores - 1);
 
       render();
     });
@@ -446,177 +373,198 @@ body::before{
 
   // Copiar / compartir
   $("#copyBtn").addEventListener("click", async ()=>{
-    try{
-      await navigator.clipboard.writeText(state.code);
-      flash("#copyBtn","Copiado!");
-    }catch{
-      alert("No se pudo copiar el código.");
-    }
+    try{ await navigator.clipboard.writeText(state.code); flash("#copyBtn","Copiado!"); }
+    catch{ alert("No se pudo copiar el código."); }
   });
-
   $("#shareBtn").addEventListener("click", async ()=>{
-    const url = `https://impostor-futbol.example/join?code=${state.code}`;
+    const url = `${location.origin}${location.pathname.replace("crear.html","index.html")}?code=${state.code}`;
     if(navigator.share){
-      try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url}); }
-      catch{}
+      try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url}); }catch{}
     }else{
-      try{
-        await navigator.clipboard.writeText(url);
-        flash("#shareBtn","Enlace copiado");
-      }catch{
-        alert(url);
-      }
+      try{ await navigator.clipboard.writeText(url); flash("#shareBtn","Enlace copiado"); }
+      catch{ alert(url); }
     }
   });
-
-  function flash(sel, text){
-    const el = document.querySelector(sel);
-    const prev = el.textContent;
-    el.textContent = text;
-    setTimeout(()=> el.textContent = prev, 1200);
-  }
-
- 
-
-  // Generador de código (opcional)
-  function genCode(){
-    const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let s = "";
-    for(let i=0;i<6;i++) s += alphabet[Math.floor(Math.random()*alphabet.length)];
-    return s;
-  }
-  render();
+  function flash(sel, text){ const el = document.querySelector(sel); const prev = el.textContent; el.textContent = text; setTimeout(()=> el.textContent = prev, 1200); }
 </script>
-<!-- OVERLAY DE REVELACIÓN DE ROLES -->
-<div id="reveal" style="display:none">
-  <div class="rev-card">
-    <h2 id="revTitle">Jugador 1</h2>
-    <div id="revContent" class="rev-content">
-      <p>Tocá <b>Mostrar</b> para ver tu rol</p>
-    </div>
-    <div class="rev-actions">
-      <button id="btnMostrar" class="btn-ghost">👁️ Mostrar</button>
-      <button id="btnOcultar" class="btn-ghost" style="display:none">🙈 Ocultar</button>
-      <button id="btnSiguiente" class="btn-primary" style="display:none">👉 Pasar al siguiente</button>
-      <button id="btnComenzarRonda" class="btn-cta" style="display:none">🚀 Comenzar ronda</button>
-    </div>
-  </div>
-</div>
-<script>
-// ======== POOLS por tema (podés ampliarlos) ========
-const POOLS = {
-  "Clubes": [
-    "Real Madrid","Barcelona","Boca Juniors","River Plate","PSG",
-    "Manchester City","Inter","AC Milan","Liverpool","Chelsea"
-  ],
-  "Jugadores": [
-    "Lionel Messi","Cristiano Ronaldo","Diego Maradona","Pelé","Kylian Mbappé",
-    "Erling Haaland","Neymar","Zinedine Zidane","Ronaldinho","Ronaldo Nazário"
-  ],
-  "Mundiales": [
-    "Mundial 2002","Mundial 2006","Mundial 2010","Mundial 2014","Mundial 2018","Mundial 2022"
-  ]
-};
 
-let assignments = [];    // [{player, role, word, tema}]
-let currentReveal = 0;  // índice del jugador a revelar
+<!-- Firebase (ONLINE) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+  import {
+    getFirestore, doc, setDoc, getDoc, onSnapshot,
+    collection, getDocs, writeBatch, updateDoc
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-// Utils
-const randInt = n => Math.floor(Math.random()*n);
-const sampleOne = arr => arr[randInt(arr.length)];
-function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=randInt(i+1); [arr[i],arr[j]]=[arr[j],arr[i]] } return arr; }
-function pickKUnique(k, n){ const idx = Array.from({length:n}, (_,i)=>i); shuffle(idx); return idx.slice(0,k); }
+  // Tu config (la misma que en index.html)
+  const firebaseConfig = {
+    apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
+    authDomain: "who-is-who-6ea99.firebaseapp.com",
+    projectId: "who-is-who-6ea99",
+    storageBucket: "who-is-who-6ea99.firebasestorage.app",
+    messagingSenderId: "718537140049",
+    appId: "1:718537140049:web:7400ec7e5467b387f8d570",
+    measurementId: "G-KNC4FJXXBN"
+  };
 
-// === Iniciar partida: asigna roles y palabra según tema ===
-function iniciarPartida(){
-  const N = state.jugadores;
-  const K = state.impostores;
-  const tema = state.temas[state.temaIndex];
+  const app = initializeApp(firebaseConfig);
+  const auth = getAuth(app);
+  const db = getFirestore(app);
+  await signInAnonymously(auth);
 
-  if (K >= N){ alert("Impostores debe ser menor que la cantidad de jugadores."); return; }
+  // ------ Host vs Invitado ------
+  const urlCode = new URLSearchParams(location.search).get("code");
+  const isHost = !urlCode;
+  state.code = (urlCode || state.code).toUpperCase();
+  document.getElementById("roomCode").textContent = state.code;
 
-  const palabraSecreta = sampleOne(POOLS[tema] || ["Balón"]);
-  const impostorIdxs = new Set(pickKUnique(K, N));
+  // Pools
+  const POOLS = {
+    "Clubes": ["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"],
+    "Jugadores": ["Lionel Messi","Cristiano Ronaldo","Diego Maradona","Pelé","Kylian Mbappé","Erling Haaland","Neymar","Zinedine Zidane","Ronaldinho","Ronaldo Nazário"],
+    "Mundiales": ["Mundial 2002","Mundial 2006","Mundial 2010","Mundial 2014","Mundial 2018","Mundial 2022"]
+  };
+  const rand = n => Math.floor(Math.random()*n);
+  const sampleOne = a => a[rand(a.length)];
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){ const j=rand(i+1); [a[i],a[j]]=[a[j],a[i]] } return a; }
 
-  assignments = [];
-  for (let i=0; i<N; i++){
-    const isImp = impostorIdxs.has(i);
-    assignments.push({
-      player: i+1,
-      role: isImp ? "IMPOSTOR" : "CIVIL",
-      word: isImp ? null : palabraSecreta,
-      tema
+  // ------ Crear/Unirse a la sala ------
+  const roomRef = doc(db,"rooms", state.code);
+
+  if (isHost) {
+    // crear/actualizar sala con settings actuales
+    await setDoc(roomRef, {
+      hostUid: auth.currentUser.uid,
+      status: "lobby",
+      createdAt: Date.now(),
+      settings: {
+        maxPlayers: state.jugadores,
+        impostors: state.impostores,
+        tema: state.temas[state.temaIndex]
+      }
+    }, { merge: true });
+
+    // host entra como Jugador 1
+    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
+      uid: auth.currentUser.uid, name: "Jugador 1", slot: 1, online: true
+    }, { merge: true });
+  } else {
+    // invitado: asegura que sala exista
+    const r = await getDoc(roomRef);
+    if(!r.exists()){ alert("La sala no existe"); location.href="index.html"; }
+    // copio settings a mi UI
+    const s = r.data().settings;
+    state.jugadores = s.maxPlayers; state.impostores = s.impostors; state.temaIndex = ["Clubes","Jugadores","Mundiales"].indexOf(s.tema);
+    if(state.temaIndex<0) state.temaIndex = 0;
+    // unirse como jugador
+    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
+      uid: auth.currentUser.uid, name: "Jugador", slot: Date.now(), online: true
+    }, { merge: true });
+    // deshabilitar edición de settings para invitados
+    document.querySelectorAll(".arrow").forEach(b=> b.style.pointerEvents = "none");
+  }
+
+  // ------ Escuchar cambios de settings (si host los cambia) ------
+  onSnapshot(roomRef, snap=>{
+    const room = snap.data(); if(!room) return;
+    // reflejar configuraciones en UI
+    state.jugadores = room.settings.maxPlayers;
+    state.impostores = room.settings.impostors;
+    state.temaIndex  = ["Clubes","Jugadores","Mundiales"].indexOf(room.settings.tema);
+    if(state.temaIndex<0) state.temaIndex=0;
+    document.getElementById("impostoresVal").textContent = state.impostores;
+    document.getElementById("jugadoresVal").textContent  = state.jugadores;
+    document.getElementById("temaVal").textContent       = room.settings.tema;
+  });
+
+  // ------ Si el host toca flechas, persiste settings ------
+  if (isHost) {
+    document.querySelectorAll(".arrow").forEach(btn=>{
+      btn.addEventListener("click", async ()=>{
+        await updateDoc(roomRef, {
+          settings: {
+            maxPlayers: state.jugadores,
+            impostors: state.impostores,
+            tema: state.temas[state.temaIndex]
+          }
+        });
+      });
     });
   }
 
-  currentReveal = 0;
-  abrirOverlay();
-  prepararPantallaReveal();
-}
+  // ------ Lista de jugadores en vivo ------
+  onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
+    const players = snap.docs.map(d=>d.data()).sort((a,b)=>(a.slot||0)-(b.slot||0));
+    const total = state.jugadores;
+    const wrap = document.getElementById("players");
+    wrap.innerHTML = "";
+    for(let i=0;i<total;i++){
+      const p = players[i];
+      const div = document.createElement("div"); div.className = "player";
+      const av = document.createElement("div"); av.className = p ? "avatar" : "avatar placeholder";
+      const label = document.createElement("small"); label.textContent = p ? (p.name || `Jugador ${i+1}`) : `Jugador ${i+1}`;
+      div.appendChild(av); div.appendChild(label); wrap.appendChild(div);
+    }
+  });
 
-// === Overlay de revelación “pasar el celular” ===
-const $reveal = document.getElementById("reveal");
-const $revTitle = document.getElementById("revTitle");
-const $revContent = document.getElementById("revContent");
-const $btnMostrar = document.getElementById("btnMostrar");
-const $btnOcultar = document.getElementById("btnOcultar");
-const $btnSiguiente = document.getElementById("btnSiguiente");
-const $btnComenzarRonda = document.getElementById("btnComenzarRonda");
+  // ------ Empezar partida (host asigna y escribe a Firestore) ------
+  document.getElementById("startBtn").addEventListener("click", async ()=>{
+    if(!isHost){ alert("Solo el host puede iniciar la partida"); return; }
 
-function abrirOverlay(){ $reveal.style.display = "grid"; }
-function cerrarOverlay(){ $reveal.style.display = "none"; }
+    const roomSnap = await getDoc(roomRef);
+    const room = roomSnap.data();
+    const tema = room.settings.tema;
+    const impostors = room.settings.impostors;
 
-function prepararPantallaReveal(){
-  const a = assignments[currentReveal];
-  $revTitle.textContent = `Jugador ${a.player}`;
-  $revContent.innerHTML = `<p>Tocá <b>Mostrar</b> para ver tu rol</p>`;
-  $btnMostrar.style.display = "";
-  $btnOcultar.style.display = "none";
-  $btnSiguiente.style.display = "none";
-  $btnComenzarRonda.style.display = "none";
-}
+    const playersSnap = await getDocs(collection(db,"rooms",state.code,"players"));
+    const players = playersSnap.docs.map(d=>d.data());
+    const N = players.length;
+    if (impostors >= N) { alert("Impostores debe ser menor que jugadores"); return; }
 
-$btnMostrar.addEventListener("click", ()=>{
-  const a = assignments[currentReveal];
-  if (a.role === "IMPOSTOR"){
-    $revContent.innerHTML = `
-      <div>
-        <div style="font-size:38px; font-weight:900; color:#ff6b6b; margin-bottom:8px;">IMPOSTOR</div>
-        <div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>
-      </div>`;
-  } else {
-    $revContent.innerHTML = `
-      <div>
-        <div style="opacity:.75; font-size:14px; margin-bottom:6px;">Palabra secreta (${a.tema})</div>
-        <div style="font-size:34px; font-weight:900; color:#7cf062">${a.word}</div>
-      </div>`;
-  }
-  $btnMostrar.style.display = "none";
-  $btnOcultar.style.display = "";
-  $btnSiguiente.style.display = (currentReveal < assignments.length - 1) ? "" : "none";
-  $btnComenzarRonda.style.display = (currentReveal === assignments.length - 1) ? "" : "none";
-});
+    const palabra = sampleOne(POOLS[tema] || ["Balón"]);
+    const shuffled = shuffle([...players]);
+    const impostorSet = new Set(shuffled.slice(0, impostors).map(p=>p.uid));
 
-$btnOcultar.addEventListener("click", ()=>{
-  $revContent.innerHTML = `<p>Pantalla oculta. Pasá el dispositivo al jugador siguiente.</p>`;
-  $btnOcultar.style.display = "none";
-  $btnSiguiente.style.display = "";
-});
+    const batch = writeBatch(db);
+    players.forEach(p=>{
+      const ref = doc(db,"rooms",state.code,"assignments",p.uid);
+      const isImp = impostorSet.has(p.uid);
+      batch.set(ref, { role: isImp ? "IMPOSTOR" : "CIVIL", word: isImp ? null : palabra, tema });
+    });
+    batch.update(roomRef, { status: "playing" });
+    await batch.commit();
+  });
 
-$btnSiguiente.addEventListener("click", ()=>{
-  if (currentReveal < assignments.length - 1){
-    currentReveal++;
-    prepararPantallaReveal();
-  }
-});
+  // ------ Cada dispositivo escucha SU rol y muestra overlay ------
+  const myUid = auth.currentUser.uid;
+  onSnapshot(doc(db,"rooms",state.code,"assignments",myUid), (snap)=>{
+    if(!snap.exists()) return;
+    const a = snap.data();
+    const rev = document.getElementById("reveal");
+    const box = document.getElementById("revContent");
+    rev.style.display = "grid";
+    if(a.role === "IMPOSTOR"){
+      box.innerHTML = `
+        <div>
+          <div style="font-size:38px;font-weight:900;color:#ff6b6b;margin-bottom:8px;">IMPOSTOR</div>
+          <div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>
+        </div>`;
+    }else{
+      box.innerHTML = `
+        <div>
+          <div style="opacity:.75;font-size:14px;margin-bottom:6px;">Palabra secreta (${a.tema})</div>
+          <div style="font-size:34px;font-weight:900;color:#7cf062">${a.word}</div>
+        </div>`;
+    }
+  });
 
-$btnComenzarRonda.addEventListener("click", ()=>{
-  cerrarOverlay();
-  alert("¡Roles asignados! Arranca la ronda 1 🎯");
-});
-
-// Conectar el botón principal
-document.getElementById("startBtn").addEventListener("click", iniciarPartida);
+  // Botón continuar
+  document.getElementById("btnComenzarRonda").addEventListener("click", ()=>{
+    // Redirigí a la pantalla de ronda (a implementar)
+    // window.location.href = "ronda.html?code=" + state.code;
+    document.getElementById("reveal").style.display = "none";
+  });
 </script>
 
 </body>
