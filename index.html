@@ -186,14 +186,14 @@
   <!-- ===== Perfil (nombre + avatar) ===== -->
   <script>
     // Avatares disponibles (ajustá rutas reales)
-    const AVATARS = [
-      {key:"a1", src:"avatars/a1.png"},{key:"a2", src:"avatars/a2.png"},
-      {key:"a3", src:"avatars/a3.png"},{key:"a4", src:"avatars/a4.png"},
-      {key:"a5", src:"avatars/a5.png"},{key:"a6", src:"avatars/a6.png"},
-      {key:"a7", src:"avatars/a7.png"},{key:"a8", src:"avatars/a8.png"},
-      {key:"a9", src:"avatars/a9.png"},{key:"a10",src:"avatars/a10.png"},
-      {key:"a11",src:"avatars/a11.png"},{key:"a12",src:"avatars/a12.png"},
-    ];
+   const AVATARS = [
+  {key:"messi",   src:"avatars/messi.png"},
+  {key:"neymar",  src:"avatars/neymar.png"},
+  {key:"mbappe",  src:"avatars/mbappe.png"},
+  {key:"cr7",     src:"avatars/cr7.png"},
+  {key:"dibu",    src:"avatars/dibu.png"},
+  {key:"haaland", src:"avatars/haaland.png"}
+];
 
     window.PlayerProfile = {
       getName(){ return localStorage.getItem("displayName") || ""; },
