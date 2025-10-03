@@ -23,6 +23,45 @@
   <a class="menu-btn" href="ingresar.html">🔑 INGRESAR A SALA</a>
   <button id="btn-azar" class="menu-btn yellow">🎲 UNIRSE AL AZAR</button>
 
+<script>
+  // Helpers de nombre
+  window.PlayerName = {
+    get(){ return localStorage.getItem("displayName") || ""; },
+    set(n){ localStorage.setItem("displayName", n); },
+    async ensure(){
+      let name = this.get();
+      if (valid(name)) return name;
+
+      const modal = document.getElementById("name-modal");
+      const input = document.getElementById("displayName");
+      const btn   = document.getElementById("saveName");
+      const errEl = document.getElementById("nameError");
+      const close = ()=>{ modal.style.display="none"; modal.setAttribute("aria-hidden","true"); };
+
+      modal.style.display="grid";
+      modal.setAttribute("aria-hidden","false");
+      input.value = ""; input.focus();
+
+      return new Promise((resolve)=>{
+        const save = ()=>{
+          const v = input.value.trim();
+          if(!valid(v)){ errEl.textContent = "Usá entre 2 y 16 caracteres."; return; }
+          window.PlayerName.set(v);
+          errEl.textContent = "";
+          close();
+          resolve(v);
+        };
+        btn.onclick = save;
+        input.onkeydown = (e)=>{ if(e.key==="Enter") save(); if(e.key==="Escape") close(); };
+        modal.onclick = (e)=>{ if(e.target===modal){ /* impedir cerrar sin nombre */ input.focus(); } };
+      });
+
+      function valid(s){ return typeof s==="string" && s.trim().length>=2 && s.trim().length<=16; }
+    }
+  };
+</script>
+
+  
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -70,8 +109,33 @@
       }
     })();
   </script>
+<!-- ===== Nombre para mostrar (modal) ===== -->
+<style>
+  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:60}
+  .name-card{width:min(420px,92vw);background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.18);
+    border-radius:16px;padding:18px;box-shadow:0 30px 60px rgba(0,0,0,.6);font-family:"Outfit",sans-serif}
+  .name-card h3{margin:0 0 8px;font-size:22px}
+  .name-card p{margin:0 0 14px;opacity:.9}
+  .name-row{display:flex;gap:10px}
+  .name-input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.25);
+    background:#0f172a;color:#fff;font-size:16px;outline:none}
+  .name-input:focus{border-color:#38bdf8}
+  .name-btn{padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.35);cursor:pointer;
+    background:linear-gradient(180deg,#facc15,#eab308);color:#111;font-weight:900}
+  .name-error{margin-top:8px;font-size:13px;color:#fb7185;min-height:18px}
+</style>
 
-  <!-- Consejo: serví los archivos con un server local para evitar problemas de CORS con módulos.
-       Ej: `python3 -m http.server 5500` y abrí http://localhost:5500/index.html -->
+<div id="name-modal" class="backdrop" aria-hidden="true">
+  <div class="name-card" role="dialog" aria-modal="true" aria-labelledby="name-title">
+    <h3 id="name-title">Elegí tu nombre</h3>
+    <p>Este será el nombre que verán los demás jugadores.</p>
+    <div class="name-row">
+      <input id="displayName" class="name-input" type="text" maxlength="16" placeholder="Ej: Nico, Lio 🐐" />
+      <button id="saveName" class="name-btn">Guardar</button>
+    </div>
+    <div id="nameError" class="name-error"></div>
+  </div>
+</div>
+
 </body>
 </html>
