@@ -120,7 +120,10 @@
       <div class="card"><h3>Tema</h3><div class="selector"><div class="arrow" data-dec="tema">‹</div><div class="value" id="temaVal">Clubes</div><div class="arrow" data-inc="tema">›</div></div></div>
     </div>
 
-    <div class="cta"><button id="startBtn" class="btn-cta">EMPEZAR PARTIDA</button></div>
+<div class="cta">
+  <button id="startBtn" class="btn-cta">EMPEZAR PARTIDA</button>
+  <button id="leaveBtn" class="btn" style="margin-left:12px;display:none">ABANDONAR PARTIDA</button>
+</div>
   </div>
 
   <!-- Overlay: rol + countdown -->
@@ -198,6 +201,7 @@
   const roomCodeEl  = $("#roomCode");
   const meNameEl    = $("#meName");
   const playersWrap = $("#players");
+  const leaveBtn = document.getElementById("leaveBtn");
 
   function getStoredName(){
     const qp = new URLSearchParams(location.search);
@@ -365,6 +369,41 @@
     }catch(e){ console.error(e); alert(e.message||"No pude iniciar la partida."); } finally{ starting=false; }
   });
 
+// ===== ABANDONAR PARTIDA (solo host) =====
+leaveBtn.addEventListener("click", async ()=>{
+  if (!isHost){
+    alert("Solo el host puede abandonar y resetear la sala.");
+    return;
+  }
+  if (!confirm("¿Seguro que querés abandonar la partida actual? Esto limpia la ronda.")) return;
+
+  try {
+    // 1) Borrar subcolecciones: assignments y rounds
+    const batchDel = writeBatch(db);
+    const assignsSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+    assignsSnap.forEach(d => batchDel.delete(d.ref));
+    const roundsSnap = await getDocs(collection(db,"rooms",state.code,"rounds"));
+    roundsSnap.forEach(d => batchDel.delete(d.ref));
+    await batchDel.commit();
+
+    // 2) Volver la sala a lobby y limpiar campos de estado
+    await updateDoc(doc(db,"rooms",state.code), {
+      status: "lobby",
+      round: 0,
+      startedAt: null
+    });
+
+    // 3) UI local
+    document.getElementById("phaseDiscuss").style.display = "none";
+    alert("Sesión abandonada. Ya podés iniciar otra partida.");
+
+  } catch(e){
+    console.error(e);
+    alert("Error al abandonar: " + (e?.message || e));
+  }
+});
+
+    
   // Overlay rol
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
     if(!s.exists()) return;
