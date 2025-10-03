@@ -35,37 +35,22 @@
   #reveal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,10,20,.9)}
   .rev-card{width:min(680px,92vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:24px;text-align:center}
   .rev-content{padding:18px;background:linear-gradient(180deg,#102c4f,#0c2441);border:1px solid rgba(128,180,255,.25);border-radius:16px;min-height:110px;display:grid;place-items:center;font-size:26px;font-weight:800}
-  /* === Nombre del jugador en la barra === */
-.user-area{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
-.userbox{
-  display:flex;align-items:center;gap:8px;
-  background:linear-gradient(180deg,#0c2747,#0a213b);
-  border:1px solid rgba(128,180,255,.28);
-  border-radius:12px;padding:8px 10px;font-weight:700;color:#cfe4ff
-}
-.mini-btn{
-  padding:6px 10px;border-radius:10px;cursor:pointer;
-  background:linear-gradient(180deg,#1e68d6,#184fa5);
-  border:1px solid rgba(110,178,255,.65);color:#eaf2ff;font-weight:700
-}
-.me-badge{color:#ffd166;font-weight:900;margin-left:4px}
-.me-outline{outline:2px solid #f6c11b;outline-offset:2px;border-radius:16px}
-/* === Nombre del jugador en la barra === */
-.user-area{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
-.userbox{
-  display:flex;align-items:center;gap:8px;
-  background:linear-gradient(180deg,#0c2747,#0a213b);
-  border:1px solid rgba(128,180,255,.28);
-  border-radius:12px;padding:8px 10px;font-weight:700;color:#cfe4ff
-}
-.mini-btn{
-  padding:6px 10px;border-radius:10px;cursor:pointer;
-  background:linear-gradient(180deg,#1e68d6,#184fa5);
-  border:1px solid rgba(110,178,255,.65);color:#eaf2ff;font-weight:700
-}
-.me-badge{color:#ffd166;font-weight:900;margin-left:4px}
-.me-outline{outline:2px solid #f6c11b;outline-offset:2px;border-radius:16px}
 
+  /* === Nombre visible + resalte (yo) === */
+  .user-area{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+  .userbox{
+    display:flex;align-items:center;gap:8px;
+    background:linear-gradient(180deg,#0c2747,#0a213b);
+    border:1px solid rgba(128,180,255,.28);
+    border-radius:12px;padding:8px 10px;font-weight:700;color:#cfe4ff
+  }
+  .mini-btn{
+    padding:6px 10px;border-radius:10px;cursor:pointer;
+    background:linear-gradient(180deg,#1e68d6,#184fa5);
+    border:1px solid rgba(110,178,255,.65);color:#eaf2ff;font-weight:700
+  }
+  .me-badge{color:#ffd166;font-weight:900;margin-left:4px}
+  .me-outline{outline:2px solid #f6c11b;outline-offset:2px;border-radius:16px}
 </style>
 </head>
 <body>
@@ -73,13 +58,11 @@
     <div class="room-card">
       <div class="brand"><div class="ball"></div><h1>Impostor <span>Fútbol</span></h1></div>
       <div class="code-box"><strong style="opacity:.7">CÓDIGO:</strong><div class="room-code" id="roomCode">—</div><button id="copyBtn" class="btn">Copiar</button></div>
+      <!-- Reemplazado: nombre + editar + compartir -->
       <div class="user-area">
-  <div class="userbox">👤 <span id="meName">—</span>
-    <button id="editName" class="mini-btn">Editar</button>
-  </div>
-  <button id="shareBtn" class="btn">Compartir enlace</button>
-</div>
-
+        <div class="userbox">👤 <span id="meName">—</span> <button id="editName" class="mini-btn">Editar</button></div>
+        <button id="shareBtn" class="btn">Compartir enlace</button>
+      </div>
     </div>
 
     <div class="players" id="players"></div>
@@ -113,24 +96,6 @@
     collection, getDocs, writeBatch
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-function getStoredName(){
-  const qp = new URLSearchParams(location.search);
-  const qName = qp.get("name");
-  if (qName && qName.trim()) localStorage.setItem("displayName", qName.trim());
-  const s = localStorage.getItem("displayName") || "";
-  return (s.trim().length>=2 && s.trim().length<=16) ? s.trim() : "Jugador";
-}
-async function editAndSaveName(playerRef){
-  const prev = getStoredName();
-  const nuevo = prompt("Tu nombre para mostrar (2–16 chars):", prev) ?? "";
-  const v = nuevo.trim();
-  if (v.length<2 || v.length>16) return;
-  localStorage.setItem("displayName", v);
-  document.getElementById("meName").textContent = v;
-  try{ if(playerRef) await updateDoc(playerRef, { name: v }); }catch(e){ console.warn(e); }
-}
-
-  
   const firebaseConfig = {
     apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
     authDomain: "who-is-who-6ea99.firebaseapp.com",
@@ -143,6 +108,24 @@ async function editAndSaveName(playerRef){
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+
+  // ===== Helpers nombre =====
+  function getStoredName(){
+    const qp = new URLSearchParams(location.search);
+    const qName = qp.get("name");
+    if (qName && qName.trim()) localStorage.setItem("displayName", qName.trim());
+    const s = localStorage.getItem("displayName") || "";
+    return (s.trim().length>=2 && s.trim().length<=16) ? s.trim() : "Jugador";
+  }
+  async function editAndSaveName(playerRef){
+    const prev = getStoredName();
+    const nuevo = prompt("Tu nombre para mostrar (2–16 chars):", prev) ?? "";
+    const v = nuevo.trim();
+    if (v.length<2 || v.length>16) return;
+    localStorage.setItem("displayName", v);
+    document.getElementById("meName").textContent = v;
+    try{ if(playerRef) await updateDoc(playerRef, { name: v }); }catch(e){ console.warn(e); }
+  }
 
   // ===== Helpers código único =====
   function genCode(len = 6){
@@ -167,6 +150,8 @@ async function editAndSaveName(playerRef){
   const impostoresEl = $("#impostoresVal");
   const jugadoresEl  = $("#jugadoresVal");
   const temaEl       = $("#temaVal");
+  const meNameEl     = document.getElementById("meName");
+  const editNameBtn  = document.getElementById("editName");
 
   const state = {
     code: "",            // se define más abajo
@@ -217,6 +202,8 @@ async function editAndSaveName(playerRef){
   render();
 
   const roomRef = doc(db, "rooms", state.code);
+  const myName = getStoredName();
+  if (meNameEl) meNameEl.textContent = myName;
 
   // ===== Flechas (solo host persiste en Firestore) =====
   document.querySelectorAll(".arrow").forEach(btn=>{
@@ -255,7 +242,7 @@ async function editAndSaveName(playerRef){
     }, { merge:true });
 
     await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
-      uid: auth.currentUser.uid, name: "Jugador 1", slot: 1, online: true
+      uid: auth.currentUser.uid, name: myName, slot: 1, online: true
     }, { merge:true });
 
   } else {
@@ -269,11 +256,15 @@ async function editAndSaveName(playerRef){
     render();
 
     await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
-      uid: auth.currentUser.uid, name: "Jugador", slot: Date.now(), online: true
+      uid: auth.currentUser.uid, name: myName, slot: Date.now(), online: true
     }, { merge:true });
 
     document.querySelectorAll(".arrow").forEach(b=>b.style.pointerEvents="none");
   }
+
+  // ===== Conectar botón "Editar" al doc del jugador =====
+  const playerRef = doc(db,"rooms",state.code,"players",auth.currentUser.uid);
+  editNameBtn?.addEventListener("click", ()=> editAndSaveName(playerRef));
 
   // ===== Sincronía en vivo =====
   onSnapshot(roomRef, s=>{
@@ -288,26 +279,25 @@ async function editAndSaveName(playerRef){
   onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
     const list = snap.docs.map(d=>d.data()).sort((a,b)=>(a.slot||0)-(b.slot||0));
     playersWrap.innerHTML = "";
-for(let i=0;i<state.jugadores;i++){
-  const p = list[i];
-  const card=document.createElement("div"); card.className="player";
-  const av=document.createElement("div"); av.className=p?"avatar":"avatar placeholder";
-  const label=document.createElement("small");
+    for(let i=0;i<state.jugadores;i++){
+      const p = list[i];
+      const card=document.createElement("div"); card.className="player";
+      const av=document.createElement("div"); av.className=p?"avatar":"avatar placeholder";
+      const label=document.createElement("small");
 
-  if(p){
-    if(p.uid === auth.currentUser.uid){
-      card.classList.add("me-outline");
-      label.innerHTML = `${p.name || `Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
-    }else{
-      label.textContent = p.name || `Jugador ${i+1}`;
+      if(p){
+        if(p.uid === auth.currentUser.uid){
+          card.classList.add("me-outline");
+          label.innerHTML = `${p.name || `Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
+        }else{
+          label.textContent = p.name || `Jugador ${i+1}`;
+        }
+      }else{
+        label.textContent = `Jugador ${i+1}`;
+      }
+
+      card.append(av,label); playersWrap.append(card);
     }
-  }else{
-    label.textContent = `Jugador ${i+1}`;
-  }
-
-  card.append(av,label); playersWrap.append(card);
-}
-
   });
 
   // ===== Empezar partida (solo host) =====
