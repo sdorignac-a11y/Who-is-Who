@@ -1,244 +1,342 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Impostor Fútbol – Lobby</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg-1:#081a2e;
-    --panel:#0f2b4b;
-    --panel-2:#0c213a;
-    --panel-3:#0a1a2e;
-    --accent:#4ade80;         /* verde del título */
-    --gold:#f6c11b;
-    --gold-2:#f39c12;
-    --text:#eaf2ff;
-    --muted:#a7c0e8;
-    --btnText:#0b1b2c;
-    --shadow:0 20px 50px rgba(0,0,0,.45);
-  }
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Impostor Fútbol – Menú</title>
 
-  *{box-sizing:border-box}
-  html,body{height:100%;margin:0;font-family:"Outfit",system-ui;background:#061426;color:var(--text);overflow:hidden}
+  <!-- Fuentes -->
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 
-  /* Fondo estadio (usa tu imagen existente) */
-  .bg{
-    position:fixed; inset:0;
-    background:url("fondo-cancha.png") center/cover no-repeat fixed, radial-gradient(1200px 600px at 50% 110%, #0b2d4f00 40%, #061426 75%);
-    z-index:-2;
-  }
-  /* Vignette suave para contraste */
-  .vignette{position:fixed; inset:0; background:radial-gradient(circle at 50% 20%, transparent 0 45%, rgba(0,0,0,.35) 60%, rgba(0,0,0,.65) 100%); z-index:-1;}
+  <style>
+    :root{
+      /* Paleta arcade/pixel */
+      --bg-deep:#0b2a44;
+      --bg-mid:#123a5f;
+      --grass-1:#2a9a3a;
+      --grass-2:#187b2b;
+      --line:#cdeccf;
 
-  /* Cinta superior de banderas */
-  .flags{
-    position:relative; height:54px; overflow:hidden;
-    background:linear-gradient(to bottom, rgba(255,255,255,.06), rgba(255,255,255,0));
-    border-bottom:1px solid rgba(255,255,255,.06);
-    box-shadow: inset 0 -12px 20px rgba(0,0,0,.25);
-  }
-  .flags-track{
-    position:absolute; inset:0; display:flex; gap:14px; align-items:center;
-    padding:0 16px; font-size:26px; filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));
-    animation:scroll 24s linear infinite;
-    white-space:nowrap;
-  }
-  .flags .chip{background:rgba(255,255,255,.08); padding:6px 10px; border-radius:8px; backdrop-filter:blur(2px)}
-  @keyframes scroll{
-    from{transform:translateX(0)}
-    to{transform:translateX(-50%)}
-  }
+      --btn-blue:#1e53a4;
+      --btn-blue-2:#163a77;
+      --btn-green:#2f8b3a;
+      --btn-green-2:#1f6028;
+      --btn-yellow:#f5b019;
+      --btn-yellow-2:#c88411;
 
-  .container{width:min(1200px,92vw); margin:18px auto 0; padding:10px 0}
+      --btn-outline:#0b2244;
+      --text:#f5f7ff;
+      --shadow:#061428;
+    }
 
-  /* Header */
-  .topbar{
-    display:grid; grid-template-columns:auto 1fr auto auto; align-items:center; gap:16px;
-    background:linear-gradient(180deg, rgba(15,43,75,.8), rgba(12,33,58,.7));
-    border:1px solid rgba(255,255,255,.08);
-    border-radius:16px;
-    padding:16px 20px;
-    box-shadow:var(--shadow);
-  }
-  .logo{font-size:28px; font-weight:800; letter-spacing:.3px}
-  .logo span{color:var(--accent)}
-  .code{
-    justify-self:center;
-    background:linear-gradient(180deg, #12345a, #0c2a4a);
-    border:1px solid rgba(255,255,255,.1);
-    border-radius:12px; padding:10px 18px;
-    font-size:26px; font-weight:800; letter-spacing:2px;
-    text-shadow:0 2px 8px rgba(0,0,0,.45);
-  }
-  .btn{
-    background:#184574; color:#d7e7ff;
-    border:1px solid rgba(255,255,255,.12);
-    padding:10px 14px; border-radius:12px; font-weight:700; cursor:pointer;
-    transition:transform .08s ease, filter .15s ease, background .2s ease;
-  }
-  .btn:hover{filter:brightness(1.08)}
-  .btn:active{transform:translateY(1px)}
+    *{box-sizing:border-box}
+    html,body{height:100%}
 
-  /* Grid jugadores */
-  .players{display:grid; grid-template-columns:repeat(8,1fr); gap:18px; margin:20px 0 10px}
-  .card{
-    background:linear-gradient(180deg, #0c223b, #0a1c33);
-    border:1px solid rgba(255,255,255,.06);
-    border-radius:16px; padding:14px; text-align:center;
-    position:relative; box-shadow:0 8px 24px rgba(0,0,0,.3);
-    transition:transform .15s ease, box-shadow .2s ease;
-  }
-  .card:hover{transform:translateY(-2px); box-shadow:0 16px 32px rgba(0,0,0,.35)}
-  .avatar{
-    width:64px; height:64px; margin:6px auto 10px; border-radius:50%;
-    background:radial-gradient(circle at 35% 35%, #2f80ed 0 40%, #0b2a4b 41% 100%);
-    border:3px solid #d6a83a; box-shadow:0 0 0 3px rgba(246,193,27,.25), 0 8px 16px rgba(0,0,0,.35);
-  }
-  .me .avatar{border-color:#f5d57a; box-shadow:0 0 0 3px rgba(255,220,120,.35), 0 10px 18px rgba(0,0,0,.4)}
-  .name{font-size:14px; color:#cfe2ff; opacity:.95}
-  .tag{font-size:12px; color:#98b6ea; opacity:.9}
+    /* ===== Fondo estilo estadio pixel (CSS puro) ===== */
+    body{
+      margin:0;
+      color:var(--text);
+      font-family:"Press Start 2P", system-ui, monospace;
+      image-rendering: pixelated;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      text-align:center;
+      background:
+        /* estrellas */
+        radial-gradient(2px 2px at 10% 12%, #fff8 70%, #0000 71%),
+        radial-gradient(2px 2px at 40% 20%, #fff8 70%, #0000 71%),
+        radial-gradient(2px 2px at 75% 15%, #fff8 70%, #0000 71%),
+        radial-gradient(2px 2px at 20% 35%, #fff8 70%, #0000 71%),
+        radial-gradient(2px 2px at 60% 30%, #fff8 70%, #0000 71%),
+        /* grada */
+        linear-gradient(var(--bg-mid), var(--bg-mid)) 0 45%/100% 18% no-repeat,
+        /* barandas */
+        linear-gradient(#0e2b49, #0e2b49) 0 62%/100% 2% no-repeat,
+        linear-gradient(#0a2541, #0a2541) 0 66%/100% 2% no-repeat,
+        /* césped bandas */
+        repeating-linear-gradient(180deg,
+          var(--grass-1) 0 40px,
+          var(--grass-2) 40px 80px) 0 100%/100% 40% no-repeat,
+        /* línea central */
+        linear-gradient(var(--line), var(--line)) 50% calc(100% - 20%) / 4px 40% no-repeat,
+        /* cielo */
+        linear-gradient(180deg, var(--bg-deep) 0%, #0e3155 50%, #0e3155 50%, #0b2a44 100%);
+      min-height:100vh;
+      padding:40px 16px;
+    }
 
-  /* Panels inferiores */
-  .rows{display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; margin-top:18px}
-  .panel{
-    background:linear-gradient(180deg, rgba(8,26,46,.85), rgba(8,26,46,.65));
-    border:1px solid rgba(255,255,255,.06);
-    border-radius:16px; padding:16px 18px; box-shadow:var(--shadow);
-  }
-  .h{font-weight:800; letter-spacing:.4px; color:#e9f2ff; margin-bottom:10px}
-  .ctrl{display:flex; align-items:center; gap:14px}
-  .arrow{
-    width:46px; height:46px; display:grid; place-items:center;
-    border-radius:12px; cursor:pointer; user-select:none;
-    background:linear-gradient(180deg, #123a67, #0f2f53);
-    border:1px solid rgba(255,255,255,.1); color:#cfe2ff; font-size:20px;
-    transition:transform .08s ease, filter .15s ease;
-  }
-  .arrow:hover{filter:brightness(1.1)}
-  .arrow:active{transform:translateY(1px)}
-  .arrow::before{content:"⚽"; font-size:18px; opacity:.9}
-  .arrow.right{transform:scaleX(-1)} .arrow.right:active{transform:scaleX(-1) translateY(1px)}
-  .value{
-    flex:1; text-align:center; font-weight:800; font-size:28px; letter-spacing:1px;
-    background:linear-gradient(180deg, #0e2a49, #0c223b);
-    border:1px solid rgba(255,255,255,.07); padding:8px 12px; border-radius:12px;
-  }
+    /* ===== Título ===== */
+    .title{
+      font-size:clamp(28px, 4vw, 64px);
+      font-weight:900;
+      text-transform:uppercase;
+      letter-spacing:2px;
+      margin:0 0 28px;
+      text-shadow:
+        0 6px 0 #09223d,
+        0 10px 16px #0008;
+      line-height:1.2;
+    }
+    .title span{ color:#ffd84d; text-shadow:0 4px 0 #a56e00; }
+    .title .ball{ filter: drop-shadow(0 6px 0 #09223d) drop-shadow(0 10px 16px #0008); }
 
-  /* Botón principal */
-  .start{
-    margin:26px auto 0; width:min(560px,92vw);
-    background:linear-gradient(180deg, var(--gold), var(--gold-2));
-    color:#19324f; font-weight:900; font-size:38px; letter-spacing:.5px;
-    border:none; border-radius:18px; padding:18px 22px; cursor:pointer;
-    box-shadow:0 12px 24px rgba(246,193,27,.35), inset 0 -8px 14px rgba(0,0,0,.15);
-    text-shadow:0 2px 0 rgba(255,255,255,.35);
-    transition:transform .08s ease, filter .15s ease, box-shadow .2s ease;
-  }
-  .start:hover{filter:brightness(1.03); box-shadow:0 18px 36px rgba(246,193,27,.4), inset 0 -8px 14px rgba(0,0,0,.18)}
-  .start:active{transform:translateY(2px)}
+    /* ===== Botones (conserva .menu-btn y .yellow) ===== */
+    .menu-btn{
+      --bg: var(--btn-blue);
+      --bg2: var(--btn-blue-2);
+      --txtshadow:#082040;
 
-  /* Pequeños brillos de ambiente */
-  .spark{position:fixed; width:6px; height:6px; background:#7cd1ff; border-radius:50%; opacity:.65; filter:blur(.2px); animation:blink 3.2s infinite ease-in-out}
-  .s2{animation-delay:.7s} .s3{animation-delay:1.4s}
-  @keyframes blink{50%{opacity:.15; transform:translateY(1px)}}
+      display:flex; align-items:center; justify-content:center; gap:14px;
+      width:min(780px, 92vw);
+      padding:22px 26px;
+      margin:14px auto;
+      font-size:clamp(14px, 1.9vw, 28px);
+      font-weight:800;
+      text-decoration:none;
+      color:var(--text);
+      cursor:pointer;
 
-  @media (max-width:1100px){
-    .players{grid-template-columns:repeat(4,1fr)}
-    .rows{grid-template-columns:1fr}
-    .code{font-size:22px}
-    .start{font-size:32px}
-  }
-</style>
+      /* marco 8-bit + sombras escalonadas */
+      background:
+        linear-gradient(180deg, #ffffff0a, #00000020),
+        linear-gradient(180deg, var(--bg2), var(--bg));
+      border:0;
+      border-radius:6px;
+      box-shadow:
+        0 0 0 4px var(--btn-outline),
+        0 0 0 8px #ffd84d,
+        0 10px 0 0 var(--shadow);
+      text-shadow:0 3px 0 var(--txtshadow);
+      transition: transform .06s steps(2), box-shadow .06s steps(2), filter .06s steps(2);
+    }
+    .menu-btn:hover{
+      transform: translateY(-3px);
+      box-shadow:
+        0 0 0 4px var(--btn-outline),
+        0 0 0 8px #ffea83,
+        0 14px 0 0 var(--shadow);
+      filter: saturate(1.05) brightness(1.03);
+    }
+    .menu-btn:active{
+      transform: translateY(0);
+      box-shadow:
+        0 0 0 4px var(--btn-outline),
+        0 0 0 8px #e9c74d,
+        0 6px 0 0 var(--shadow);
+    }
+
+    /* variantes */
+    .yellow{
+      --bg:var(--btn-yellow);
+      --bg2:var(--btn-yellow-2);
+      --txtshadow:#7a4f00;
+      color:#04244a;
+    }
+    /* botón verde (Offline del mockup) */
+    #link-offline{
+      --bg:var(--btn-green);
+      --bg2:var(--btn-green-2);
+      --txtshadow:#08331a;
+      color:#f0fff0;
+    }
+
+    /* Badge “AZAR” tipo cápsula */
+    .caps{
+      display:inline-block;
+      padding:6px 10px;
+      margin-left:10px;
+      background:#0b2a68;
+      color:#e6f1ff;
+      border:3px solid #07224f;
+      box-shadow: inset 0 -3px 0 #061a3a, 0 3px 0 #061a3a;
+      border-radius:4px;
+      font-size:0.75em;
+    }
+
+    /* ===== Modal nombre + avatar (mantengo Outfit para legibilidad) ===== */
+    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:60}
+    .name-card{width:min(480px,92vw);background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.18);
+      border-radius:16px;padding:18px;box-shadow:0 30px 60px rgba(0,0,0,.6);font-family:"Outfit",sans-serif}
+    .name-card h3{margin:0 0 8px;font-size:22px}
+    .name-card p{margin:0 0 14px;opacity:.9}
+    .name-row{display:flex;gap:10px}
+    .name-input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.25);
+      background:#0f172a;color:#fff;font-size:16px;outline:none}
+    .name-input:focus{border-color:#38bdf8}
+    .name-btn{padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.35);cursor:pointer;
+      background:linear-gradient(180deg,#facc15,#eab308);color:#111;font-weight:900}
+    .name-error{margin-top:8px;font-size:13px;color:#fb7185;min-height:18px}
+
+    /* ===== Selector de avatar ===== */
+    .avatar-grid{display:grid;grid-template-columns:repeat(6,56px);gap:10px;justify-content:center;margin-top:12px}
+    .avatar-opt{width:56px;height:56px;border-radius:50%;overflow:hidden;cursor:pointer;border:2px solid transparent;background:#0f172a;display:grid;place-items:center}
+    .avatar-opt img{width:100%;height:100%;object-fit:cover;display:block}
+    .avatar-opt.selected{border-color:#facc15;box-shadow:0 0 0 3px rgba(250,204,21,.35)}
+
+    .avatar-hint{margin:8px 0 0;font-size:13px;opacity:.85;font-family:"Outfit",sans-serif}
+  </style>
 </head>
 <body>
-  <div class="bg"></div>
-  <div class="vignette"></div>
+  <div class="title">IMPOSTOR <span>FÚTBOL</span> <span class="ball">⚽</span></div>
 
-  <!-- Banderas (mantiene estética y suma “mundial”) -->
-  <div class="flags">
-    <div class="flags-track">
-      <span class="chip">🇦🇷</span><span class="chip">🇧🇷</span><span class="chip">🇪🇸</span><span class="chip">🇫🇷</span><span class="chip">🏴</span><span class="chip">🇩🇪</span><span class="chip">🇮🇹</span><span class="chip">🇵🇹</span><span class="chip">🇺🇾</span><span class="chip">🇯🇵</span>
-      <span class="chip">🇦🇷</span><span class="chip">🇧🇷</span><span class="chip">🇪🇸</span><span class="chip">🇫🇷</span><span class="chip">🏴</span><span class="chip">🇩🇪</span><span class="chip">🇮🇹</span><span class="chip">🇵🇹</span><span class="chip">🇺🇾</span><span class="chip">🇯🇵</span>
+  <a id="link-crear"    class="menu-btn yellow" href="crear.html">🏆 CREAR SALA</a>
+  <a id="link-offline"  class="menu-btn"        href="offline.html">🚩 Offline</a>
+  <a id="link-ingresar" class="menu-btn"        href="ingresar.html">🔑 INGRESAR A SALA</a>
+  <button id="btn-azar"  class="menu-btn yellow">🎲 UNIRSE AL <span class="caps">AZAR</span></button>
+
+  <!-- ===== Perfil (nombre + avatar) ===== -->
+  <script>
+    // Avatares disponibles (ajustá rutas reales)
+    const AVATARS = [
+      {key:"a1", src:"avatars/a1.png"},{key:"a2", src:"avatars/a2.png"},
+      {key:"a3", src:"avatars/a3.png"},{key:"a4", src:"avatars/a4.png"},
+      {key:"a5", src:"avatars/a5.png"},{key:"a6", src:"avatars/a6.png"},
+      {key:"a7", src:"avatars/a7.png"},{key:"a8", src:"avatars/a8.png"},
+      {key:"a9", src:"avatars/a9.png"},{key:"a10",src:"avatars/a10.png"},
+      {key:"a11",src:"avatars/a11.png"},{key:"a12",src:"avatars/a12.png"},
+    ];
+
+    window.PlayerProfile = {
+      getName(){ return localStorage.getItem("displayName") || ""; },
+      setName(n){ localStorage.setItem("displayName", n); },
+      getAvatar(){ return localStorage.getItem("avatarKey") || ""; },
+      setAvatar(k){ localStorage.setItem("avatarKey", k); },
+
+      async ensure(){
+        let name = this.getName();
+        let avatar = this.getAvatar();
+        if (valid(name) && avatar) return {name, avatar};
+
+        const modal = document.getElementById("name-modal");
+        const input = document.getElementById("displayName");
+        const btn   = document.getElementById("saveName");
+        const errEl = document.getElementById("nameError");
+        const grid  = document.getElementById("avatarGrid");
+        const close = ()=>{ modal.style.display="none"; modal.setAttribute("aria-hidden","true"); };
+
+        // Render opciones avatar
+        grid.innerHTML = "";
+        AVATARS.forEach(a=>{
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "avatar-opt";
+          b.innerHTML = `<img src="${a.src}" alt="${a.key}" />`;
+          if ((avatar||"") === a.key) b.classList.add("selected");
+          b.addEventListener("click", ()=>{
+            document.querySelectorAll(".avatar-opt").forEach(x=>x.classList.remove("selected"));
+            b.classList.add("selected");
+            avatar = a.key;
+          });
+          grid.appendChild(b);
+        });
+
+        modal.style.display="grid";
+        modal.setAttribute("aria-hidden","false");
+        input.value = this.getName() || ""; input.focus();
+
+        return new Promise((resolve)=>{
+          const save = ()=>{
+            const v = (input.value||"").trim();
+            if(!valid(v)){ errEl.textContent = "Usá entre 2 y 16 caracteres."; return; }
+            if(!avatar){ errEl.textContent = "Elegí un avatar."; return; }
+            this.setName(v);
+            this.setAvatar(avatar);
+            errEl.textContent = "";
+            close();
+            resolve({name:v, avatar});
+          };
+          btn.onclick = save;
+          input.onkeydown = (e)=>{ if(e.key==="Enter") save(); if(e.key==="Escape") close(); };
+          modal.onclick = (e)=>{ if(e.target===modal){ input.focus(); } };
+        });
+
+        function valid(s){ return typeof s==="string" && s.trim().length>=2 && s.trim().length<=16; }
+      }
+    };
+  </script>
+
+  <!-- ===== Firebase + acciones ===== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    (async () => {
+      try {
+        const firebaseConfig = {
+          apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
+          authDomain: "who-is-who-6ea99.firebaseapp.com",
+          projectId: "who-is-who-6ea99",
+          storageBucket: "who-is-who-6ea99.firebasestorage.app",
+          messagingSenderId: "718537140049",
+          appId: "1:718537140049:web:7400ec7e5467b387f8d570",
+          measurementId: "G-KNC4FJXXBN"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        try { await signInAnonymously(auth); }
+        catch (e) { console.warn("Anon auth falló (seguimos igual):", e); }
+
+        // Unirse al azar
+        const btnAzar = document.getElementById("btn-azar");
+        if (btnAzar) {
+          btnAzar.addEventListener("click", async () => {
+            try {
+              const {name, avatar} = await window.PlayerProfile.ensure();
+
+              const snap = await getDocs(collection(db, "rooms"));
+              if (snap.empty) { alert("No hay salas disponibles todavía."); return; }
+              const rooms = snap.docs.map(d => d.id);
+              const code = rooms[Math.floor(Math.random() * rooms.length)];
+
+              location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`;
+            } catch (err) {
+              console.error(err);
+              alert("No pude listar salas. Probá refrescar o crear una sala.");
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error inicializando Firebase:", err);
+      }
+    })();
+  </script>
+
+  <!-- ===== Modal nombre + avatar ===== -->
+  <div id="name-modal" class="backdrop" aria-hidden="true">
+    <div class="name-card" role="dialog" aria-modal="true" aria-labelledby="name-title">
+      <h3 id="name-title">Elegí tu nombre</h3>
+      <p>Este será el nombre y avatar que verán los demás jugadores.</p>
+      <div class="name-row">
+        <input id="displayName" class="name-input" type="text" maxlength="16" placeholder="Ej: Nico, Lio 🐐" />
+        <button id="saveName" class="name-btn">Guardar</button>
+      </div>
+      <div id="nameError" class="name-error"></div>
+      <div class="avatar-grid" id="avatarGrid"></div>
+      <div class="avatar-hint">Elegí tu avatar</div>
     </div>
   </div>
 
-  <div class="container">
-    <!-- Top bar -->
-    <div class="topbar">
-      <div class="logo">IMPOSTOR <span>FÚTBOL</span></div>
-      <div></div>
-      <div class="code">79CUNU</div>
-      <button class="btn" id="copy">Copiar</button>
-    </div>
+  <!-- ===== Navegación que exige perfil ===== -->
+  <script>
+    document.addEventListener("DOMContentLoaded", ()=>{
+      const linkCrear    = document.getElementById("link-crear");
+      const linkIngresar = document.getElementById("link-ingresar");
 
-    <!-- Jugadores -->
-    <div class="players">
-      <div class="card me">
-        <div class="avatar"></div>
-        <div class="name">messi (yo)</div>
-      </div>
-      <div class="card"><div class="avatar"></div><div class="name">Jugador 2</div></div>
-      <div class="card"><div class="avatar"></div><div class="name">Jugador 3</div></div>
-      <div class="card"><div class="avatar"></div><div class="name">Jugador 4</div></div>
-      <div class="card"><div class="avatar"></div><div class="name">Jugador 5</div></div>
-      <div class="card"><div class="avatar"></div><div class="name">Jugador 6</div></div>
-      <div class="card"><div class="avatar"></div><div class="name">Jugador 7</div></div>
-      <div class="card"><div class="avatar"></div><div class="name">Jugador 8</div></div>
-    </div>
+      async function goWithProfile(url){
+        const {name, avatar} = await window.PlayerProfile.ensure();
+        const sep  = url.includes("?") ? "&" : "?";
+        location.href = `${url}${sep}name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`.
+          replace(/\s/g, "%20");
+      }
 
-    <!-- Controles -->
-    <div class="rows">
-      <div class="panel">
-        <div class="h">IMPOSTORES</div>
-        <div class="ctrl">
-          <div class="arrow left" title="menos"></div>
-          <div class="value" id="imp">1</div>
-          <div class="arrow right" title="más"></div>
-        </div>
-      </div>
+      linkCrear?.addEventListener("click", (e)=>{ e.preventDefault(); goWithProfile("crear.html"); });
+      linkIngresar?.addEventListener("click", (e)=>{ e.preventDefault(); goWithProfile("ingresar.html"); });
 
-      <div class="panel">
-        <div class="h">JUGADORES</div>
-        <div class="ctrl">
-          <div class="arrow left"></div>
-          <div class="value" id="jug">8</div>
-          <div class="arrow right"></div>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="h">TEMA</div>
-        <div class="ctrl">
-          <div class="arrow left"></div>
-          <div class="value" id="tema">Clubes</div>
-          <div class="arrow right"></div>
-        </div>
-      </div>
-    </div>
-
-    <button class="start">EMPEZAR PARTIDA</button>
-  </div>
-
-  <!-- Lucecitas ambiente -->
-  <div class="spark" style="left:12%; top:40%"></div>
-  <div class="spark s2" style="left:37%; top:52%"></div>
-  <div class="spark s3" style="left:74%; top:46%"></div>
-
-<script>
-  // Copiar código (demostración)
-  document.getElementById('copy')?.addEventListener('click', ()=>{
-    const code = document.querySelector('.code')?.textContent?.trim();
-    if(navigator.clipboard && code){
-      navigator.clipboard.writeText(code);
-      const b = document.getElementById('copy');
-      const old = b.textContent;
-      b.textContent = 'Copiado ✓';
-      setTimeout(()=> b.textContent = old, 1200);
-    }
-  });
-</script>
+      // Si querés que Offline también pida perfil:
+      // document.getElementById("link-offline")?.addEventListener("click", (e)=>{ e.preventDefault(); goWithProfile("offline.html"); });
+    });
+  </script>
 </body>
 </html>
