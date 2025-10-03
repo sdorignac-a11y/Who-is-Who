@@ -514,6 +514,7 @@
     // ===== Orquestación por estado de sala + ronda
     let currentRound = 0;
     let roundState = null;
+let drawPlayedForRound = 0; // evita repetir la animación de sorteo por ronda
 
     onSnapshot(roomRef, async s=>{
       if(!s.exists()) return;
@@ -681,7 +682,20 @@ onSnapshot(roomRef, async (snap) => {
     });
 
     // ===== Hint de turno live
-    onSnapshot(doc(db,"rooms",state.code,"rounds", String(()=>currentRound ? currentRound : 0)()), rdoc=>{
+    onSnapshot(
+  doc(db, "rooms", state.code, "rounds", String(currentRound || 0)),
+  (rdoc) => {
+    if (!rdoc.exists()) return;
+    const r = rdoc.data();
+    roundState = r;
+    if (r.status === "prompt") {
+      const idx = r.turnIndex ?? 0;
+      const uidTurno = (r.order || [])[idx];
+      if (uidTurno) nameOf(uidTurno).then(n => ui.turnHint.textContent = `Turno de: ${n}`);
+    }
+  }
+);
+
       if(!rdoc.exists()) return;
       const r = rdoc.data();
       roundState = r;
