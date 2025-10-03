@@ -531,10 +531,13 @@
         document.getElementById("phaseDiscuss").style.display = "none";
       }
       if (phase === "draw") {
-        document.getElementById("phaseDiscuss").style.display = "none";
-        // Solo arrancamos la animación si todavía no arrancó en este cliente
-        startDrawAnimation(roundState.order || []);
-      }
+  document.getElementById("phaseDiscuss").style.display = "none";
+  // Solo arrancamos la animación si no la mostramos aún en esta ronda
+  if (drawPlayedForRound !== currentRound) {
+    drawPlayedForRound = currentRound;
+    startDrawAnimation(roundState.order || []);
+  }
+}
       if (phase === "prompt") {
         document.getElementById("phaseDiscuss").style.display = "block";
         document.getElementById("firstWordTip").style.display = "block";
