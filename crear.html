@@ -34,7 +34,7 @@
   .cta{display:flex;justify-content:center}
   .btn-cta{background:linear-gradient(180deg,var(--yellow),var(--yellow-2));border:1px solid rgba(255,210,80,.9);color:#10223b;font-weight:900;font-size:28px;padding:16px 34px;border-radius:16px}
 
-  /* Overlay rol */
+  /* === Overlay rol (de tu versión) === */
   #reveal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,10,20,.9);z-index:1000}
   .rev-card{width:min(680px,92vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:24px;text-align:center}
   .rev-content{padding:18px;background:linear-gradient(180deg,#102c4f,#0c2441);border:1px solid rgba(128,180,255,.25);border-radius:16px;min-height:110px;display:grid;place-items:center;font-size:26px;font-weight:800}
@@ -65,6 +65,41 @@
   .order-item{background:linear-gradient(180deg,#0c2747,#0a213b);border:1px solid rgba(128,180,255,.28);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px}
   .order-badge{width:26px;height:26px;border-radius:8px;background:linear-gradient(180deg,#1e68d6,#184fa5);border:1px solid rgba(110,178,255,.7);display:grid;place-items:center;font-weight:900}
   .order-name{font-weight:800}
+
+  /* === Cartel de turno centrado === */
+  #turnBanner{
+    position:absolute; top:38%; left:50%; transform:translate(-50%,-50%) scale(.92);
+    display:none; padding:16px 26px; border-radius:18px;
+    background:linear-gradient(135deg,#1e68d6,#4ade80);
+    color:#fff; font-weight:900; font-size:26px; letter-spacing:.3px;
+    text-shadow:0 2px 10px rgba(0,0,0,.35);
+    box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.15);
+    border:1px solid rgba(255,255,255,.2);
+    pointer-events:none; z-index:5; opacity:0;
+    transition:transform .35s ease, opacity .35s ease;
+  }
+  #turnBanner.show{display:block;opacity:1;transform:translate(-50%,-50%) scale(1);}
+  #turnBanner.hide{opacity:0;transform:translate(-50%,-50%) scale(.92);}
+  #turnBanner .who{font-size:30px;text-transform:uppercase;}
+
+  /* === Chat burbujas === */
+  #chatList{ padding:14px; }
+  .chat-row{ display:flex; margin:8px 0; }
+  .chat-row.mine{ justify-content:flex-end; }
+  .chat-row.other{ justify-content:flex-start; }
+  .bubble{
+    max-width:70%; padding:10px 14px; border-radius:16px;
+    background:#142946; border:1px solid rgba(128,180,255,.18);
+    color:#cfe4ff; box-shadow:0 4px 12px rgba(0,0,0,.25);
+    animation:fadeUp .25s ease;
+  }
+  .chat-row.mine .bubble{
+    background:linear-gradient(135deg,#22c55e,#16a34a);
+    color:#fff; border-color:rgba(255,255,255,.2);
+  }
+  .bubble .name{ font-weight:800; opacity:.9; margin-bottom:2px; font-size:13px; }
+  .bubble .text{ font-size:16px; }
+  @keyframes fadeUp{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:translateY(0)}}
 </style>
 </head>
 <body>
@@ -112,7 +147,10 @@
 
   <!-- FASE: DEBATE (chat) -->
   <div id="phaseDiscuss" style="display:none;position:fixed;inset:0;background:rgba(0,10,20,.9);padding:24px">
-    <div style="max-width:900px;margin:0 auto;background:#0b203a;border:1px solid rgba(128,180,255,.3);border-radius:18px;height:86vh;display:flex;flex-direction:column">
+    <div style="max-width:900px;margin:0 auto;background:#0b203a;border:1px solid rgba(128,180,255,.3);border-radius:18px;height:86vh;display:flex;flex-direction:column;position:relative">
+      <!-- Cartel de turno centrado -->
+      <div id="turnBanner">⚽ Va <span id="turnName" class="who">—</span></div>
+
       <div style="padding:14px 16px;border-bottom:1px solid rgba(128,180,255,.15);display:flex;justify-content:space-between;align-items:center">
         <h2 style="margin:0">Debate</h2>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
@@ -121,7 +159,7 @@
         </div>
       </div>
       <div id="firstWordTip" class="tip" style="display:none">Primero, cada jugador debe enviar <strong>UNA</strong> palabra (2–24 letras). Después, chat libre.</div>
-      <div id="chatList" style="flex:1;overflow:auto;padding:14px"></div>
+      <div id="chatList" style="flex:1;overflow:auto"></div>
       <form id="chatForm" style="padding:12px;display:flex;gap:10px;border-top:1px solid rgba(128,180,255,.15)">
         <input id="chatInput" maxlength="140" placeholder="Primero UNA palabra (2–24 letras)…"
                style="flex:1;padding:12px;border-radius:12px;border:1px solid rgba(128,180,255,.35);background:#0a213b;color:#eaf2ff">
@@ -131,6 +169,7 @@
     </div>
   </div>
 
+  <!-- ============ SCRIPT ============ -->
   <script type="module">
   // ===== Firebase =====
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
@@ -405,7 +444,7 @@
     return a;
   }
 
-  // ======== START: roles + ronda con ORDEN y status "reveal" -> (después) "draw"
+  // ======== START: roles + ronda con ORDEN y status "reveal" -> "draw"
   let starting = false;
   document.getElementById("startBtn").addEventListener("click", async ()=>{
     if (!isHost){ alert("Solo el host puede iniciar"); return; }
@@ -455,7 +494,7 @@
 
       await batch.commit();
 
-      // 10s para ver el rol -> luego lanzamos sorteo "draw"
+      // 10s para ver el rol -> luego sorteo "draw"
       setTimeout(async ()=>{
         try{ await updateDoc(roundRef, { status:"draw", drawStartedAt: serverTimestamp() }); }catch(e){ console.warn(e); }
       }, 10000);
@@ -468,7 +507,7 @@
     }
   });
 
-  // ===== Overlay de rol + countdown de 10s (visual)
+  // ===== Overlay de rol + countdown
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
     if(!s.exists()) return;
     const a = s.data();
@@ -505,13 +544,14 @@
     },1000);
   });
 
-  // ====== Sorteo del orden (animación sincronizada)
+  // ===== Utilidades
   function sanitize(str){ return (str||"").replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s])); }
   async function nameOf(uid){
     try{ const snap = await getDoc(doc(db,"rooms",state.code,"players", uid)); return (snap.exists() && (snap.data().name||"Jugador")) || "Jugador"; }
     catch{ return "Jugador"; }
   }
 
+  // ===== Sorteo del orden (animación)
   async function startDrawAnimation(order){
     const draw = document.getElementById("drawOverlay");
     const slip = document.getElementById("slip");
@@ -519,7 +559,6 @@
     list.innerHTML = "";
     draw.style.display = "grid";
 
-    // Precreamos placeholders en la lista
     const names = await Promise.all(order.map(uid=>nameOf(uid)));
     names.forEach((n,i)=>{
       const item = document.createElement("div");
@@ -528,12 +567,11 @@
       list.appendChild(item);
     });
 
-    // Revelamos uno por uno
     for (let i=0;i<order.length;i++){
       const n = names[i];
       slip.textContent = n;
       slip.classList.remove("reveal");
-      void slip.offsetWidth; // reiniciar animación
+      void slip.offsetWidth;
       slip.classList.add("reveal");
       await new Promise(r=>setTimeout(r, 900));
       const slot = document.getElementById(`ord-${i}`);
@@ -541,7 +579,6 @@
       await new Promise(r=>setTimeout(r, 450));
     }
 
-    // Al terminar: host pasa a PROMPT
     const roomSnap = await getDoc(roomRef);
     const roundId = String(roomSnap.data().round || 0);
     if (isHost && roundId !== "0"){
@@ -553,11 +590,27 @@
   // ===== Orquestación por estado de sala + ronda
   let currentRound = 0;
   let roundState = null;
-  let drawPlayedForRound = 0; // evita repetir el bolillero por ronda
+  let drawPlayedForRound = 0;
 
-  // Suscriptores que limpiaremos al cambiar de ronda
   let unsubscribeRoundHint = null;
   let unsubscribeChat = null;
+
+  // === Cartel de turno centrado ===
+  let _turnBannerTimer = null;
+  function showTurnBanner(name){
+    const banner = document.getElementById("turnBanner");
+    const who    = document.getElementById("turnName");
+    who.textContent = (name || "alguien");
+    banner.classList.remove("hide");
+    banner.classList.add("show");
+    banner.style.display = "block";
+    if (_turnBannerTimer) clearTimeout(_turnBannerTimer);
+    _turnBannerTimer = setTimeout(()=>{
+      banner.classList.remove("show");
+      banner.classList.add("hide");
+      setTimeout(()=>{ banner.style.display="none"; }, 350);
+    }, 2200);
+  }
 
   function subscribeRoundHint(roundId){
     if (unsubscribeRoundHint) unsubscribeRoundHint();
@@ -572,6 +625,7 @@
           const uidTurno = (r.order || [])[idx];
           if (uidTurno) nameOf(uidTurno).then(n => {
             ui.turnHint.textContent = `Turno de: ${n}`;
+            showTurnBanner(n);
           });
         }
       }
@@ -585,11 +639,16 @@
       snap=>{
         const items = snap.docs.map(d=>({id:d.id, ...d.data()}))
           .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
-        ui.chatList.innerHTML = items.map(m=>`
-          <div style="margin:6px 0;padding:8px 10px;border-radius:12px;background:#0a2747;border:1px solid rgba(128,180,255,.18)">
-            <strong style="opacity:.9">${sanitize(m.name) || "Jugador"}</strong>
-            <div>${sanitize(m.text||"")}</div>
-          </div>`).join("");
+        ui.chatList.innerHTML = items.map(m=>{
+          const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
+          return `
+            <div class="chat-row ${mine?'mine':'other'}">
+              <div class="bubble">
+                <div class="name">${sanitize(m.name) || "Jugador"}</div>
+                <div class="text">${sanitize(m.text||"")}</div>
+              </div>
+            </div>`;
+        }).join("");
         ui.chatList.scrollTop = ui.chatList.scrollHeight;
       }
     );
@@ -600,7 +659,6 @@
     const data = s.data();
     const newRound = data.round || 0;
 
-    // Si cambió la ronda, (re)conectar hint + chat
     if (newRound && newRound !== currentRound){
       currentRound = newRound;
       subscribeRoundHint(currentRound);
@@ -638,7 +696,7 @@
       document.getElementById("phaseDiscuss").style.display = "block";
       document.getElementById("firstWordTip").style.display = "none";
       ui.turnHint.textContent = "Chat libre";
-      ui.chatInput.placeholder = "Decí tu pista/sospecha (3s cooldown)";
+      ui.chatInput.placeholder = "Decí tu pista/suspecha (3s cooldown)";
     }
     if (phase === "vote") {
       document.getElementById("phaseDiscuss").style.display = "block";
@@ -646,7 +704,7 @@
     }
   });
 
-  // ===== Fallbacks de fase (solo host) =====
+  // ===== Fallbacks de fase (solo host)
   onSnapshot(roomRef, async (snap) => {
     if (!snap.exists()) return;
     if (!isHost) return;
@@ -697,93 +755,84 @@
     return true;
   }
 
- function isOneWordLatin(str){
-  return /^\p{L}{2,24}$/u.test(str);
-}
-
-
- // Helper para mostrar errores visibles
-function showError(msg){
-  ui.cooldownHint.textContent = msg;
-  ui.cooldownHint.style.color = "#ff7b7b";
-  document.getElementById("chatInput").style.outline = "2px solid #ff7b7b";
-  setTimeout(()=>{
-    ui.cooldownHint.style.color = "";
-    document.getElementById("chatInput").style.outline = "";
-  }, 1800);
-}
-
-document.getElementById("chatForm").addEventListener("submit", async (e)=>{
-  e.preventDefault();
-  if (!roundState) { showError("No hay ronda activa."); return; }
-
-  const raw = (ui.chatInput.value || "").trim();
-  if (!raw) return;
-
-  const myUid = auth.currentUser?.uid;
-  const roundId = String(currentRound);
-
-  try {
-    if (roundState.status === "prompt") {
-      const idx = roundState.turnIndex ?? 0;
-      const order = roundState.order || [];
-      const uidTurno = order[idx];
-
-      // 🔒 Chequeo de turno MUY explícito
-      if (!myUid || !uidTurno || String(myUid) !== String(uidTurno)) {
-        const name = uidTurno ? await nameOf(uidTurno) : "alguien";
-        showError(`Esperá tu turno. Ahora: ${name}.`);
-        return;
-      }
-
-      // ✅ Validación de UNA palabra
-      if (!isOneWordLatin(raw)) {
-        showError("Enviá UNA sola palabra (2–24 letras, sin espacios).");
-        return;
-      }
-
-      // ✍️ Guardar "primera palabra" + mensaje de chat
-      await setDoc(doc(db,"rooms",state.code,"rounds", roundId,"firstWords", myUid), {
-        uid: myUid, name: getStoredName(), text: raw, at: serverTimestamp()
-      });
-
-      const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
-      await setDoc(msgRef, {
-        uid: myUid, name: getStoredName(), text: raw, at: serverTimestamp(), kind:"firstword"
-      });
-
-      ui.chatInput.value = "";
-
-      // 👑 Avanzar turno solo si sos host
-      if (isHost) {
-        const nextIdx = idx + 1;
-        if (nextIdx < order.length) {
-          await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { turnIndex: nextIdx });
-        } else {
-          await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { status:"discuss", discussStartedAt: serverTimestamp() });
-        }
-      }
-      return;
-    }
-
-    if (roundState.status === "discuss") {
-      if (!canSendNow()) return;
-      const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
-      await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: raw, at: serverTimestamp(), kind:"chat" });
-      ui.chatInput.value = "";
-      cooldownUntil = Date.now() + 3000;
-      canSendNow();
-      return;
-    }
-
-    showError("No podés enviar ahora.");
-
-  } catch (e) {
-    console.error(e);
-    showError(`Error al enviar: ${e?.message || e}`);
+  // Regex unicode para 1 palabra (2–24 letras)
+  function isOneWordLatin(str){
+    return /^\p{L}{2,24}$/u.test(str);
   }
-});
 
+  // Helper de error visible
+  function showError(msg){
+    ui.cooldownHint.textContent = msg;
+    ui.cooldownHint.style.color = "#ff7b7b";
+    document.getElementById("chatInput").style.outline = "2px solid #ff7b7b";
+    setTimeout(()=>{
+      ui.cooldownHint.style.color = "";
+      document.getElementById("chatInput").style.outline = "";
+    }, 1800);
+  }
+
+  // ===== Chat submit
+  document.getElementById("chatForm").addEventListener("submit", async (e)=>{
+    e.preventDefault();
+    if (!roundState) { showError("No hay ronda activa."); return; }
+
+    const raw = (ui.chatInput.value || "").trim();
+    if (!raw) return;
+
+    const myUid = auth.currentUser?.uid;
+    const roundId = String(currentRound);
+
+    try {
+      if (roundState.status === "prompt") {
+        const idx = roundState.turnIndex ?? 0;
+        const order = roundState.order || [];
+        const uidTurno = order[idx];
+
+        if (!myUid || !uidTurno || String(myUid) !== String(uidTurno)) {
+          const name = uidTurno ? await nameOf(uidTurno) : "alguien";
+          showError(`Esperá tu turno. Ahora: ${name}.`);
+          return;
+        }
+        if (!isOneWordLatin(raw)) {
+          showError("Enviá UNA sola palabra (2–24 letras, sin espacios).");
+          return;
+        }
+
+        await setDoc(doc(db,"rooms",state.code,"rounds", roundId,"firstWords", myUid), {
+          uid: myUid, name: getStoredName(), text: raw, at: serverTimestamp()
+        });
+        const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
+        await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: raw, at: serverTimestamp(), kind:"firstword" });
+        ui.chatInput.value = "";
+
+        if (isHost) {
+          const nextIdx = idx + 1;
+          if (nextIdx < order.length) {
+            await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { turnIndex: nextIdx });
+          } else {
+            await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { status:"discuss", discussStartedAt: serverTimestamp() });
+          }
+        }
+        return;
+      }
+
+      if (roundState.status === "discuss") {
+        if (!canSendNow()) return;
+        const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
+        await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: raw, at: serverTimestamp(), kind:"chat" });
+        ui.chatInput.value = "";
+        cooldownUntil = Date.now() + 3000;
+        canSendNow();
+        return;
+      }
+
+      showError("No podés enviar ahora.");
+
+    } catch (e) {
+      console.error(e);
+      showError(`Error al enviar: ${e?.message || e}`);
+    }
+  });
 
   // ===== Votación
   async function renderVoteBar(){
@@ -848,6 +897,6 @@ document.getElementById("chatForm").addEventListener("submit", async (e)=>{
     if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); } catch{} }
     else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); } catch{ alert(joinUrl); } }
   });
-</script>
+  </script>
 </body>
 </html>
