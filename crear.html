@@ -73,9 +73,9 @@
     <div class="rev-card">
       <h2>Tu rol</h2>
       <div id="revContent" class="rev-content"></div>
-      <div style="margin-top:12px">
-        <button id="btnComenzarRonda" class="btn-cta" type="button">🚀 Comenzar ronda</button>
-      </div>
+      <div id="countdown" style="margin-top:12px;font-size:22px;font-weight:700;color:#f6c11b">
+  Pasando en 10s...
+</div>
     </div>
   </div>
 
@@ -487,13 +487,42 @@
     let currentRound = 0;
     let cooldownUntil = 0;
 
-    // Comenzar ronda = marcar revealedAt y cerrar overlay
-    document.getElementById("btnComenzarRonda").addEventListener("click", async ()=>{
-      try{
-        await updateDoc(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), { revealedAt: serverTimestamp() });
-      }catch(e){ console.warn(e); }
-      hide(ui.reveal);
-    });
+    // Cuando se muestran los roles, arrancamos un countdown de 10s
+onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
+  if(!s.exists()) return;
+  const a = s.data();
+  const overlay = document.getElementById("reveal");
+  const box = document.getElementById("revContent");
+
+  overlay.style.display = "grid";
+  if(a.role === "IMPOSTOR"){
+    box.innerHTML = `
+      <div style="font-size:38px;font-weight:900;color:#ff6b6b;margin:6px 0 8px">IMPOSTOR</div>
+      <div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>
+    `;
+  }else{
+    box.innerHTML = `
+      <div style="opacity:.75;font-size:14px;margin:6px 0">Palabra secreta (${a.tema})</div>
+      <div style="font-size:34px;font-weight:900;color:#7cf062">${a.word}</div>
+    `;
+  }
+
+  // contador de 10s
+  let secs = 10;
+  const countdownEl = document.getElementById("countdown");
+  countdownEl.textContent = `Pasando en ${secs}s...`;
+
+  const interval = setInterval(()=>{
+    secs--;
+    countdownEl.textContent = `Pasando en ${secs}s...`;
+    if(secs <= 0){
+      clearInterval(interval);
+      overlay.style.display = "none";
+      document.getElementById("phasePrompt").style.display = "grid"; // mostrar fase palabra
+    }
+  },1000);
+});
+
 
     // Inicia automáticamente la ronda después de 10 segundos de mostrar roles
 onSnapshot(roomRef, async snap=>{
