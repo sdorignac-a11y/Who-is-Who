@@ -17,11 +17,11 @@
 <body>
   <div class="title">Impostor <span>Fútbol</span> ⚽</div>
 
-  <!-- Link directo: navega aunque el JS falle -->
-  <a id="btn-crear" class="menu-btn yellow" href="crear.html">🏟️ CREAR SALA</a>
-  <a id="btn-crear" class="menu-btn yellow" href="offline.html">🏟️ Offline</a>
-  <a class="menu-btn" href="ingresar.html">🔑 INGRESAR A SALA</a>
-  <button id="btn-azar" class="menu-btn yellow">🎲 UNIRSE AL AZAR</button>
+  <a id="link-crear"    class="menu-btn yellow" href="crear.html">🏟️ CREAR SALA</a>
+<a id="link-offline"  class="menu-btn yellow" href="offline.html">📴 Offline</a>
+<a id="link-ingresar" class="menu-btn"        href="ingresar.html">🔑 INGRESAR A SALA</a>
+<button id="btn-azar"  class="menu-btn yellow">🎲 UNIRSE AL AZAR</button>
+
 
 <script>
   // Helpers de nombre
@@ -40,7 +40,7 @@
 
       modal.style.display="grid";
       modal.setAttribute("aria-hidden","false");
-      input.value = ""; input.focus();
+      input.value = (this.get() || ""); input.focus();
 
       return new Promise((resolve)=>{
         const save = ()=>{
@@ -91,17 +91,21 @@
         const btnAzar = document.getElementById("btn-azar");
         if (btnAzar) {
           btnAzar.addEventListener("click", async () => {
-            try {
-              const snap = await getDocs(collection(db, "rooms"));
-              if (snap.empty) { alert("No hay salas disponibles todavía."); return; }
-              const rooms = snap.docs.map(d => d.id);
-              const code = rooms[Math.floor(Math.random() * rooms.length)];
-              location.href = "crear.html?code=" + code;
-            } catch (err) {
-              console.error(err);
-              alert("No pude listar salas. Probá refrescar o crear una sala.");
-            }
-          });
+  try {
+    const name = await window.PlayerName.ensure();
+
+    const snap = await getDocs(collection(db, "rooms"));
+    if (snap.empty) { alert("No hay salas disponibles todavía."); return; }
+    const rooms = snap.docs.map(d => d.id);
+    const code = rooms[Math.floor(Math.random() * rooms.length)];
+
+    location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}`;
+  } catch (err) {
+    console.error(err);
+    alert("No pude listar salas. Probá refrescar o crear una sala.");
+  }
+});
+
         }
       } catch (err) {
         console.error("Error inicializando Firebase:", err);
@@ -136,6 +140,23 @@
     <div id="nameError" class="name-error"></div>
   </div>
 </div>
+<script>
+  // Asegurar nombre antes de navegar
+  document.addEventListener("DOMContentLoaded", ()=>{
+    const linkCrear    = document.getElementById("link-crear");
+    const linkIngresar = document.getElementById("link-ingresar");
+    const linkOffline  = document.getElementById("link-offline"); // si querés que Offline también pida nombre, descomentá abajo
+
+    async function goWithName(url){
+      const name = await window.PlayerName.ensure();
+      const sep  = url.includes("?") ? "&" : "?";
+      location.href = `${url}${sep}name=${encodeURIComponent(name)}`;
+    }
+
+    linkCrear?.addEventListener("click", (e)=>{ e.preventDefault(); goWithName("crear.html"); });
+    linkIngresar?.addEventListener("click", (e)=>{ e.preventDefault(); goWithName("ingresar.html"); });
+  });
+</script>
 
 </body>
 </html>
