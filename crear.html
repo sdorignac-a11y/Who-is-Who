@@ -481,7 +481,231 @@ const impostorIds = new Set(order.slice(0, K).map(p => p.id));
     if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); } catch{} }
     else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); } catch{ alert(joinUrl); } }
   });
+  // ======= FASES =======
+const ui = {
+  reveal: document.getElementById("reveal"),
+  phasePrompt: document.getElementById("phasePrompt"),
+  phaseDiscuss: document.getElementById("phaseDiscuss"),
+  promptForm: document.getElementById("promptForm"),
+  promptInput: document.getElementById("promptInput"),
+  promptStatus: document.getElementById("promptStatus"),
+  chatForm: document.getElementById("chatForm"),
+  chatInput: document.getElementById("chatInput"),
+  chatList: document.getElementById("chatList"),
+  voteBar: document.getElementById("voteBar"),
+  cooldownHint: document.getElementById("cooldownHint"),
+};
+
+function show(el){ el.style.display = "grid"; }
+function hide(el){ el.style.display = "none"; }
+
+// track
+let currentRound = 0;
+let cooldownUntil = 0;
+
+// ====== Comenzar ronda (ya tenés el botón). Agregá handler si no lo pusiste:
+document.getElementById("btnComenzarRonda").addEventListener("click", async ()=>{
+  try{
+    await updateDoc(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), { revealedAt: serverTimestamp() });
+  }catch(e){ console.warn(e); }
+  hide(ui.reveal);
+});
+
+// ====== Orquestación por estado de sala
+onSnapshot(roomRef, async s=>{
+  if(!s.exists()) return;
+  const data = s.data();
+  currentRound = data.round || 0;
+
+  // cuando sala está "playing" y TODOS revelaron -> host crea round doc con status 'prompt'
+  if (data.status === "playing") {
+    const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+    const asg = asgSnap.docs.map(d=>d.data());
+    const allRevealed = asg.length>0 && asg.every(a=>!!a.revealedAt);
+
+    if (isHost && allRevealed) {
+      const roundRef = doc(db,"rooms",state.code,"rounds", String(currentRound));
+      const roundDoc = await getDoc(roundRef);
+      if (!roundDoc.exists()) {
+        const order = asg.map(a=>a.uid).sort(()=>Math.random()-0.5);
+        await setDoc(roundRef, { status:"prompt", createdAt: serverTimestamp(), order, turnIndex:0 });
+      }
+    }
+  }
+
+  // escuchar el round actual
+  const roundRef = doc(db,"rooms",state.code,"rounds", String(currentRound));
+  const rdoc = await getDoc(roundRef);
+  if (!rdoc.exists()) return;
+  const r = rdoc.data();
+
+  if (r.status === "prompt") {
+    hide(ui.phaseDiscuss);
+    show(ui.phasePrompt);
+  } else if (r.status === "discuss") {
+    hide(ui.phasePrompt);
+    show(ui.phaseDiscuss);
+  } else if (r.status === "vote") {
+    // ya estamos en debate; mostramos barra de voto (la llenamos abajo)
+    show(ui.phaseDiscuss);
+  }
+});
+
+// ====== FASE PALABRA: envío
+ui.promptForm.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const text = (ui.promptInput.value || "").trim();
+  if (!text) return;
+  const promRef = doc(db,"rooms",state.code,"rounds", String(currentRound), "prompts", auth.currentUser.uid);
+  try{
+    await setDoc(promRef, { text, at: serverTimestamp(), uid: auth.currentUser.uid, name: getStoredName() });
+    ui.promptInput.value = "";
+    ui.promptStatus.textContent = "Listo. Esperá a los demás…";
+  }catch(e){ console.warn(e); }
+});
+
+// cuando TODOS enviaron palabra → cambiar a 'discuss' (solo host)
+onSnapshot(collection(db,"rooms",state.code,"rounds", String(currentRound), "prompts"), async snap=>{
+  const submitted = new Set(snap.docs.map(d=>d.id));
+  const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+  const players = asgSnap.docs.map(d=>d.id);  // ids de jugadores
+  const all = players.length>0 && players.every(id=>submitted.has(id));
+  if (isHost && all) {
+    await updateDoc(doc(db,"rooms",state.code,"rounds", String(currentRound)), { status:"discuss", discussStartedAt: serverTimestamp() });
+  }
+});
+
+// ====== FASE DEBATE: chat (cooldown 3s)
+function canSendNow(){
+  const now = Date.now();
+  if (now < cooldownUntil) {
+    const left = Math.ceil((cooldownUntil - now)/1000);
+    ui.cooldownHint.textContent = `Esperá ${left}s para volver a enviar`;
+    return false;
+  }
+  ui.cooldownHint.textContent = "";
+  return true;
+}
+
+ui.chatForm.addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  if (!canSendNow()) return;
+  const msg = (ui.chatInput.value || "").trim();
+  if (!msg) return;
+  const msgRef = doc(collection(db,"rooms",state.code,"rounds", String(currentRound), "chat"));
+  try{
+    await setDoc(msgRef, {
+      uid: auth.currentUser.uid,
+      name: getStoredName(),
+      text: msg,
+      at: serverTimestamp()
+    });
+    ui.chatInput.value = "";
+    cooldownUntil = Date.now() + 3000; // 3s
+    canSendNow();
+  }catch(e){ console.warn(e); }
+});
+
+// stream de chat
+onSnapshot(collection(db,"rooms",state.code,"rounds", String(currentRound), "chat"), snap=>{
+  const items = snap.docs
+    .map(d=>({id:d.id, ...d.data()}))
+    .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
+  ui.chatList.innerHTML = items.map(m=>`
+    <div style="margin:6px 0;padding:8px 10px;border-radius:12px;background:#0a2747;border:1px solid rgba(128,180,255,.18)">
+      <strong style="opacity:.9">${m.name || "Jugador"}</strong>
+      <div>${(m.text||"").replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s]))}</div>
+    </div>
+  `).join("");
+  ui.chatList.scrollTop = ui.chatList.scrollHeight;
+});
+
+// ====== Pasar a VOTACIÓN (host decide trigger; acá lo hacemos auto a los X msgs si querés, pero simple: botón manual en consola)
+// Cuando quieras pasar a votar desde debate:
+async function gotoVote(){
+  await updateDoc(doc(db,"rooms",state.code,"rounds", String(currentRound)), { status:"vote", voteStartedAt: serverTimestamp() });
+}
+
+// ====== UI de Votación (muestra avatares/nombres clicables)
+async function renderVoteBar(){
+  const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+  const players = asgSnap.docs.map(d=>d.data()).filter(p=>p.alive!==false);
+  ui.voteBar.innerHTML = players.map(p=>{
+    const src = (p.avatarKey && AVATAR_MAP[p.avatarKey]) ? AVATAR_MAP[p.avatarKey] : "";
+    return `
+      <button class="btn" data-vote="${p.uid}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px">
+        <span style="width:28px;height:28px;border-radius:50%;overflow:hidden;display:inline-grid;place-items:center;background:#0a213b;border:1px solid rgba(128,180,255,.25)">
+          ${src ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover">` : "?"}
+        </span>
+        ${p.name || "Jugador"}
+      </button>`;
+  }).join("");
+  ui.voteBar.querySelectorAll("[data-vote]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const votedUid = btn.getAttribute("data-vote");
+      const myVoteRef = doc(db,"rooms",state.code,"rounds", String(currentRound), "votes", auth.currentUser.uid);
+      try{
+        await setDoc(myVoteRef, { voter: auth.currentUser.uid, target: votedUid, at: serverTimestamp() });
+        // feedback visual simple
+        ui.voteBar.querySelectorAll("[data-vote]").forEach(b=>b.style.opacity=".6");
+        btn.style.opacity = "1";
+      }catch(e){ console.warn(e); }
+    });
+  });
+}
+
+// reactivo: si round entra a 'vote', renderizamos barra y cerramos prompt/debate si hiciera falta
+onSnapshot(doc(db,"rooms",state.code,"rounds", String(currentRound)), rdoc=>{
+  if(!rdoc.exists()) return;
+  const r = rdoc.data();
+  if (r.status === "vote") {
+    show(ui.phaseDiscuss); // usamos misma vista con barra de voto
+    renderVoteBar();
+  }
+});
+
+// (opcional) cuando TODOS votaron, el host podría cerrar y calcular resultados
+onSnapshot(collection(db,"rooms",state.code,"rounds", String(currentRound), "votes"), async snap=>{
+  const voted = new Set(snap.docs.map(d=>d.id));
+  const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+  const players = asgSnap.docs.map(d=>d.id).filter(Boolean);
+  if (isHost && players.length>0 && players.every(id=>voted.has(id))) {
+    // acá podrías contar votos y eliminar al más votado; por ahora solo cambio estado
+    await updateDoc(doc(db,"rooms",state.code,"rounds", String(currentRound)), { status:"results", resultsAt: serverTimestamp() });
+  }
+});
+
 </script>
+<!-- FASE: PALABRA -->
+<div id="phasePrompt" style="display:none;position:fixed;inset:0;display:none;place-items:center;background:rgba(0,10,20,.9)">
+  <div style="width:min(720px,92vw);background:#0b203a;border:1px solid rgba(128,180,255,.3);border-radius:18px;padding:20px">
+    <h2 style="margin:0 0 6px">Tu palabra</h2>
+    <p style="opacity:.8;margin:0 0 12px">Escribí una palabra relacionada con el tema (una sola).</p>
+    <form id="promptForm" style="display:flex;gap:10px">
+      <input id="promptInput" maxlength="24" required placeholder="Ej: 'Fútbol' / 'Arco' / 'Medio' ..." 
+             style="flex:1;padding:12px;border-radius:12px;border:1px solid rgba(128,180,255,.35);background:#0a213b;color:#eaf2ff">
+      <button class="btn-cta" type="submit" style="font-size:18px;padding:10px 18px">Enviar</button>
+    </form>
+    <div id="promptStatus" style="margin-top:10px;opacity:.8"></div>
+  </div>
+</div>
+
+<!-- FASE: DEBATE -->
+<div id="phaseDiscuss" style="display:none;position:fixed;inset:0;background:rgba(0,10,20,.9);padding:24px;display:none">
+  <div style="max-width:900px;margin:0 auto;background:#0b203a;border:1px solid rgba(128,180,255,.3);border-radius:18px;height:86vh;display:flex;flex-direction:column">
+    <div style="padding:14px 16px;border-bottom:1px solid rgba(128,180,255,.15);display:flex;justify-content:space-between;align-items:center">
+      <h2 style="margin:0">Debate</h2>
+      <small id="cooldownHint" style="opacity:.7"></small>
+    </div>
+    <div id="chatList" style="flex:1;overflow:auto;padding:14px"></div>
+    <form id="chatForm" style="padding:12px;display:flex;gap:10px;border-top:1px solid rgba(128,180,255,.15)">
+      <input id="chatInput" maxlength="140" placeholder="Decí tu pista/sospecha (3s cooldown)" 
+             style="flex:1;padding:12px;border-radius:12px;border:1px solid rgba(128,180,255,.35);background:#0a213b;color:#eaf2ff">
+      <button class="btn" type="submit">Enviar</button>
+    </form>
+    <div id="voteBar" style="padding:10px 12px;border-top:1px solid rgba(128,180,255,.15);display:flex;gap:10px;flex-wrap:wrap"></div>
+  </div>
+</div>
 
 </body>
 </html>
