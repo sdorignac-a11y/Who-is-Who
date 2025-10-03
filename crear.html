@@ -33,6 +33,8 @@
   .selector .arrow{width:40px;height:40px;border-radius:10px;background:linear-gradient(180deg,#1e68d6,#184fa5);border:1px solid rgba(110,178,255,.7);display:grid;place-items:center;cursor:pointer;font-size:20px;font-weight:900}
   .cta{display:flex;justify-content:center}
   .btn-cta{background:linear-gradient(180deg,var(--yellow),var(--yellow-2));border:1px solid rgba(255,210,80,.9);color:#10223b;font-weight:900;font-size:28px;padding:16px 34px;border-radius:16px}
+
+  /* Overlay rol */
   #reveal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,10,20,.9);z-index:1000}
   .rev-card{width:min(680px,92vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:24px;text-align:center}
   .rev-content{padding:18px;background:linear-gradient(180deg,#102c4f,#0c2441);border:1px solid rgba(128,180,255,.25);border-radius:16px;min-height:110px;display:grid;place-items:center;font-size:26px;font-weight:800}
@@ -45,6 +47,24 @@
   .rev-avatar img{width:100%;height:100%;object-fit:cover;display:block}
   .rev-name{font-weight:800;margin-top:4px;opacity:.9}
   .tip{background:#08213a;border:1px solid rgba(128,180,255,.25);padding:8px 12px;border-radius:12px;margin:10px;opacity:.9}
+
+  /* === Sorteo (“bolillero”) === */
+  #drawOverlay{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,12,24,.9);z-index:1200}
+  .draw-card{width:min(760px,96vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:20px}
+  .draw-title{margin:0 0 10px;text-align:center}
+  .bowl{position:relative;height:240px;border-radius:16px;background:radial-gradient(circle at 50% 0%, rgba(255,255,255,.09), transparent 60%), linear-gradient(180deg,#0a2340,#0a1f37);border:1px solid rgba(128,180,255,.25);overflow:hidden;display:flex;align-items:flex-end;justify-content:center;padding-bottom:16px}
+  .ball{position:absolute;bottom:-40px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff, #cfe1ff 55%, #82a8ff);opacity:.7;animation:float 3s ease-in-out infinite}
+  .ball:nth-child(2){left:20%;animation-delay:.2s}.ball:nth-child(3){left:40%;animation-delay:.4s}.ball:nth-child(4){left:60%;animation-delay:.6s}.ball:nth-child(5){left:80%;animation-delay:.8s}
+  @keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-18px)}100%{transform:translateY(0)}}
+  .slip{position:absolute;bottom:12px;left:50%;transform:translateX(-50%) translateY(120%);background:#fff;color:#0c2441;border-radius:8px;padding:8px 12px;font-weight:900;box-shadow:0 6px 18px rgba(0,0,0,.45);opacity:0;white-space:nowrap}
+  .slip.reveal{animation:popUp .6s ease-out forwards}
+  @keyframes popUp{0%{transform:translateX(-50%) translateY(120%) rotate(-6deg);opacity:0}
+                   60%{transform:translateX(-50%) translateY(-26%) rotate(1deg);opacity:1}
+                   100%{transform:translateX(-50%) translateY(-10%) rotate(0deg);opacity:1}}
+  .order-list{margin:12px 4px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .order-item{background:linear-gradient(180deg,#0c2747,#0a213b);border:1px solid rgba(128,180,255,.28);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px}
+  .order-badge{width:26px;height:26px;border-radius:8px;background:linear-gradient(180deg,#1e68d6,#184fa5);border:1px solid rgba(110,178,255,.7);display:grid;place-items:center;font-weight:900}
+  .order-name{font-weight:800}
 </style>
 </head>
 <body>
@@ -75,6 +95,18 @@
       <h2>Tu rol</h2>
       <div id="revContent" class="rev-content"></div>
       <div id="countdown" style="margin-top:12px;font-size:22px;font-weight:700;color:#f6c11b">Pasando en 10s...</div>
+    </div>
+  </div>
+
+  <!-- Overlay: Sorteo del orden -->
+  <div id="drawOverlay">
+    <div class="draw-card">
+      <h2 class="draw-title">Sorteo del orden</h2>
+      <div class="bowl" id="bowl">
+        <div class="ball"></div><div class="ball"></div><div class="ball"></div><div class="ball"></div><div class="ball"></div>
+        <div class="slip" id="slip">—</div>
+      </div>
+      <div id="orderList" class="order-list"></div>
     </div>
   </div>
 
@@ -122,12 +154,7 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    const AVATAR_MAP = {
-      a1: "avatars/a1.png",  a2: "avatars/a2.png",  a3: "avatars/a3.png",
-      a4: "avatars/a4.png",  a5: "avatars/a5.png",  a6: "avatars/a6.png",
-      a7: "avatars/a7.png",  a8: "avatars/a8.png",  a9: "avatars/a9.png",
-      a10:"avatars/a10.png", a11:"avatars/a11.png", a12:"avatars/a12.png"
-    };
+    const AVATAR_MAP = { a1:"avatars/a1.png",a2:"avatars/a2.png",a3:"avatars/a3.png",a4:"avatars/a4.png",a5:"avatars/a5.png",a6:"avatars/a6.png",a7:"avatars/a7.png",a8:"avatars/a8.png",a9:"avatars/a9.png",a10:"avatars/a10.png",a11:"avatars/a11.png",a12:"avatars/a12.png" };
 
     const $ = s => document.querySelector(s);
     const playersWrap = $("#players");
@@ -215,13 +242,7 @@
       }
     }
 
-    const state = {
-      code: "",
-      impostores: 1,
-      jugadores: 8,
-      temas: ["Clubes","Jugadores","Mundiales"],
-      temaIndex: 0
-    };
+    const state = { code:"", impostores:1, jugadores:8, temas:["Clubes","Jugadores","Mundiales"], temaIndex:0 };
 
     const POOLS = {
       Clubes:["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"],
@@ -237,23 +258,14 @@
       drawPlayers(state.jugadores, lastPlayers);
     }
 
-    const appInit = await initialize();
-    async function initialize(){
-      const app = initializeApp(firebaseConfig);
-      const authInst = getAuth(app);
-      const dbInst = getFirestore(app);
-      await signInAnonymously(authInst).catch(e=>console.warn("Anon auth:", e));
-      return {app:app, auth:authInst, db:dbInst};
-    }
-
-    const authRef = auth;
-    const dbRef = db;
+    // ===== Init auth/db + room
+    await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
 
     const urlCode = new URLSearchParams(location.search).get("code");
     let isHost = false;
 
     if (!urlCode) {
-      state.code = await createUniqueRoomCode(dbRef);
+      state.code = await createUniqueRoomCode(db);
       isHost = true;
     } else {
       state.code = urlCode.toUpperCase();
@@ -261,34 +273,34 @@
     }
     render();
 
-    const roomRef = doc(dbRef, "rooms", state.code);
+    const roomRef = doc(db, "rooms", state.code);
 
     const firstSnap = await getDoc(roomRef);
     if (!firstSnap.exists() && isHost) {
       await setDoc(roomRef, {
-        hostUid: authRef.currentUser.uid,
+        hostUid: auth.currentUser.uid,
         status: "lobby",
         createdAt: Date.now(),
         settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
       }, { merge:true });
     }
     if (firstSnap.exists()) {
-      isHost = firstSnap.data().hostUid === authRef.currentUser.uid;
+      isHost = firstSnap.data().hostUid === auth.currentUser.uid;
     }
 
     const myName   = getStoredName();
     const myAvatar = getStoredAvatar();
     meNameEl.textContent = myName;
 
-    await setDoc(doc(dbRef,"rooms",state.code,"players",authRef.currentUser.uid), {
-      uid: authRef.currentUser.uid,
+    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
+      uid: auth.currentUser.uid,
       name: myName,
       avatarKey: myAvatar || null,
       slot: isHost ? 1 : Date.now(),
       online: true
     }, { merge:true });
 
-    const playerRef = doc(dbRef,"rooms",state.code,"players",authRef.currentUser.uid);
+    const playerRef = doc(db,"rooms",state.code,"players",auth.currentUser.uid);
     document.getElementById("editName")?.addEventListener("click", ()=> editAndSaveName(playerRef));
 
     function setArrowsEnabled(enabled){
@@ -312,9 +324,7 @@
         state.jugadores = Math.max(state.jugadores, lastPlayers.length);
         render();
         if (isHost){
-          await setDoc(roomRef, {
-            settings:{ maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
-          }, { merge:true });
+          await setDoc(roomRef, { settings:{ maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] } }, { merge:true });
         }
       });
     });
@@ -323,7 +333,7 @@
       if(!s.exists()) return;
       const data = s.data();
       const before = isHost;
-      isHost = (data.hostUid === authRef.currentUser.uid);
+      isHost = (data.hostUid === auth.currentUser.uid);
       if (before !== isHost) setArrowsEnabled(isHost);
 
       const st = data.settings || {};
@@ -336,7 +346,7 @@
       render();
     });
 
-    onSnapshot(collection(dbRef,"rooms",state.code,"players"), snap=>{
+    onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
       lastPlayers = snap.docs.map(d=>d.data());
       drawPlayers(state.jugadores, lastPlayers);
     });
@@ -353,7 +363,7 @@
       return a;
     }
 
-    // ======== START: asigna roles + crea ronda con ORDEN y status "reveal"
+    // ======== START: roles + ronda con ORDEN y status "reveal" -> (después) "draw"
     let starting = false;
     document.getElementById("startBtn").addEventListener("click", async ()=>{
       if (!isHost){ alert("Solo el host puede iniciar"); return; }
@@ -373,62 +383,39 @@
           starting = false; return;
         }
 
-        const ps = await getDocs(collection(dbRef, "rooms", state.code, "players"));
-        const players = ps.docs
-          .map(d => ({ id: d.id, ...d.data() }))
-          .filter(p => p.id && p.online !== false);
+        const ps = await getDocs(collection(db, "rooms", state.code, "players"));
+        const players = ps.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.id && p.online !== false);
 
         if (players.length < 3){ alert("Se necesitan al menos 3 jugadores."); starting = false; return; }
         if (K >= players.length){ alert("Impostores debe ser menor que jugadores."); starting = false; return; }
 
         const palabra = pickWord(tema);
-
-        // orden aleatorio UNA vez (ids)
-        const order = shuffleInPlace(players.map(p=>p.id));
-
-        // elegir impostores (primeros K del order)
-        const impostorIds = new Set(order.slice(0, K));
+        const order   = shuffleInPlace(players.map(p=>p.id)); // orden aleatorio UNA sola vez
+        const impostorIds = new Set(order.slice(0, K));       // primeros K = impostores
 
         const nextRound = (room.round || 0) + 1;
-        const batch = writeBatch(dbRef);
+        const batch = writeBatch(db);
 
-        batch.update(roomRef, {
-          status: "playing",
-          round: nextRound,
-          startedAt: serverTimestamp()
-        });
+        batch.update(roomRef, { status: "playing", round: nextRound, startedAt: serverTimestamp() });
 
         players.forEach(p=>{
-          const aRef = doc(dbRef, "rooms", state.code, "assignments", p.id);
+          const aRef = doc(db, "rooms", state.code, "assignments", p.id);
           batch.set(aRef, {
-            round: nextRound,
-            uid: p.id,
-            name: p.name || "Jugador",
-            avatarKey: p.avatarKey || null,
+            round: nextRound, uid: p.id, name: p.name || "Jugador", avatarKey: p.avatarKey || null,
             role: impostorIds.has(p.id) ? "IMPOSTOR" : "CIVIL",
-            word: impostorIds.has(p.id) ? null : palabra,
-            tema,
-            alive: true,
-            vote: null,
-            revealedAt: null
+            word: impostorIds.has(p.id) ? null : palabra, tema,
+            alive: true, vote: null, revealedAt: null
           });
         });
 
-        const roundRef = doc(dbRef,"rooms",state.code,"rounds", String(nextRound));
-        batch.set(roundRef, {
-          status:"reveal",
-          createdAt: serverTimestamp(),
-          order,
-          turnIndex: 0
-        });
+        const roundRef = doc(db,"rooms",state.code,"rounds", String(nextRound));
+        batch.set(roundRef, { status:"reveal", createdAt: serverTimestamp(), order, turnIndex: 0 });
 
         await batch.commit();
 
-        // tras 10s pasamos a PROMPT
+        // 10s para ver el rol -> luego lanzamos sorteo "draw"
         setTimeout(async ()=>{
-          try{
-            await updateDoc(roundRef, { status:"prompt", promptStartedAt: serverTimestamp() });
-          }catch(e){ console.warn(e); }
+          try{ await updateDoc(roundRef, { status:"draw", drawStartedAt: serverTimestamp() }); }catch(e){ console.warn(e); }
         }, 10000);
 
       }catch(e){
@@ -440,7 +427,7 @@
     });
 
     // ===== Overlay de rol + countdown de 10s (visual)
-    onSnapshot(doc(dbRef,"rooms",state.code,"assignments",authRef.currentUser.uid), s=>{
+    onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
       if(!s.exists()) return;
       const a = s.data();
       const overlay = document.getElementById("reveal");
@@ -472,11 +459,57 @@
         if(secs <= 0){
           clearInterval(interval);
           overlay.style.display = "none";
-          document.getElementById("phaseDiscuss").style.display = "block";
-          document.getElementById("firstWordTip").style.display = "block";
         }
       },1000);
     });
+
+    // ====== Sorteo del orden (animación sincronizada)
+    function sanitize(str){ return (str||"").replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s])); }
+    async function nameOf(uid){
+      try{ const snap = await getDoc(doc(db,"rooms",state.code,"players", uid)); return (snap.exists() && (snap.data().name||"Jugador")) || "Jugador"; }
+      catch{ return "Jugador"; }
+    }
+
+    async function startDrawAnimation(order){
+      const draw = document.getElementById("drawOverlay");
+      const slip = document.getElementById("slip");
+      const list = document.getElementById("orderList");
+      list.innerHTML = "";
+      draw.style.display = "grid";
+
+      // Precreamos placeholders en la lista
+      const names = await Promise.all(order.map(uid=>nameOf(uid)));
+      names.forEach((n,i)=>{
+        const item = document.createElement("div");
+        item.className = "order-item";
+        item.innerHTML = `<div class="order-badge">${i+1}</div><div class="order-name" id="ord-${i}">—</div>`;
+        list.appendChild(item);
+      });
+
+      // Revelamos uno por uno
+      for (let i=0;i<order.length;i++){
+        const n = names[i];
+        slip.textContent = n;
+        slip.classList.remove("reveal");
+        // forzar reflow para reiniciar animación
+        void slip.offsetWidth;
+        slip.classList.add("reveal");
+        // cuando sube el papelito, lo volcamos a la lista
+        await new Promise(r=>setTimeout(r, 900));
+        const slot = document.getElementById(`ord-${i}`);
+        if (slot) slot.textContent = n;
+        await new Promise(r=>setTimeout(r, 450));
+      }
+
+      // Al terminar: host pasa a PROMPT
+      const roomSnap = await getDoc(roomRef);
+      const roundId = String(roomSnap.data().round || 0);
+      if (isHost && roundId !== "0"){
+        await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { status:"prompt", promptStartedAt: serverTimestamp(), turnIndex: 0 });
+      }
+      // Escondemos el overlay un toque después para que se vea el último
+      setTimeout(()=>{ draw.style.display = "none"; }, 600);
+    }
 
     // ===== Orquestación por estado de sala + ronda
     let currentRound = 0;
@@ -486,48 +519,41 @@
       if(!s.exists()) return;
       const data = s.data();
       currentRound = data.round || 0;
-
       if (!currentRound) return;
-      const roundRef = doc(dbRef,"rooms",state.code,"rounds", String(currentRound));
+
+      const roundRef = doc(db,"rooms",state.code,"rounds", String(currentRound));
       const rdoc = await getDoc(roundRef);
       if (!rdoc.exists()) return;
       roundState = rdoc.data();
 
-      // Pintar fase
       const phase = roundState.status;
       if (phase === "reveal") {
-        showDiscuss(false);
+        document.getElementById("phaseDiscuss").style.display = "none";
+      }
+      if (phase === "draw") {
+        document.getElementById("phaseDiscuss").style.display = "none";
+        // Solo arrancamos la animación si todavía no arrancó en este cliente
+        startDrawAnimation(roundState.order || []);
       }
       if (phase === "prompt") {
-        showDiscuss(true);
-        ui.chatInput.placeholder = "Primero UNA palabra (2–24 letras)…";
+        document.getElementById("phaseDiscuss").style.display = "block";
         document.getElementById("firstWordTip").style.display = "block";
+        ui.chatInput.placeholder = "Primero UNA palabra (2–24 letras)…";
         const idx = roundState.turnIndex ?? 0;
         const uidTurno = (roundState.order||[])[idx];
         ui.turnHint.textContent = uidTurno ? `Turno de: ${await nameOf(uidTurno)}` : "";
       }
       if (phase === "discuss") {
-        showDiscuss(true);
+        document.getElementById("phaseDiscuss").style.display = "block";
         document.getElementById("firstWordTip").style.display = "none";
         ui.turnHint.textContent = "Chat libre";
         ui.chatInput.placeholder = "Decí tu pista/sospecha (3s cooldown)";
       }
       if (phase === "vote") {
-        showDiscuss(true);
+        document.getElementById("phaseDiscuss").style.display = "block";
         ui.turnHint.textContent = "Votación";
       }
     });
-
-    function showDiscuss(show){ document.getElementById("phaseDiscuss").style.display = show ? "block":"none"; }
-
-    // ===== Util para obtener nombre por uid (desde players)
-    async function nameOf(uid){
-      try{
-        const docRef = doc(dbRef,"rooms",state.code,"players", uid);
-        const snap = await getDoc(docRef);
-        return (snap.exists() && (snap.data().name||"Jugador")) || "Jugador";
-      }catch{ return "Jugador"; }
-    }
 
     // ===== UI / helpers chat
     const ui = {
@@ -557,14 +583,14 @@
     }
 
     // ===== Chat submit: PROMPT por turno → DISCUSS
-    ui.chatForm.addEventListener("submit", async (e)=>{
+    document.getElementById("chatForm").addEventListener("submit", async (e)=>{
       e.preventDefault();
       if (!roundState) return;
 
       const msg = (ui.chatInput.value || "").trim();
       if (!msg) return;
 
-      const myUid = authRef.currentUser?.uid;
+      const myUid = auth.currentUser?.uid;
       const roundId = String(currentRound);
 
       if (roundState.status === "prompt") {
@@ -582,23 +608,20 @@
         }
 
         // guardar primera palabra (flag + mensaje visible)
-        await setDoc(doc(dbRef,"rooms",state.code,"rounds", roundId,"firstWords", myUid), {
+        await setDoc(doc(db,"rooms",state.code,"rounds", roundId,"firstWords", myUid), {
           uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp()
         });
-        const msgRef = doc(collection(dbRef,"rooms",state.code,"rounds", roundId, "chat"));
-        await setDoc(msgRef, {
-          uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"firstword"
-        });
-
+        const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
+        await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"firstword" });
         ui.chatInput.value = "";
 
         // avanzar turno o cerrar prompt -> discuss (solo host)
         if (isHost) {
           const nextIdx = idx + 1;
           if (nextIdx < order.length) {
-            await updateDoc(doc(dbRef,"rooms",state.code,"rounds", roundId), { turnIndex: nextIdx });
+            await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { turnIndex: nextIdx });
           } else {
-            await updateDoc(doc(dbRef,"rooms",state.code,"rounds", roundId), { status:"discuss", discussStartedAt: serverTimestamp() });
+            await updateDoc(doc(db,"rooms",state.code,"rounds", roundId), { status:"discuss", discussStartedAt: serverTimestamp() });
           }
         }
         return;
@@ -606,10 +629,8 @@
 
       if (!canSendNow()) return;
       if (roundState.status === "discuss") {
-        const msgRef = doc(collection(dbRef,"rooms",state.code,"rounds", roundId, "chat"));
-        await setDoc(msgRef, {
-          uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"chat"
-        });
+        const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
+        await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"chat" });
         ui.chatInput.value = "";
         cooldownUntil = Date.now() + 3000;
         canSendNow();
@@ -619,8 +640,8 @@
       ui.cooldownHint.textContent = "No podés enviar ahora.";
     });
 
-    // ===== Refrescar hint de turno en vivo
-    onSnapshot(doc(dbRef,"rooms",state.code,"rounds", String(()=>currentRound ? currentRound : 0)()), rdoc=>{
+    // ===== Hint de turno live
+    onSnapshot(doc(db,"rooms",state.code,"rounds", String(()=>currentRound ? currentRound : 0)()), rdoc=>{
       if(!rdoc.exists()) return;
       const r = rdoc.data();
       roundState = r;
@@ -631,28 +652,25 @@
       }
     });
 
-    // ===== Stream de chat actual
+    // ===== Stream de chat
     onSnapshot(roomRef, async s=>{
       if(!s.exists()) return;
       const rId = s.data().round || 0;
       if (!rId) return;
-      onSnapshot(collection(dbRef,"rooms",state.code,"rounds", String(rId), "chat"), snap=>{
-        const items = snap.docs
-          .map(d=>({id:d.id, ...d.data()}))
-          .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
+      onSnapshot(collection(db,"rooms",state.code,"rounds", String(rId), "chat"), snap=>{
+        const items = snap.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
         ui.chatList.innerHTML = items.map(m=>`
           <div style="margin:6px 0;padding:8px 10px;border-radius:12px;background:#0a2747;border:1px solid rgba(128,180,255,.18)">
-            <strong style="opacity:.9">${m.name || "Jugador"}</strong>
-            <div>${(m.text||"").replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s]))}</div>
-          </div>
-        `).join("");
+            <strong style="opacity:.9">${sanitize(m.name) || "Jugador"}</strong>
+            <div>${sanitize(m.text||"")}</div>
+          </div>`).join("");
         ui.chatList.scrollTop = ui.chatList.scrollHeight;
       });
     });
 
-    // ===== Votación (igual que antes)
+    // ===== Votación
     async function renderVoteBar(){
-      const asgSnap = await getDocs(collection(dbRef,"rooms",state.code,"assignments"));
+      const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
       const players = asgSnap.docs.map(d=>d.data()).filter(p=>p.alive!==false);
       document.getElementById("voteBar").innerHTML = players.map(p=>{
         const src = (p.avatarKey && AVATAR_MAP[p.avatarKey]) ? AVATAR_MAP[p.avatarKey] : "";
@@ -661,7 +679,7 @@
             <span style="width:28px;height:28px;border-radius:50%;overflow:hidden;display:inline-grid;place-items:center;background:#0a213b;border:1px solid rgba(128,180,255,.25)">
               ${src ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover">` : "?"}
             </span>
-            ${p.name || "Jugador"}
+            ${sanitize(p.name) || "Jugador"}
           </button>`;
       }).join("");
       document.querySelectorAll("[data-vote]").forEach(btn=>{
@@ -669,9 +687,9 @@
           const votedUid = btn.getAttribute("data-vote");
           const roomSnap = await getDoc(roomRef);
           const roundId = roomSnap.data().round || 0;
-          const myVoteRef = doc(dbRef,"rooms",state.code,"rounds", String(roundId), "votes", authRef.currentUser.uid);
+          const myVoteRef = doc(db,"rooms",state.code,"rounds", String(roundId), "votes", auth.currentUser.uid);
           try{
-            await setDoc(myVoteRef, { voter: authRef.currentUser.uid, target: votedUid, at: serverTimestamp() });
+            await setDoc(myVoteRef, { voter: auth.currentUser.uid, target: votedUid, at: serverTimestamp() });
             document.querySelectorAll("[data-vote]").forEach(b=>b.style.opacity=".6");
             btn.style.opacity = "1";
           }catch(e){ console.warn(e); }
@@ -682,7 +700,7 @@
     onSnapshot(roomRef, async s=>{
       if(!s.exists()) return;
       const data = s.data();
-      const roundRef = doc(dbRef,"rooms",state.code,"rounds", String(data.round || 0));
+      const roundRef = doc(db,"rooms",state.code,"rounds", String(data.round || 0));
       const rdoc = await getDoc(roundRef);
       if(!rdoc.exists()) return;
       const r = rdoc.data();
@@ -696,26 +714,23 @@
       if(!s.exists()) return;
       const data = s.data();
       const roundId = data.round || 0;
-      onSnapshot(collection(dbRef,"rooms",state.code,"rounds", String(roundId), "votes"), async snap=>{
+      onSnapshot(collection(db,"rooms",state.code,"rounds", String(roundId), "votes"), async snap=>{
         const voted = new Set(snap.docs.map(d=>d.id));
-        const asgSnap = await getDocs(collection(dbRef,"rooms",state.code,"assignments"));
+        const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
         const players = asgSnap.docs.map(d=>d.id).filter(Boolean);
         if (isHost && players.length>0 && players.every(id=>voted.has(id))) {
-          await updateDoc(doc(dbRef,"rooms",state.code,"rounds", String(roundId)), { status:"results", resultsAt: serverTimestamp() });
+          await updateDoc(doc(db,"rooms",state.code,"rounds", String(roundId)), { status:"results", resultsAt: serverTimestamp() });
         }
       });
     });
 
-    // ===== Copiar / Compartir
-    document.getElementById("copyBtn").addEventListener("click", async ()=>{
-      try{ await navigator.clipboard.writeText(state.code); }catch{}
-    });
+    // Copiar / Compartir
+    document.getElementById("copyBtn").addEventListener("click", async ()=>{ try{ await navigator.clipboard.writeText(state.code); }catch{} });
     document.getElementById("shareBtn").addEventListener("click", async ()=>{
       const joinUrl = `${location.origin}/ingresar.html?code=${state.code}`;
       if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); } catch{} }
       else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); } catch{ alert(joinUrl); } }
     });
-
   </script>
 </body>
 </html>
