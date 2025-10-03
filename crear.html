@@ -495,29 +495,40 @@
       hide(ui.reveal);
     });
 
-    // ⚠️ NUEVO: escuchar ASSIGNMENTS para crear el round cuando TODOS revelan (dispara sin depender de cambios en roomRef)
-    onSnapshot(collection(db,"rooms",state.code,"assignments"), async snap=>{
-      const asg = snap.docs.map(d=>d.data());
-      if (asg.length === 0) return;
+    // Inicia automáticamente la ronda después de 10 segundos de mostrar roles
+onSnapshot(roomRef, async snap=>{
+  if (!snap.exists()) return;
+  const room = snap.data();
+  if (room.status !== "playing") return;
 
-      const allRevealed = asg.every(a => !!a.revealedAt);
-      if (!allRevealed) return;
+  const roundIdx = room.round || 0;
+  if (!isHost) return;
 
-      const roomSnap = await getDoc(roomRef);
-      if (!roomSnap.exists()) return;
-      const room = roomSnap.data();
-      if (room.status !== "playing") return;
+  const roundRef = doc(db,"rooms",state.code,"rounds", String(roundIdx));
+  const roundDoc = await getDoc(roundRef);
+  if (roundDoc.exists()) return;
 
-      const roundIdx = room.round || 0;
-      if (!isHost) return;
+  // Espera 10 segundos y luego pasa a la fase "prompt"
+  setTimeout(async ()=>{
+    try {
+      const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+      const asg = asgSnap.docs.map(d=>d.data());
+      const order = asg.map(a=>a.uid).sort(()=>Math.random()-0.5);
 
-      const roundRef = doc(db,"rooms",state.code,"rounds", String(roundIdx));
-      const roundDoc = await getDoc(roundRef);
-      if (!roundDoc.exists()) {
-        const order = asg.map(a=>a.uid).sort(()=>Math.random()-0.5);
-        await setDoc(roundRef, { status:"prompt", createdAt: serverTimestamp(), order, turnIndex:0 });
-      }
-    });
+      await setDoc(roundRef, {
+        status:"prompt",
+        createdAt: serverTimestamp(),
+        order,
+        turnIndex: 0
+      });
+      console.log("Pasando a fase PROMPT automáticamente");
+    } catch (e) {
+      console.warn("Error al crear round:", e);
+    }
+  }, 10000); // 10 segundos
+});
+
+
 
     // Orquestación por estado de sala (sigue siendo útil para pintar UI de fase)
     onSnapshot(roomRef, async s=>{
