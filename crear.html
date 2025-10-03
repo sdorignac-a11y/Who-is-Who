@@ -191,8 +191,9 @@
   // ===== Autenticación y determinación de host / invitado =====
   await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
 
-  const urlCode = new URLSearchParams(location.search).get("code");
-  const isHost = !urlCode;
+  let isHost = false; // se recalcula con el doc de la sala
+const urlCode = new URLSearchParams(location.search).get("code");
+
 
   if (isHost) {
     state.code = await createUniqueRoomCode(db); // <- código realmente único
@@ -218,6 +219,36 @@
       if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
       render();
 
+      // Saber si soy el host mirando el doc
+const roomSnap = await getDoc(roomRef);
+if (roomSnap.exists()) {
+  isHost = roomSnap.data().hostUid === auth.currentUser.uid;
+} else {
+  // si todavía no existe (primer render del creador), soy host
+  isHost = true;
+}
+setArrowsEnabled(isHost);
+
+// Si cambia hostUid por algún motivo, me entero:
+onSnapshot(roomRef, s=>{
+  if (!s.exists()) return;
+  const data = s.data();
+  const before = isHost;
+  isHost = data.hostUid === auth.currentUser.uid;
+  if (before !== isHost) setArrowsEnabled(isHost);
+
+  // Sincronizar ajustes desde Firestore
+  const st = data.settings || {};
+  state.jugadores  = st.maxPlayers ?? state.jugadores;
+  state.impostores = st.impostors  ?? state.impostores;
+  if (st.tema) {
+    const idx = state.temas.indexOf(st.tema);
+    state.temaIndex = idx >= 0 ? idx : 0;
+  }
+  render();
+});
+
+      
       if (isHost){
         try{
           await updateDoc(roomRef, {
