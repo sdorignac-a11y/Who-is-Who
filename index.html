@@ -1,3 +1,5 @@
+chat, decis que le podesmo dar un rediseño? proque le podemos poner mas cosas 
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -6,199 +8,24 @@
   <title>Impostor Fútbol – Menú</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    :root{
-      --brand:#22c55e; /* verde fútbol */
-      --brand-2:#38bdf8; /* celeste luz */
-      --gold-1:#facc15; --gold-2:#eab308;
-      --ink:#0b1220; --ink-2:#0f172a; --white:#fff;
-      --glass: rgba(255,255,255,.08);
-      --border: rgba(255,255,255,.18);
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;font-family:"Outfit",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:var(--white);
-      background:url("fondo-cancha.png") center/cover fixed no-repeat;
-      display:flex;flex-direction:column;min-height:100%;
-      /* ligero overlay para contraste */
-      position:relative;isolation:isolate;
-    }
-    /* Overlay de luces/partículas */
-    body::before{
-      content:"";position:absolute;inset:0;z-index:0;
-      background:
-        radial-gradient(1200px 500px at 15% 8%, rgba(56,189,248,.20), transparent 60%),
-        radial-gradient(1200px 500px at 85% 8%, rgba(56,189,248,.20), transparent 60%),
-        radial-gradient(800px 350px at 50% 75%, rgba(34,197,94,.10), transparent 60%);
-      pointer-events:none;
-    }
-    .container{z-index:1;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:24px}
-
-    /* Header */
-    .topbar{
-      position:fixed;inset:0 0 auto 0;height:64px;display:flex;align-items:center;justify-content:space-between;
-      padding:0 20px;z-index:2;
-      background:linear-gradient(to bottom, rgba(0,0,0,.35), transparent);
-      backdrop-filter:saturate(140%) blur(4px);
-    }
-    .logo{
-      display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.5px;text-transform:uppercase
-    }
-    .logo .word1{font-size:22px;opacity:.95}
-    .logo .word2{font-size:22px;color:var(--brand)}
-    .logo .ball{filter:drop-shadow(0 4px 10px rgba(0,0,0,.6))}
-    .top-actions{display:flex;align-items:center;gap:10px}
-    .icon-btn{
-      height:40px;min-width:40px;padding:0 12px;border-radius:12px;border:1px solid var(--border);cursor:pointer;
-      display:flex;align-items:center;gap:8px;background:rgba(15,23,42,.45);color:var(--white);
-      box-shadow:0 8px 24px rgba(0,0,0,.25);transition:.15s;
-    }
-    .icon-btn:hover{transform:translateY(-1px);background:rgba(15,23,42,.6)}
-    .icon-btn:active{transform:translateY(0)}
-    .pill{
-      font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--border);background:rgba(255,255,255,.06)
-    }
-
-    /* Card central */
-    .card{
-      width:min(760px, 92vw);
-      background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.08));
-      border:1px solid var(--border); border-radius:20px; padding:28px;
-      box-shadow:0 30px 60px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.08);
-      backdrop-filter:blur(6px);
-    }
-    .title{
-      font-size:48px;line-height:1.05;font-weight:900;text-transform:uppercase;text-align:center;
-      text-shadow:0 6px 18px rgba(0,0,0,.5);margin:6px 0 6px;
-    }
-    .title .accent{color:var(--brand)}
-    .subtitle{
-      text-align:center;opacity:.95;margin:6px 0 16px;font-weight:600
-    }
-    .chips{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
-    .chip{
-      display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;
-      border:1px solid var(--border);background:rgba(255,255,255,.06);font-weight:600
-    }
-
-    /* Grid de botones */
-    .grid{
-      display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px
-    }
-    @media (min-width:680px){ .grid{grid-template-columns:1fr 1fr} }
-
-    .menu-btn{
-      display:flex;align-items:center;justify-content:center;gap:12px;
-      width:100%; padding:16px 20px; font-size:20px; font-weight:900; letter-spacing:.4px;
-      border-radius:14px; cursor:pointer; user-select:none; text-decoration:none;
-      border:1.5px solid rgba(255,255,255,.28); color:var(--white);
-      background:linear-gradient(180deg,#1e3a8a,#172554);
-      box-shadow:0 10px 22px rgba(0,0,0,.45);
-      transition:transform .08s ease, filter .15s ease, box-shadow .15s ease;
-    }
-    .menu-btn:hover{filter:brightness(1.06)}
-    .menu-btn:active{transform:translateY(1.5px)}
-    .yellow{background:linear-gradient(180deg,var(--gold-1),var(--gold-2)); color:#111; border-color:rgba(255,255,255,.55)}
-    .blue{background:linear-gradient(180deg,#3b82f6,#1d4ed8)}
-    .outline{
-      background:rgba(255,255,255,.06);
-      border:1.5px solid rgba(255,255,255,.35)
-    }
-
-    /* Tips + enlaces */
-    .meta{margin-top:14px;display:flex;flex-direction:column;gap:10px;align-items:center}
-    .tips{font-size:14px;opacity:.9}
-    .links{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
-    .a-lite{color:#c7e1ff;text-decoration:none;border-bottom:1px dashed rgba(199,225,255,.4)}
-    .a-lite:hover{border-bottom-color:transparent}
-
-    /* Footer */
-    .footer{
-      position:fixed;inset:auto 0 10px 0;display:flex;justify-content:space-between;align-items:center;
-      padding:0 16px;font-size:12px;opacity:.85;z-index:2
-    }
-
-    /* Modal ajustes */
-    .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:50}
-    .modal{width:min(560px,92vw);background:#0b1220;border:1px solid var(--border);border-radius:18px;padding:20px;box-shadow:0 30px 60px rgba(0,0,0,.6)}
-    .modal h3{margin:0 0 10px;font-size:22px}
-    .row{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px dashed rgba(255,255,255,.08)}
-    .row:last-child{border-bottom:none}
-    .switch{appearance:none;width:52px;height:30px;background:#334155;border-radius:999px;position:relative;outline:none;cursor:pointer;border:1px solid #475569}
-    .switch:checked{background:#10b981;border-color:#0ea5a4}
-    .switch::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .18s}
-    .switch:checked::after{left:25px}
+    body{margin:0;font-family:"Outfit",sans-serif;background:url("fondo-cancha.png") center/cover fixed no-repeat;color:#fff;height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center}
+    .title{font-size:60px;font-weight:900;text-transform:uppercase;text-shadow:0 4px 12px rgba(0,0,0,.6);margin-bottom:40px}
+    .title span{color:#4ade80}
+    .menu-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:320px;padding:16px 24px;margin:12px 0;font-size:24px;font-weight:800;border-radius:12px;cursor:pointer;border:2px solid #ffd43b;color:#fff;background:linear-gradient(180deg,#1e40af,#1e3a8a);box-shadow:0 6px 16px rgba(0,0,0,.5);transition:.1s}
+    .menu-btn:hover{filter:brightness(1.1)} .menu-btn:active{transform:translateY(2px)}
+    .yellow{background:linear-gradient(180deg,#facc15,#eab308);color:#111;border-color:#fff176}
   </style>
 </head>
 <body>
-  <!-- HEADER -->
-  <header class="topbar">
-    <div class="logo">
-      <span class="word1">Impostor</span>
-      <span class="word2">Fútbol</span>
-      <span class="ball">⚽</span>
-      <span class="pill">v1.0</span>
-    </div>
-    <div class="top-actions">
-      <button id="btn-sound" class="icon-btn" title="Sonido">
-        🔊 <span class="pill">ON</span>
-      </button>
-      <a href="perfil.html" class="icon-btn" title="Mi cuenta">👤 <span>Cuenta</span></a>
-    </div>
-  </header>
+  <div class="title">Impostor <span>Fútbol</span> ⚽</div>
 
-  <!-- CONTENIDO -->
-  <main class="container">
-    <section class="card">
-      <h1 class="title">Impostor <span class="accent">Fútbol</span> ⚽</h1>
-      <p class="subtitle">Crea una sala y engaña a tus amigos. ¿Quién es el impostor del vestuario?</p>
-
-      <div class="chips">
-        <span class="chip">👥 4–12 jugadores</span>
-        <span class="chip">⚔️ Clubes / Jugadores</span>
-        <span class="chip">⏱️ 5–10 min por ronda</span>
-      </div>
-
-      <div class="grid">
-        <a class="menu-btn yellow" href="crear.html">🏟️ CREAR SALA</a>
-        <a class="menu-btn outline" href="offline.html">📴 Offline (1 dispositivo)</a>
-        <a class="menu-btn blue" href="ingresar.html">🔑 INGRESAR A SALA</a>
-        <button id="btn-azar" class="menu-btn yellow">🎲 UNIRSE AL AZAR</button>
-      </div>
-
-      <div class="meta">
-        <div class="tips">Tip: comparte el <strong>código</strong> de tu sala o usa “Unirse al azar”.</div>
-        <div class="links">
-          <a class="a-lite" href="reglas.html">📘 Reglas</a>
-          <a class="a-lite" href="novedades.html">🆕 Novedades</a>
-          <a class="a-lite" href="soporte.html">🛟 Soporte</a>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- FOOTER -->
-  <div class="footer">
-    <span>© 2025 Impostor Fútbol</span>
-    <button id="btn-ajustes" class="icon-btn">⚙️ Ajustes</button>
-  </div>
-
-  <!-- MODAL AJUSTES -->
-  <div id="modal" class="modal-backdrop" aria-hidden="true">
-    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="ajustes-title">
-      <h3 id="ajustes-title">Ajustes rápidos</h3>
-      <div class="row"><span>Sonido</span><input type="checkbox" id="sw-sound" class="switch" checked></div>
-      <div class="row"><span>Vibración</span><input type="checkbox" id="sw-vibrate" class="switch" checked></div>
-      <div class="row"><span>Modo daltónicos (alto contraste)</span><input type="checkbox" id="sw-contrast" class="switch"></div>
-      <div class="row"><span>Mostrar nombres reales</span><input type="checkbox" id="sw-nombres" class="switch"></div>
-      <div style="text-align:right;margin-top:14px">
-        <button id="btn-cerrar" class="icon-btn">Cerrar</button>
-      </div>
-    </div>
-  </div>
+  <!-- Link directo: navega aunque el JS falle -->
+  <a id="btn-crear" class="menu-btn yellow" href="crear.html">🏟️ CREAR SALA</a>
+  <a id="btn-crear" class="menu-btn yellow" href="offline.html">🏟️ Offline</a>
+  <a class="menu-btn" href="ingresar.html">🔑 INGRESAR A SALA</a>
+  <button id="btn-azar" class="menu-btn yellow">🎲 UNIRSE AL AZAR</button>
 
   <script type="module">
-    // ====== Firebase (igual que tu código, sólo reordenado) ======
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -219,14 +46,14 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
+        // Autenticación anónima (no bloquea si falla)
         try { await signInAnonymously(auth); }
         catch (e) { console.warn("Anon auth falló (seguimos igual):", e); }
 
-        // Unirse al azar
+        // Unirse al azar (si Firestore funciona)
         const btnAzar = document.getElementById("btn-azar");
         if (btnAzar) {
           btnAzar.addEventListener("click", async () => {
-            btnAzar.disabled = true; btnAzar.textContent = "Buscando salas…";
             try {
               const snap = await getDocs(collection(db, "rooms"));
               if (snap.empty) { alert("No hay salas disponibles todavía."); return; }
@@ -236,41 +63,17 @@
             } catch (err) {
               console.error(err);
               alert("No pude listar salas. Probá refrescar o crear una sala.");
-            } finally {
-              btnAzar.disabled = false; btnAzar.textContent = "🎲 UNIRSE AL AZAR";
             }
           });
         }
       } catch (err) {
         console.error("Error inicializando Firebase:", err);
+        // El link de CREAR SALA sigue funcionando igual.
       }
     })();
-
-    // ====== Interacciones UI básicas ======
-    const $ = (s)=>document.querySelector(s);
-    const modal = $("#modal");
-    $("#btn-ajustes")?.addEventListener("click", ()=>{ modal.style.display="flex"; modal.setAttribute("aria-hidden","false"); });
-    $("#btn-cerrar")?.addEventListener("click", ()=>{ modal.style.display="none"; modal.setAttribute("aria-hidden","true"); });
-    modal?.addEventListener("click", (e)=>{ if(e.target===modal){ modal.style.display="none"; modal.setAttribute("aria-hidden","true"); } });
-
-    // Botón sonido en topbar (visual)
-    const btnSound = document.getElementById("btn-sound");
-    btnSound?.addEventListener("click", ()=>{
-      const pill = btnSound.querySelector(".pill");
-      const on = pill?.textContent?.trim()==="ON";
-      if(pill) pill.textContent = on ? "OFF" : "ON";
-      btnSound.firstChild.textContent = on ? "🔇" : "🔊";
-    });
-
-    // Accesibilidad: foco visible
-    document.querySelectorAll(".menu-btn, .icon-btn, .switch").forEach(el=>{
-      el.addEventListener("keydown",(e)=>{
-        if(e.key==="Enter" && el.tagName==="A"){ el.click(); }
-      });
-    });
   </script>
 
-  <!-- Consejo dev: sirve con un server local para evitar CORS de módulos.
-       Ej.: `python3 -m http.server 5500` y abre http://localhost:5500/index.html -->
+  <!-- Consejo: serví los archivos con un server local para evitar problemas de CORS con módulos.
+       Ej: `python3 -m http.server 5500` y abrí http://localhost:5500/index.html -->
 </body>
 </html>
