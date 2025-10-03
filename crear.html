@@ -386,17 +386,20 @@ document.getElementById("startBtn").addEventListener("click", async ()=>{
       starting = false; return;
     }
 
-    // 2) Leer jugadores
-    const ps = await getDocs(collection(db, "rooms", state.code, "players"));
-    const players = ps.docs.map(d=>d.data()).filter(p => p.online !== false);
+   // 2) Leer jugadores (usando también el id real del doc)
+const ps = await getDocs(collection(db, "rooms", state.code, "players"));
+const players = ps.docs
+  .map(d => ({ id: d.id, ...d.data() }))   // <- guardamos id además de los datos
+  .filter(p => p.id && p.online !== false);
+
 
     if (players.length < 3){ alert("Se necesitan al menos 3 jugadores."); starting = false; return; }
     if (K >= players.length){ alert("Impostores debe ser menor que jugadores."); starting = false; return; }
 
     // 3) Sorteo
     const palabra = pickWord(tema);
-    const order   = shuffleInPlace(players.slice());
-    const impostorIds = new Set(order.slice(0, K).map(p => p.uid));
+   const order   = shuffleInPlace(players.slice());
+const impostorIds = new Set(order.slice(0, K).map(p => p.id));
 
     // 4) Escribir todo en batch
     const nextRound = (room.round || 0) + 1;
@@ -409,9 +412,9 @@ document.getElementById("startBtn").addEventListener("click", async ()=>{
     });
 
     players.forEach(p=>{
-      const aRef = doc(db, "rooms", state.code, "assignments", p.uid);
-      batch.set(aRef, {
-        round: nextRound,
+  const aRef = doc(db, "rooms", state.code, "assignments", p.id); // usamos id
+  batch.set(aRef, {
+    round: nextRound,
         uid: p.uid,
         name: p.name || "Jugador",
         avatarKey: p.avatarKey || null,
