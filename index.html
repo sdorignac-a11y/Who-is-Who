@@ -82,9 +82,9 @@
 <body>
   <div class="title">Impostor <span>Fútbol</span> ⚽</div>
 
-  <button class="menu-btn yellow">
-    🏟️ CREAR SALA
-  </button>
+  <a href="crear.html" class="menu-btn yellow">
+  🏟️ CREAR SALA
+</a>
   <button class="menu-btn">
     🔑 INGRESAR A SALA
   </button>
@@ -97,5 +97,11 @@
     <i>👤</i>
     <i>📖</i>
   </div>
+  <script>
+  document.getElementById("btn-crear").addEventListener("click", () => {
+    window.location.href = "crear.html";
+  });
+</script>
+
 </body>
 </html>
