@@ -22,38 +22,76 @@
 <a id="link-ingresar" class="menu-btn"        href="ingresar.html">🔑 INGRESAR A SALA</a>
 <button id="btn-azar"  class="menu-btn yellow">🎲 UNIRSE AL AZAR</button>
 
-
 <script>
-  // Helpers de nombre
-  window.PlayerName = {
-    get(){ return localStorage.getItem("displayName") || ""; },
-    set(n){ localStorage.setItem("displayName", n); },
+  // Avatares disponibles (poné tus rutas reales de imágenes)
+  const AVATARS = [
+    {key:"a1", src:"avatars/a1.png"},
+    {key:"a2", src:"avatars/a2.png"},
+    {key:"a3", src:"avatars/a3.png"},
+    {key:"a4", src:"avatars/a4.png"},
+    {key:"a5", src:"avatars/a5.png"},
+    {key:"a6", src:"avatars/a6.png"},
+    {key:"a7", src:"avatars/a7.png"},
+    {key:"a8", src:"avatars/a8.png"},
+    {key:"a9", src:"avatars/a9.png"},
+    {key:"a10",src:"avatars/a10.png"},
+    {key:"a11",src:"avatars/a11.png"},
+    {key:"a12",src:"avatars/a12.png"},
+  ];
+
+  // Helpers de perfil (nombre + avatar)
+  window.PlayerProfile = {
+    getName(){ return localStorage.getItem("displayName") || ""; },
+    setName(n){ localStorage.setItem("displayName", n); },
+
+    getAvatar(){ return localStorage.getItem("avatarKey") || ""; },
+    setAvatar(k){ localStorage.setItem("avatarKey", k); },
+
     async ensure(){
-      let name = this.get();
-      if (valid(name)) return name;
+      let name = this.getName();
+      let avatar = this.getAvatar();
+      if (valid(name) && avatar) return {name, avatar};
 
       const modal = document.getElementById("name-modal");
       const input = document.getElementById("displayName");
       const btn   = document.getElementById("saveName");
       const errEl = document.getElementById("nameError");
+      const grid  = document.getElementById("avatarGrid");
       const close = ()=>{ modal.style.display="none"; modal.setAttribute("aria-hidden","true"); };
+
+      // Render de opciones de avatar
+      grid.innerHTML = "";
+      AVATARS.forEach(a=>{
+        const b = document.createElement("button");
+        b.type = "button"; b.className = "avatar-opt";
+        b.innerHTML = `<img src="${a.src}" alt="${a.key}" />`;
+        if ((avatar||"") === a.key) b.classList.add("selected");
+        b.addEventListener("click", ()=>{
+          document.querySelectorAll(".avatar-opt").forEach(x=>x.classList.remove("selected"));
+          b.classList.add("selected");
+          avatar = a.key;
+        });
+        grid.appendChild(b);
+      });
 
       modal.style.display="grid";
       modal.setAttribute("aria-hidden","false");
-      input.value = (this.get() || ""); input.focus();
+      input.value = this.getName() || ""; input.focus();
 
       return new Promise((resolve)=>{
         const save = ()=>{
-          const v = input.value.trim();
+          const v = (input.value||"").trim();
           if(!valid(v)){ errEl.textContent = "Usá entre 2 y 16 caracteres."; return; }
-          window.PlayerName.set(v);
+          if(!avatar){ errEl.textContent = "Elegí un avatar."; return; }
+          this.setName(v);
+          this.setAvatar(avatar);
           errEl.textContent = "";
           close();
-          resolve(v);
+          resolve({name:v, avatar});
         };
         btn.onclick = save;
         input.onkeydown = (e)=>{ if(e.key==="Enter") save(); if(e.key==="Escape") close(); };
-        modal.onclick = (e)=>{ if(e.target===modal){ /* impedir cerrar sin nombre */ input.focus(); } };
+        modal.onclick = (e)=>{ if(e.target===modal){ input.focus(); } };
       });
 
       function valid(s){ return typeof s==="string" && s.trim().length>=2 && s.trim().length<=16; }
@@ -127,6 +165,13 @@
   .name-btn{padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.35);cursor:pointer;
     background:linear-gradient(180deg,#facc15,#eab308);color:#111;font-weight:900}
   .name-error{margin-top:8px;font-size:13px;color:#fb7185;min-height:18px}
+  /* ===== Selector de avatar (en el modal) ===== */
+.avatar-grid{display:grid;grid-template-columns:repeat(6,56px);gap:10px;justify-content:center;margin-top:10px}
+.avatar-opt{width:56px;height:56px;border-radius:50%;overflow:hidden;cursor:pointer;border:2px solid transparent;background:#0f172a;display:grid;place-items:center}
+.avatar-opt img{width:100%;height:100%;object-fit:cover;display:block}
+.avatar-opt.selected{border-color:#facc15;box-shadow:0 0 0 3px rgba(250,204,21,.35)}
+.avatar-hint{margin:8px 0 0;font-size:13px;opacity:.85}
+
 </style>
 
 <div id="name-modal" class="backdrop" aria-hidden="true">
@@ -138,6 +183,9 @@
       <button id="saveName" class="name-btn">Guardar</button>
     </div>
     <div id="nameError" class="name-error"></div>
+<div class="avatar-grid" id="avatarGrid"></div>
+<div class="avatar-hint">Elegí tu avatar</div>
+
   </div>
 </div>
 <script>
