@@ -17,7 +17,8 @@
 <body>
   <div class="title">Impostor <span>Fútbol</span> ⚽</div>
 
-  <button id="btn-crear" class="menu-btn yellow">🏟️ CREAR SALA</button>
+  <!-- Link directo: navega aunque el JS falle -->
+  <a id="btn-crear" class="menu-btn yellow" href="crear.html">🏟️ CREAR SALA</a>
   <a class="menu-btn" href="ingresar.html">🔑 INGRESAR A SALA</a>
   <button id="btn-azar" class="menu-btn yellow">🎲 UNIRSE AL AZAR</button>
 
@@ -26,32 +27,50 @@
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
-      authDomain: "who-is-who-6ea99.firebaseapp.com",
-      projectId: "who-is-who-6ea99",
-      storageBucket: "who-is-who-6ea99.firebasestorage.app",
-      messagingSenderId: "718537140049",
-      appId: "1:718537140049:web:7400ec7e5467b387f8d570",
-      measurementId: "G-KNC4FJXXBN"
-    };
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-    await signInAnonymously(auth);
+    (async () => {
+      try {
+        const firebaseConfig = {
+          apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
+          authDomain: "who-is-who-6ea99.firebaseapp.com",
+          projectId: "who-is-who-6ea99",
+          storageBucket: "who-is-who-6ea99.firebasestorage.app",
+          messagingSenderId: "718537140049",
+          appId: "1:718537140049:web:7400ec7e5467b387f8d570",
+          measurementId: "G-KNC4FJXXBN"
+        };
 
-    document.getElementById("btn-crear").addEventListener("click", ()=>{
-      // host -> abre lobby sin code (crea sala)
-      location.href = "crear.html";
-    });
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
 
-    document.getElementById("btn-azar").addEventListener("click", async ()=>{
-      const snap = await getDocs(collection(db,"rooms"));
-      if(snap.empty){ alert("No hay salas disponibles todavía."); return; }
-      const rooms = snap.docs.map(d=>d.id);
-      const code = rooms[Math.floor(Math.random()*rooms.length)];
-      location.href = "crear.html?code="+code;
-    });
+        // Autenticación anónima (no bloquea si falla)
+        try { await signInAnonymously(auth); }
+        catch (e) { console.warn("Anon auth falló (seguimos igual):", e); }
+
+        // Unirse al azar (si Firestore funciona)
+        const btnAzar = document.getElementById("btn-azar");
+        if (btnAzar) {
+          btnAzar.addEventListener("click", async () => {
+            try {
+              const snap = await getDocs(collection(db, "rooms"));
+              if (snap.empty) { alert("No hay salas disponibles todavía."); return; }
+              const rooms = snap.docs.map(d => d.id);
+              const code = rooms[Math.floor(Math.random() * rooms.length)];
+              location.href = "crear.html?code=" + code;
+            } catch (err) {
+              console.error(err);
+              alert("No pude listar salas. Probá refrescar o crear una sala.");
+            }
+          });
+        }
+      } catch (err) {
+        console.error("Error inicializando Firebase:", err);
+        // El link de CREAR SALA sigue funcionando igual.
+      }
+    })();
   </script>
+
+  <!-- Consejo: serví los archivos con un server local para evitar problemas de CORS con módulos.
+       Ej: `python3 -m http.server 5500` y abrí http://localhost:5500/index.html -->
 </body>
 </html>
