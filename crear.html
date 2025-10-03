@@ -229,6 +229,62 @@ body::before{
     .settings{ grid-template-columns: 1fr; }
     body{ overflow:auto; }
   }
+  /* Overlay full-screen */
+#reveal{
+  position:fixed; inset:0; z-index:1000;
+  background: radial-gradient(1200px 420px at 15% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
+              radial-gradient(1200px 420px at 85% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
+              rgba(0,10,20,.9);
+  display:grid; place-items:center;
+}
+
+/* Tarjeta central */
+.rev-card{
+  width:min(680px, 92vw);
+  background: linear-gradient(180deg, #0d2747, #0b203a);
+  border:1px solid rgba(128,180,255,.30);
+  border-radius:20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.6);
+  padding:24px;
+  text-align:center;
+}
+.rev-card h2{
+  margin:0 0 12px;
+  font-size:28px; font-weight:900; letter-spacing:.5px;
+}
+
+.rev-content{
+  padding:18px;
+  background: linear-gradient(180deg, #102c4f, #0c2441);
+  border:1px solid rgba(128,180,255,.25);
+  border-radius:16px;
+  font-size:26px; font-weight:800;
+  min-height:110px; display:grid; place-items:center;
+}
+
+/* Botones overlay */
+.rev-actions{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:16px }
+.btn-ghost{
+  background: linear-gradient(180deg, #142840, #0f2237);
+  border:1px solid rgba(128,180,255,.35);
+  color:#cfe2ff; font-weight:700;
+  padding:12px 16px; border-radius:12px; cursor:pointer;
+}
+.btn-primary{
+  background: linear-gradient(180deg, #1e68d6, #184fa5);
+  border:1px solid rgba(110,178,255,.7);
+  color:#eaf2ff; font-weight:800;
+  padding:12px 18px; border-radius:12px; cursor:pointer;
+  box-shadow:0 6px 16px rgba(0,0,0,.45);
+}
+.btn-cta{
+  background: linear-gradient(180deg, var(--yellow), var(--yellow-2));
+  border:1px solid rgba(255,210,80,.9);
+  color:#10223b; font-weight:900;
+  padding:12px 18px; border-radius:12px; cursor:pointer;
+  box-shadow:0 12px 30px rgba(0,0,0,.5);
+}
+
 </style>
 </head>
 <body>
@@ -437,9 +493,22 @@ body::before{
     for(let i=0;i<6;i++) s += alphabet[Math.floor(Math.random()*alphabet.length)];
     return s;
   }
-  // Si querés regenerar: state.code = genCode();
-
   render();
 </script>
+<!-- OVERLAY DE REVELACIÓN DE ROLES -->
+<div id="reveal" style="display:none">
+  <div class="rev-card">
+    <h2 id="revTitle">Jugador 1</h2>
+    <div id="revContent" class="rev-content">
+      <p>Tocá <b>Mostrar</b> para ver tu rol</p>
+    </div>
+    <div class="rev-actions">
+      <button id="btnMostrar" class="btn-ghost">👁️ Mostrar</button>
+      <button id="btnOcultar" class="btn-ghost" style="display:none">🙈 Ocultar</button>
+      <button id="btnSiguiente" class="btn-primary" style="display:none">👉 Pasar al siguiente</button>
+      <button id="btnComenzarRonda" class="btn-cta" style="display:none">🚀 Comenzar ronda</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
