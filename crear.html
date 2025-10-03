@@ -52,6 +52,15 @@
   }
   .me-badge{color:#ffd166;font-weight:900;margin-left:4px}
   .me-outline{outline:2px solid #f6c11b;outline-offset:2px;border-radius:16px}
+
+  /* Avatar grande en el reveal */
+  .rev-avatar{
+    width:80px;height:80px;border-radius:50%;overflow:hidden;
+    border:2px solid rgba(255,255,255,.35);margin:0 auto 10px;
+    background:#0b203a;display:grid;place-items:center
+  }
+  .rev-avatar img{width:100%;height:100%;object-fit:cover;display:block}
+  .rev-name{font-weight:800;margin-top:4px;opacity:.9}
 </style>
 </head>
 <body>
@@ -96,8 +105,6 @@
     collection, getDocs, writeBatch, runTransaction, serverTimestamp
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-
-
   const firebaseConfig = {
     apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
     authDomain: "who-is-who-6ea99.firebaseapp.com",
@@ -132,7 +139,7 @@
     const qAvatar = qp.get("avatar");
     if (qAvatar && AVATAR_MAP[qAvatar]) localStorage.setItem("avatarKey", qAvatar);
     const k = localStorage.getItem("avatarKey") || "";
-    return AVATAR_MAP[k] ? k : ""; // si no existe, vacío -> placeholder
+    return AVATAR_MAP[k] ? k : ""; // si no existe, placeholder
   }
 
   async function editAndSaveName(playerRef){
@@ -184,7 +191,6 @@
       const label = document.createElement("small");
 
       if (p){
-        // avatar: si hay clave válida, mostramos imagen
         if (p.avatarKey && AVATAR_MAP[p.avatarKey]){
           av.className = "avatar";
           const img = document.createElement("img");
@@ -244,7 +250,6 @@
   const urlCode = new URLSearchParams(location.search).get("code");
   let isHost = false;
 
-  // 1) Determinar code
   if (!urlCode) {
     state.code = await createUniqueRoomCode(db);
     isHost = true;
@@ -256,7 +261,7 @@
 
   const roomRef = doc(db, "rooms", state.code);
 
-  // 2) Crear doc si soy host y aún no existe
+  // Crear doc si soy host
   const firstSnap = await getDoc(roomRef);
   if (!firstSnap.exists() && isHost) {
     await setDoc(roomRef, {
@@ -266,15 +271,13 @@
       settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
     }, { merge:true });
   }
-
-  // 3) Calcular host real si entro a sala existente
   if (firstSnap.exists()) {
     isHost = firstSnap.data().hostUid === auth.currentUser.uid;
   }
 
-  // ===== Crear/Unirse: registrar jugador =====
+  // Registrar jugador
   const myName   = getStoredName();
-  const myAvatar = getStoredAvatar(); // clave (ej. "a3") o ""
+  const myAvatar = getStoredAvatar();
   if (meNameEl) meNameEl.textContent = myName;
 
   await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
@@ -285,11 +288,11 @@
     online: true
   }, { merge:true });
 
-  // Editar nombre (no cambia avatar)
+  // Editar nombre
   const playerRef = doc(db,"rooms",state.code,"players",auth.currentUser.uid);
-  editNameBtn?.addEventListener("click", ()=> editAndSaveName(playerRef));
+  document.getElementById("editName")?.addEventListener("click", ()=> editAndSaveName(playerRef));
 
-  // ===== Habilitar/deshabilitar flechas según host =====
+  // Habilitar/deshabilitar flechas según host
   function setArrowsEnabled(enabled){
     document.querySelectorAll(".arrow").forEach(b=>{
       b.style.pointerEvents = enabled ? "auto" : "none";
@@ -298,7 +301,7 @@
   }
   setArrowsEnabled(isHost);
 
-  // ===== Flechas (persisten solo si sos host) =====
+  // Flechas (persisten solo si sos host)
   document.querySelectorAll(".arrow").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const inc = btn.dataset.inc, dec = btn.dataset.dec;
@@ -309,7 +312,6 @@
       if(inc==="tema")       state.temaIndex  = (state.temaIndex+1)%state.temas.length;
       if(dec==="tema")       state.temaIndex  = (state.temaIndex-1+state.temas.length)%state.temas.length;
       if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
-
       // nunca achicar por debajo de los ya conectados
       state.jugadores = Math.max(state.jugadores, lastPlayers.length);
 
@@ -327,11 +329,10 @@
     });
   });
 
-  // ===== Sincronías =====
+  // Sincronías
   onSnapshot(roomRef, s=>{
     if(!s.exists()) return;
     const data = s.data();
-
     const before = isHost;
     isHost = (data.hostUid === auth.currentUser.uid);
     if (before !== isHost) setArrowsEnabled(isHost);
@@ -352,98 +353,108 @@
   });
 
   // ===== Empezar partida (solo host) — asignación atómica =====
-function pickWord(tema){
-  const pool = POOLS[tema] || ["Balón"];
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-function shuffleInPlace(a){
-  for (let i=a.length-1; i>0; i--){
-    const j = Math.floor(Math.random()*(i+1));
-    [a[i], a[j]] = [a[j], a[i]];
+  function pickWord(tema){
+    const pool = POOLS[tema] || ["Balón"];
+    return pool[Math.floor(Math.random() * pool.length)];
   }
-  return a;
-}
+  function shuffleInPlace(a){
+    for (let i=a.length-1; i>0; i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
 
-document.getElementById("startBtn").addEventListener("click", async ()=>{
-  if(!isHost){ alert("Solo el host puede iniciar"); return; }
+  document.getElementById("startBtn").addEventListener("click", async ()=>{
+    if(!isHost){ alert("Solo el host puede iniciar"); return; }
+    try{
+      await runTransaction(db, async (tx)=>{
+        const roomSnap = await tx.get(roomRef);
+        if (!roomSnap.exists()) throw new Error("Sala no encontrada.");
+        const room = roomSnap.data();
+        const st   = room.settings || {};
+        const tema = st.tema || "Clubes";
+        const K    = st.impostors || 1;
+        if (room.status === "playing") throw new Error("La partida ya está en curso.");
 
-  try{
-    await runTransaction(db, async (tx)=>{
-      // 1) Leer sala “en transacción”
-      const roomSnap = await tx.get(roomRef);
-      if (!roomSnap.exists()) throw new Error("Sala no encontrada.");
+        const playersSnap = await tx.get(collection(db,"rooms",state.code,"players"));
+        const players = playersSnap.docs.map(d=>d.data()).filter(p => p.online !== false);
+        if (players.length < 3) throw new Error("Se necesitan al menos 3 jugadores.");
+        if (K >= players.length) throw new Error("Impostores debe ser menor que jugadores.");
 
-      const room = roomSnap.data();
-      const st   = room.settings || {};
-      const tema = st.tema || "Clubes";
-      const K    = st.impostors || 1;
+        const palabra = pickWord(tema);
+        const order   = shuffleInPlace(players.slice());
+        const impostorIds = new Set(order.slice(0, K).map(p=>p.uid));
 
-      if (room.status === "playing") throw new Error("La partida ya está en curso.");
-      // 2) Jugadores actuales
-      const playersSnap = await tx.get(collection(db,"rooms",state.code,"players"));
-      const players = playersSnap.docs.map(d=>d.data()).filter(p => p.online !== false);
+        const nextRound = (room.round || 0) + 1;
 
-      if (players.length < 3) throw new Error("Se necesitan al menos 3 jugadores.");
-      if (K >= players.length) throw new Error("Impostores debe ser menor que jugadores.");
-
-      // 3) Sorteo
-      const palabra = pickWord(tema);
-      const order   = shuffleInPlace(players.slice());
-      const impostorIds = new Set(order.slice(0, K).map(p=>p.uid));
-
-      // 4) Escribir asignaciones + pasar a playing
-      const nextRound = (room.round || 0) + 1;
-
-      tx.update(roomRef, {
-        status: "playing",
-        round: nextRound,
-        startedAt: serverTimestamp()
-      });
-
-      players.forEach(p=>{
-        const aRef = doc(db,"rooms",state.code,"assignments",p.uid);
-        tx.set(aRef, {
+        tx.update(roomRef, {
+          status: "playing",
           round: nextRound,
-          uid: p.uid,
-          name: p.name || "Jugador",
-          avatarKey: p.avatarKey || null, // <- guarda el avatar elegido
-          role: impostorIds.has(p.uid) ? "IMPOSTOR" : "CIVIL",
-          word: impostorIds.has(p.uid) ? null : palabra,
-          tema,
-          alive: true,
-          vote: null,
-          revealedAt: null
+          startedAt: serverTimestamp()
+        });
+
+        players.forEach(p=>{
+          const aRef = doc(db,"rooms",state.code,"assignments",p.uid);
+          tx.set(aRef, {
+            round: nextRound,
+            uid: p.uid,
+            name: p.name || "Jugador",
+            avatarKey: p.avatarKey || null,
+            role: impostorIds.has(p.uid) ? "IMPOSTOR" : "CIVIL",
+            word: impostorIds.has(p.uid) ? null : palabra,
+            tema,
+            alive: true,
+            vote: null,
+            revealedAt: null
+          });
         });
       });
-    });
+    }catch(e){
+      alert(e.message || "No pude iniciar la partida.");
+      console.error(e);
+    }
+  });
 
-    console.log("Roles asignados y partida iniciada.");
-  }catch(e){
-    alert(e.message || "No pude iniciar la partida.");
-    console.error(e);
-  }
-});
-
-
-  // ===== Ver rol propio =====
+  // ===== Ver rol propio (con avatar y nombre) =====
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
     if(!s.exists()) return;
     const a = s.data();
     const overlay = document.getElementById("reveal");
     const box = document.getElementById("revContent");
+
+    let avatarHtml = "";
+    if (a.avatarKey && AVATAR_MAP[a.avatarKey]){
+      avatarHtml = `
+        <div class="rev-avatar">
+          <img src="${AVATAR_MAP[a.avatarKey]}" alt="${a.name || 'avatar'}">
+        </div>`;
+    }
+    const nameHtml = `<div class="rev-name">${a.name || "Jugador"}</div>`;
+
     overlay.style.display = "grid";
     if(a.role === "IMPOSTOR"){
-      box.innerHTML = `<div><div style="font-size:38px;font-weight:900;color:#ff6b6b;margin-bottom:8px">IMPOSTOR</div><div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div></div>`;
+      box.innerHTML = `
+        ${avatarHtml}
+        ${nameHtml}
+        <div style="font-size:38px;font-weight:900;color:#ff6b6b;margin:6px 0 8px">IMPOSTOR</div>
+        <div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>
+      `;
     }else{
-      box.innerHTML = `<div><div style="opacity:.75;font-size:14px;margin-bottom:6px">Palabra secreta (${a.tema})</div><div style="font-size:34px;font-weight:900;color:#7cf062">${a.word}</div></div>`;
+      box.innerHTML = `
+        ${avatarHtml}
+        ${nameHtml}
+        <div style="opacity:.75;font-size:14px;margin:6px 0">Palabra secreta (${a.tema})</div>
+        <div style="font-size:34px;font-weight:900;color:#7cf062">${a.word}</div>
+      `;
     }
   });
 
   // Copiar / Compartir
-  $("#copyBtn").addEventListener("click", async ()=>{
+  document.getElementById("copyBtn").addEventListener("click", async ()=>{
     try{ await navigator.clipboard.writeText(state.code); }catch{}
   });
-  $("#shareBtn").addEventListener("click", async ()=>{
+  document.getElementById("shareBtn").addEventListener("click", async ()=>{
     const joinUrl = `${location.origin}/ingresar.html?code=${state.code}`;
     if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); } catch{} }
     else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); } catch{ alert(joinUrl); } }
