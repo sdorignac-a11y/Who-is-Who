@@ -12,94 +12,108 @@
     .menu-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:320px;padding:16px 24px;margin:12px 0;font-size:24px;font-weight:800;border-radius:12px;cursor:pointer;border:2px solid #ffd43b;color:#fff;background:linear-gradient(180deg,#1e40af,#1e3a8a);box-shadow:0 6px 16px rgba(0,0,0,.5);transition:.1s}
     .menu-btn:hover{filter:brightness(1.1)} .menu-btn:active{transform:translateY(2px)}
     .yellow{background:linear-gradient(180deg,#facc15,#eab308);color:#111;border-color:#fff176}
+
+    /* ===== Modal nombre + avatar ===== */
+    .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:60}
+    .name-card{width:min(480px,92vw);background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.18);
+      border-radius:16px;padding:18px;box-shadow:0 30px 60px rgba(0,0,0,.6);font-family:"Outfit",sans-serif}
+    .name-card h3{margin:0 0 8px;font-size:22px}
+    .name-card p{margin:0 0 14px;opacity:.9}
+    .name-row{display:flex;gap:10px}
+    .name-input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.25);
+      background:#0f172a;color:#fff;font-size:16px;outline:none}
+    .name-input:focus{border-color:#38bdf8}
+    .name-btn{padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.35);cursor:pointer;
+      background:linear-gradient(180deg,#facc15,#eab308);color:#111;font-weight:900}
+    .name-error{margin-top:8px;font-size:13px;color:#fb7185;min-height:18px}
+
+    /* ===== Selector de avatar ===== */
+    .avatar-grid{display:grid;grid-template-columns:repeat(6,56px);gap:10px;justify-content:center;margin-top:12px}
+    .avatar-opt{width:56px;height:56px;border-radius:50%;overflow:hidden;cursor:pointer;border:2px solid transparent;background:#0f172a;display:grid;place-items:center}
+    .avatar-opt img{width:100%;height:100%;object-fit:cover;display:block}
+    .avatar-opt.selected{border-color:#facc15;box-shadow:0 0 0 3px rgba(250,204,21,.35)}
+    .avatar-hint{margin:8px 0 0;font-size:13px;opacity:.85}
   </style>
 </head>
 <body>
   <div class="title">Impostor <span>Fútbol</span> ⚽</div>
 
   <a id="link-crear"    class="menu-btn yellow" href="crear.html">🏟️ CREAR SALA</a>
-<a id="link-offline"  class="menu-btn yellow" href="offline.html">📴 Offline</a>
-<a id="link-ingresar" class="menu-btn"        href="ingresar.html">🔑 INGRESAR A SALA</a>
-<button id="btn-azar"  class="menu-btn yellow">🎲 UNIRSE AL AZAR</button>
+  <a id="link-offline"  class="menu-btn yellow" href="offline.html">📴 Offline</a>
+  <a id="link-ingresar" class="menu-btn"        href="ingresar.html">🔑 INGRESAR A SALA</a>
+  <button id="btn-azar"  class="menu-btn yellow">🎲 UNIRSE AL AZAR</button>
 
-<script>
-  // Avatares disponibles (poné tus rutas reales de imágenes)
-  const AVATARS = [
-    {key:"a1", src:"avatars/a1.png"},
-    {key:"a2", src:"avatars/a2.png"},
-    {key:"a3", src:"avatars/a3.png"},
-    {key:"a4", src:"avatars/a4.png"},
-    {key:"a5", src:"avatars/a5.png"},
-    {key:"a6", src:"avatars/a6.png"},
-    {key:"a7", src:"avatars/a7.png"},
-    {key:"a8", src:"avatars/a8.png"},
-    {key:"a9", src:"avatars/a9.png"},
-    {key:"a10",src:"avatars/a10.png"},
-    {key:"a11",src:"avatars/a11.png"},
-    {key:"a12",src:"avatars/a12.png"},
-  ];
+  <!-- ===== Perfil (nombre + avatar) ===== -->
+  <script>
+    // Avatares disponibles (ajustá rutas reales)
+    const AVATARS = [
+      {key:"a1", src:"avatars/a1.png"},{key:"a2", src:"avatars/a2.png"},
+      {key:"a3", src:"avatars/a3.png"},{key:"a4", src:"avatars/a4.png"},
+      {key:"a5", src:"avatars/a5.png"},{key:"a6", src:"avatars/a6.png"},
+      {key:"a7", src:"avatars/a7.png"},{key:"a8", src:"avatars/a8.png"},
+      {key:"a9", src:"avatars/a9.png"},{key:"a10",src:"avatars/a10.png"},
+      {key:"a11",src:"avatars/a11.png"},{key:"a12",src:"avatars/a12.png"},
+    ];
 
-  // Helpers de perfil (nombre + avatar)
-  window.PlayerProfile = {
-    getName(){ return localStorage.getItem("displayName") || ""; },
-    setName(n){ localStorage.setItem("displayName", n); },
+    window.PlayerProfile = {
+      getName(){ return localStorage.getItem("displayName") || ""; },
+      setName(n){ localStorage.setItem("displayName", n); },
+      getAvatar(){ return localStorage.getItem("avatarKey") || ""; },
+      setAvatar(k){ localStorage.setItem("avatarKey", k); },
 
-    getAvatar(){ return localStorage.getItem("avatarKey") || ""; },
-    setAvatar(k){ localStorage.setItem("avatarKey", k); },
+      async ensure(){
+        let name = this.getName();
+        let avatar = this.getAvatar();
+        if (valid(name) && avatar) return {name, avatar};
 
-    async ensure(){
-      let name = this.getName();
-      let avatar = this.getAvatar();
-      if (valid(name) && avatar) return {name, avatar};
+        const modal = document.getElementById("name-modal");
+        const input = document.getElementById("displayName");
+        const btn   = document.getElementById("saveName");
+        const errEl = document.getElementById("nameError");
+        const grid  = document.getElementById("avatarGrid");
+        const close = ()=>{ modal.style.display="none"; modal.setAttribute("aria-hidden","true"); };
 
-      const modal = document.getElementById("name-modal");
-      const input = document.getElementById("displayName");
-      const btn   = document.getElementById("saveName");
-      const errEl = document.getElementById("nameError");
-      const grid  = document.getElementById("avatarGrid");
-      const close = ()=>{ modal.style.display="none"; modal.setAttribute("aria-hidden","true"); };
-
-      // Render de opciones de avatar
-      grid.innerHTML = "";
-      AVATARS.forEach(a=>{
-        const b = document.createElement("button");
-        b.type = "button"; b.className = "avatar-opt";
-        b.innerHTML = `<img src="${a.src}" alt="${a.key}" />`;
-        if ((avatar||"") === a.key) b.classList.add("selected");
-        b.addEventListener("click", ()=>{
-          document.querySelectorAll(".avatar-opt").forEach(x=>x.classList.remove("selected"));
-          b.classList.add("selected");
-          avatar = a.key;
+        // Render opciones avatar
+        grid.innerHTML = "";
+        AVATARS.forEach(a=>{
+          const b = document.createElement("button");
+          b.type = "button"; b.className = "avatar-opt";
+          b.innerHTML = `<img src="${a.src}" alt="${a.key}" />`;
+          if ((avatar||"") === a.key) b.classList.add("selected");
+          b.addEventListener("click", ()=>{
+            document.querySelectorAll(".avatar-opt").forEach(x=>x.classList.remove("selected"));
+            b.classList.add("selected");
+            avatar = a.key;
+          });
+          grid.appendChild(b);
         });
-        grid.appendChild(b);
-      });
 
-      modal.style.display="grid";
-      modal.setAttribute("aria-hidden","false");
-      input.value = this.getName() || ""; input.focus();
+        modal.style.display="grid";
+        modal.setAttribute("aria-hidden","false");
+        input.value = this.getName() || ""; input.focus();
 
-      return new Promise((resolve)=>{
-        const save = ()=>{
-          const v = (input.value||"").trim();
-          if(!valid(v)){ errEl.textContent = "Usá entre 2 y 16 caracteres."; return; }
-          if(!avatar){ errEl.textContent = "Elegí un avatar."; return; }
-          this.setName(v);
-          this.setAvatar(avatar);
-          errEl.textContent = "";
-          close();
-          resolve({name:v, avatar});
-        };
-        btn.onclick = save;
-        input.onkeydown = (e)=>{ if(e.key==="Enter") save(); if(e.key==="Escape") close(); };
-        modal.onclick = (e)=>{ if(e.target===modal){ input.focus(); } };
-      });
+        return new Promise((resolve)=>{
+          const save = ()=>{
+            const v = (input.value||"").trim();
+            if(!valid(v)){ errEl.textContent = "Usá entre 2 y 16 caracteres."; return; }
+            if(!avatar){ errEl.textContent = "Elegí un avatar."; return; }
+            this.setName(v);
+            this.setAvatar(avatar);
+            errEl.textContent = "";
+            close();
+            resolve({name:v, avatar});
+          };
+          btn.onclick = save;
+          input.onkeydown = (e)=>{ if(e.key==="Enter") save(); if(e.key==="Escape") close(); };
+          modal.onclick = (e)=>{ if(e.target===modal){ input.focus(); } };
+        });
 
-      function valid(s){ return typeof s==="string" && s.trim().length>=2 && s.trim().length<=16; }
-    }
-  };
-</script>
+        function valid(s){ return typeof s==="string" && s.trim().length>=2 && s.trim().length<=16; }
+      }
+    };
+  </script>
 
-  
+  <!-- ===== Firebase + acciones ===== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -121,90 +135,67 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Autenticación anónima (no bloquea si falla)
         try { await signInAnonymously(auth); }
         catch (e) { console.warn("Anon auth falló (seguimos igual):", e); }
 
-        // Unirse al azar (si Firestore funciona)
+        // Unirse al azar
         const btnAzar = document.getElementById("btn-azar");
         if (btnAzar) {
           btnAzar.addEventListener("click", async () => {
-  try {
-    const name = await window.PlayerName.ensure();
+            try {
+              const {name, avatar} = await window.PlayerProfile.ensure();
 
-    const snap = await getDocs(collection(db, "rooms"));
-    if (snap.empty) { alert("No hay salas disponibles todavía."); return; }
-    const rooms = snap.docs.map(d => d.id);
-    const code = rooms[Math.floor(Math.random() * rooms.length)];
+              const snap = await getDocs(collection(db, "rooms"));
+              if (snap.empty) { alert("No hay salas disponibles todavía."); return; }
+              const rooms = snap.docs.map(d => d.id);
+              const code = rooms[Math.floor(Math.random() * rooms.length)];
 
-    location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}`;
-  } catch (err) {
-    console.error(err);
-    alert("No pude listar salas. Probá refrescar o crear una sala.");
-  }
-});
-
+              location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`;
+            } catch (err) {
+              console.error(err);
+              alert("No pude listar salas. Probá refrescar o crear una sala.");
+            }
+          });
         }
       } catch (err) {
         console.error("Error inicializando Firebase:", err);
-        // El link de CREAR SALA sigue funcionando igual.
       }
     })();
   </script>
-<!-- ===== Nombre para mostrar (modal) ===== -->
-<style>
-  .backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;place-items:center;z-index:60}
-  .name-card{width:min(420px,92vw);background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.18);
-    border-radius:16px;padding:18px;box-shadow:0 30px 60px rgba(0,0,0,.6);font-family:"Outfit",sans-serif}
-  .name-card h3{margin:0 0 8px;font-size:22px}
-  .name-card p{margin:0 0 14px;opacity:.9}
-  .name-row{display:flex;gap:10px}
-  .name-input{flex:1;padding:12px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.25);
-    background:#0f172a;color:#fff;font-size:16px;outline:none}
-  .name-input:focus{border-color:#38bdf8}
-  .name-btn{padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.35);cursor:pointer;
-    background:linear-gradient(180deg,#facc15,#eab308);color:#111;font-weight:900}
-  .name-error{margin-top:8px;font-size:13px;color:#fb7185;min-height:18px}
-  /* ===== Selector de avatar (en el modal) ===== */
-.avatar-grid{display:grid;grid-template-columns:repeat(6,56px);gap:10px;justify-content:center;margin-top:10px}
-.avatar-opt{width:56px;height:56px;border-radius:50%;overflow:hidden;cursor:pointer;border:2px solid transparent;background:#0f172a;display:grid;place-items:center}
-.avatar-opt img{width:100%;height:100%;object-fit:cover;display:block}
-.avatar-opt.selected{border-color:#facc15;box-shadow:0 0 0 3px rgba(250,204,21,.35)}
-.avatar-hint{margin:8px 0 0;font-size:13px;opacity:.85}
 
-</style>
-
-<div id="name-modal" class="backdrop" aria-hidden="true">
-  <div class="name-card" role="dialog" aria-modal="true" aria-labelledby="name-title">
-    <h3 id="name-title">Elegí tu nombre</h3>
-    <p>Este será el nombre que verán los demás jugadores.</p>
-    <div class="name-row">
-      <input id="displayName" class="name-input" type="text" maxlength="16" placeholder="Ej: Nico, Lio 🐐" />
-      <button id="saveName" class="name-btn">Guardar</button>
+  <!-- ===== Modal nombre + avatar ===== -->
+  <div id="name-modal" class="backdrop" aria-hidden="true">
+    <div class="name-card" role="dialog" aria-modal="true" aria-labelledby="name-title">
+      <h3 id="name-title">Elegí tu nombre</h3>
+      <p>Este será el nombre y avatar que verán los demás jugadores.</p>
+      <div class="name-row">
+        <input id="displayName" class="name-input" type="text" maxlength="16" placeholder="Ej: Nico, Lio 🐐" />
+        <button id="saveName" class="name-btn">Guardar</button>
+      </div>
+      <div id="nameError" class="name-error"></div>
+      <div class="avatar-grid" id="avatarGrid"></div>
+      <div class="avatar-hint">Elegí tu avatar</div>
     </div>
-    <div id="nameError" class="name-error"></div>
-<div class="avatar-grid" id="avatarGrid"></div>
-<div class="avatar-hint">Elegí tu avatar</div>
-
   </div>
-</div>
-<script>
-  // Asegurar nombre antes de navegar
-  document.addEventListener("DOMContentLoaded", ()=>{
-    const linkCrear    = document.getElementById("link-crear");
-    const linkIngresar = document.getElementById("link-ingresar");
-    const linkOffline  = document.getElementById("link-offline"); // si querés que Offline también pida nombre, descomentá abajo
 
-    async function goWithName(url){
-      const name = await window.PlayerName.ensure();
-      const sep  = url.includes("?") ? "&" : "?";
-      location.href = `${url}${sep}name=${encodeURIComponent(name)}`;
-    }
+  <!-- ===== Navegación que exige perfil ===== -->
+  <script>
+    document.addEventListener("DOMContentLoaded", ()=>{
+      const linkCrear    = document.getElementById("link-crear");
+      const linkIngresar = document.getElementById("link-ingresar");
 
-    linkCrear?.addEventListener("click", (e)=>{ e.preventDefault(); goWithName("crear.html"); });
-    linkIngresar?.addEventListener("click", (e)=>{ e.preventDefault(); goWithName("ingresar.html"); });
-  });
-</script>
+      async function goWithProfile(url){
+        const {name, avatar} = await window.PlayerProfile.ensure();
+        const sep  = url.includes("?") ? "&" : "?";
+        location.href = `${url}${sep}name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`;
+      }
 
+      linkCrear?.addEventListener("click", (e)=>{ e.preventDefault(); goWithProfile("crear.html"); });
+      linkIngresar?.addEventListener("click", (e)=>{ e.preventDefault(); goWithProfile("ingresar.html"); });
+
+      // Si querés que Offline también pida perfil:
+      // document.getElementById("link-offline")?.addEventListener("click", (e)=>{ e.preventDefault(); goWithProfile("offline.html"); });
+    });
+  </script>
 </body>
 </html>
