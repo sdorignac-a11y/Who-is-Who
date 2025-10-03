@@ -68,50 +68,111 @@
   </div>
 
 <script type="module">
-  // ---- UI local ----
-  const state = { code:"TCZLPQ", impostores:1, jugadores:8, temas:["Clubes","Jugadores","Mundiales"], temaIndex:0 };
-  const $ = s=>document.querySelector(s);
-  const roomCodeEl=$("#roomCode"), playersWrap=$("#players");
-  function renderPlayers(n){ playersWrap.innerHTML=""; for(let i=1;i<=n;i++){ const d=document.createElement("div"); d.className="player"; const a=document.createElement("div"); a.className="avatar placeholder"; const t=document.createElement("small"); t.textContent=`Jugador ${i}`; d.append(a,t); playersWrap.append(d);} }
-  function render(){ $("#impostoresVal").textContent=state.impostores; $("#jugadoresVal").textContent=state.jugadores; $("#temaVal").textContent=state.temas[state.temaIndex]; roomCodeEl.textContent=state.code; renderPlayers(state.jugadores); }
-  render();
-  document.querySelectorAll(".arrow").forEach(b=>b.addEventListener("click",()=>{const i=b.dataset.inc,d=b.dataset.dec;if(i==="impostores")state.impostores=Math.min(3,state.impostores+1); if(d==="impostores")state.impostores=Math.max(1,state.impostores-1); if(i==="jugadores")state.jugadores=Math.min(10,state.jugadores+1); if(d==="jugadores")state.jugadores=Math.max(4,state.jugadores-1); if(i==="tema")state.temaIndex=(state.temaIndex+1)%state.temas.length; if(d==="tema")state.temaIndex=(state.temaIndex-1+state.temas.length)%state.temas.length; if(state.impostores>=state.jugadores)state.impostores=Math.max(1,state.jugadores-1); render(); }));
-
-  // ---- Firebase ----
+  // ===== Firebase =====
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import {
+    getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot,
+    collection, getDocs, writeBatch
+  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-  const app = initializeApp({
+  const firebaseConfig = {
     apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
     authDomain: "who-is-who-6ea99.firebaseapp.com",
     projectId: "who-is-who-6ea99",
     storageBucket: "who-is-who-6ea99.firebasestorage.app",
     messagingSenderId: "718537140049",
-    appId: "1:718537140049:web:7400ec7e5467b387f8d570"
-  });
+    appId: "1:718537140049:web:7400ec7e5467b387f8d570",
+  };
+
+  const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
-  await signInAnonymously(auth);
 
-  // host si NO hay ?code=, invitado si hay ?code=
-  const urlCode = new URLSearchParams(location.search).get("code");
-  const isHost = !urlCode;
-  state.code = (urlCode || state.code).toUpperCase();
-  roomCodeEl.textContent = state.code;
+  // ===== Util UI local (ya tenés estos nodos en tu HTML) =====
+  const $ = s => document.querySelector(s);
+  const playersWrap = $("#players");
+  const roomCodeEl  = $("#roomCode");
+  const impostoresEl = $("#impostoresVal");
+  const jugadoresEl  = $("#jugadoresVal");
+  const temaEl       = $("#temaVal");
 
-  const roomRef = doc(db,"rooms",state.code);
+  // Estado visual local (el host puede cambiarlo con flechas)
+  const state = {
+    code: "TCZLPQ",
+    impostores: 1,
+    jugadores: 8,
+    temas: ["Clubes","Jugadores","Mundiales"],
+    temaIndex: 0
+  };
 
-  // pools
   const POOLS = {
     Clubes:["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"],
     Jugadores:["Lionel Messi","Cristiano Ronaldo","Diego Maradona","Pelé","Kylian Mbappé","Erling Haaland","Neymar","Zinedine Zidane","Ronaldinho","Ronaldo Nazário"],
     Mundiales:["Mundial 2002","Mundial 2006","Mundial 2010","Mundial 2014","Mundial 2018","Mundial 2022"]
   };
-  const r = n=>Math.floor(Math.random()*n), sample = a=>a[r(a.length)], shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=r(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
+  const r=n=>Math.floor(Math.random()*n);
+  const sample=a=>a[r(a.length)];
+  const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=r(i+1);[a[i],a[j]]=[a[j],a[i]]}return a};
 
-  // crear/entrar sala
-  if(isHost){
+  function renderPlayers(n){
+    playersWrap.innerHTML="";
+    for(let i=1;i<=n;i++){
+      const card=document.createElement("div"); card.className="player";
+      const av=document.createElement("div"); av.className="avatar placeholder";
+      const label=document.createElement("small"); label.textContent=`Jugador ${i}`;
+      card.append(av,label); playersWrap.append(card);
+    }
+  }
+  function render(){
+    roomCodeEl.textContent = state.code;
+    impostoresEl.textContent = state.impostores;
+    jugadoresEl.textContent  = state.jugadores;
+    temaEl.textContent       = state.temas[state.temaIndex];
+    renderPlayers(state.jugadores);
+  }
+  render();
+
+  // Flechas (solo tendrán efecto real si sos host; abajo guardamos en Firestore)
+  document.querySelectorAll(".arrow").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const inc = btn.dataset.inc, dec = btn.dataset.dec;
+      if(inc==="impostores") state.impostores = Math.min(3, state.impostores+1);
+      if(dec==="impostores") state.impostores = Math.max(1, state.impostores-1);
+      if(inc==="jugadores")  state.jugadores  = Math.min(10,state.jugadores+1);
+      if(dec==="jugadores")  state.jugadores  = Math.max(4, state.jugadores-1);
+      if(inc==="tema") state.temaIndex = (state.temaIndex+1)%state.temas.length;
+      if(dec==="tema") state.temaIndex = (state.temaIndex-1+state.temas.length)%state.temas.length;
+      if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
+      render();
+
+      // Si soy host, persisto cambios
+      if (isHost){
+        try{
+          await updateDoc(roomRef, {
+            settings:{
+              maxPlayers: state.jugadores,
+              impostors:  state.impostores,
+              tema:       state.temas[state.temaIndex]
+            }
+          });
+        }catch(e){ console.warn("No pude actualizar settings:", e); }
+      }
+    });
+  });
+
+  // ===== Autenticación y creación/unión a sala =====
+  await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
+
+  const urlCode = new URLSearchParams(location.search).get("code");
+  const isHost = !urlCode;                 // host si no viene ?code
+  state.code = (urlCode || state.code).toUpperCase();
+  render();
+
+  const roomRef = doc(db, "rooms", state.code);
+
+  if (isHost){
+    // Crea sala si no existe y se registra como jugador 1
     await setDoc(roomRef, {
       hostUid: auth.currentUser.uid,
       status: "lobby",
@@ -119,91 +180,122 @@
       settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
     }, { merge:true });
 
-    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid),
-      { uid:auth.currentUser.uid, name:"Jugador 1", slot:1, online:true }, { merge:true });
+    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
+      uid: auth.currentUser.uid,
+      name: "Jugador 1",
+      slot: 1,
+      online: true
+    }, { merge:true });
 
-  }else{
+  } else {
+    // Invitado: valida sala y se agrega a players
     const snap = await getDoc(roomRef);
     if(!snap.exists()){ alert("La sala no existe"); location.href="index.html"; }
-    const s = snap.data().settings;
-    state.jugadores=s.maxPlayers; state.impostores=s.impostors; state.temaIndex=["Clubes","Jugadores","Mundiales"].indexOf(s.tema); if(state.temaIndex<0)state.temaIndex=0; render();
-    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid),
-      { uid:auth.currentUser.uid, name:"Jugador", slot:Date.now(), online:true }, { merge:true });
-    // invitados no editan settings
+    const s = snap.data().settings || {};
+    state.jugadores = s.maxPlayers || state.jugadores;
+    state.impostores = s.impostors || state.impostores;
+    state.temaIndex = ["Clubes","Jugadores","Mundiales"].indexOf(s.tema ?? "Clubes");
+    if (state.temaIndex < 0) state.temaIndex = 0;
+    render();
+
+    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
+      uid: auth.currentUser.uid,
+      name: "Jugador",
+      slot: Date.now(),   // orden de llegada
+      online: true
+    }, { merge:true });
+
+    // Invitado: bloquea flechas (host controla)
     document.querySelectorAll(".arrow").forEach(b=>b.style.pointerEvents="none");
   }
 
-  // reflejar settings en vivo
+  // Reflejar settings en vivo para todos
   onSnapshot(roomRef, s=>{
     if(!s.exists()) return;
-    const st=s.data().settings;
-    state.jugadores=st.maxPlayers; state.impostores=st.impostors; $("#temaVal").textContent=st.tema; renderPlayers(state.jugadores);
+    const st = s.data().settings || {};
+    state.jugadores = st.maxPlayers ?? state.jugadores;
+    state.impostores = st.impostors ?? state.impostores;
+    $("#temaVal").textContent = st.tema ?? state.temas[state.temaIndex];
+    renderPlayers(state.jugadores);
   });
 
-  // si host cambia flechas -> guarda
-  if(isHost){
-    document.querySelectorAll(".arrow").forEach(b=>b.addEventListener("click", async ()=>{
-      await updateDoc(roomRef, { settings:{ maxPlayers:state.jugadores, impostors:state.impostores, tema:state.temas[state.temaIndex] }});
-    }));
-  }
-
-  // lista de jugadores en vivo
-  onSnapshot(collection(db,"rooms",state.code,"players"), s=>{
-    const players=s.docs.map(d=>d.data()).sort((a,b)=>(a.slot||0)-(b.slot||0));
-    playersWrap.innerHTML="";
+  // Lista de jugadores en vivo
+  onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
+    const list = snap.docs.map(d=>d.data()).sort((a,b)=>(a.slot||0)-(b.slot||0));
+    playersWrap.innerHTML = "";
     for(let i=0;i<state.jugadores;i++){
-      const p=players[i];
-      const d=document.createElement("div"); d.className="player";
-      const a=document.createElement("div"); a.className=p?"avatar":"avatar placeholder";
-      const t=document.createElement("small"); t.textContent=p?(p.name||`Jugador ${i+1}`):`Jugador ${i+1}`;
-      d.append(a,t); playersWrap.append(d);
+      const p = list[i];
+      const card=document.createElement("div"); card.className="player";
+      const av=document.createElement("div"); av.className=p?"avatar":"avatar placeholder";
+      const label=document.createElement("small"); label.textContent=p?(p.name||`Jugador ${i+1}`):`Jugador ${i+1}`;
+      card.append(av,label); playersWrap.append(card);
     }
   });
 
-  // empezar partida -> asignaciones
-  document.getElementById("startBtn").addEventListener("click", async ()=>{
+  // ===== Empezar partida (solo host) -> escribe assignments =====
+  $("#startBtn").addEventListener("click", async ()=>{
     if(!isHost){ alert("Solo el host puede iniciar"); return; }
-    const rs = (await getDoc(roomRef)).data(); const tema = rs.settings.tema; const K = rs.settings.impostors;
-    const ps = await getDocs(collection(db,"rooms",state.code,"players"));
-    const players = ps.docs.map(d=>d.data());
-    if(K >= players.length){ alert("Impostores debe ser menor que jugadores"); return; }
-    const palabra = sample(POOLS[tema] || ["Balón"]);
-    const imp = new Set(shuffle([...players]).slice(0,K).map(p=>p.uid));
-    const batch = writeBatch(db);
-    players.forEach(p=>{
-      batch.set(doc(db,"rooms",state.code,"assignments",p.uid), { role: imp.has(p.uid)?"IMPOSTOR":"CIVIL", word: imp.has(p.uid)?null:palabra, tema });
-    });
-    batch.update(roomRef, { status:"playing" });
-    await batch.commit();
+
+    try{
+      const roomData = (await getDoc(roomRef)).data();
+      const tema = roomData.settings.tema;
+      const K = roomData.settings.impostors;
+
+      const ps = await getDocs(collection(db,"rooms",state.code,"players"));
+      const players = ps.docs.map(d=>d.data());
+      if(players.length < 3){ alert("Se necesitan al menos 3 jugadores."); return; }
+      if(K >= players.length){ alert("Impostores debe ser menor que jugadores."); return; }
+
+      const palabra = sample(POOLS[tema] || ["Balón"]);
+      const seleccion = shuffle(players.slice());
+      const impostores = new Set(seleccion.slice(0, K).map(p=>p.uid));
+
+      const batch = writeBatch(db);
+      players.forEach(p=>{
+        batch.set(doc(db,"rooms",state.code,"assignments",p.uid), {
+          role: impostores.has(p.uid) ? "IMPOSTOR" : "CIVIL",
+          word: impostores.has(p.uid) ? null : palabra,
+          tema
+        });
+      });
+      batch.update(roomRef, { status:"playing" });
+      await batch.commit();
+      console.log("Roles asignados.");
+    }catch(e){
+      console.error("Error al iniciar:", e);
+      alert("No pude iniciar la partida. Revisá la consola.");
+    }
   });
 
-  // cada jugador escucha su assignment y ve su rol
+  // Cada jugador escucha su assignment y ve su rol en su propio dispositivo
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
     if(!s.exists()) return;
-    const a=s.data(); const overlay=$("#reveal"), box=$("#revContent"); overlay.style.display="grid";
-    if(a.role==="IMPOSTOR"){
-      box.innerHTML=`<div><div style="font-size:38px;font-weight:900;color:#ff6b6b;margin-bottom:8px">IMPOSTOR</div><div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div></div>`;
+    const a = s.data();
+    const overlay = document.getElementById("reveal");
+    const box = document.getElementById("revContent");
+    overlay.style.display = "grid";
+    if(a.role === "IMPOSTOR"){
+      box.innerHTML = `<div><div style="font-size:38px;font-weight:900;color:#ff6b6b;margin-bottom:8px">IMPOSTOR</div><div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div></div>`;
     }else{
-      box.innerHTML=`<div><div style="opacity:.75;font-size:14px;margin-bottom:6px">Palabra secreta (${a.tema})</div><div style="font-size:34px;font-weight:900;color:#7cf062">${a.word}</div></div>`;
+      box.innerHTML = `<div><div style="opacity:.75;font-size:14px;margin-bottom:6px">Palabra secreta (${a.tema})</div><div style="font-size:34px;font-weight:900;color:#7cf062">${a.word}</div></div>`;
     }
   });
 
+  // Cerrar overlay (por ahora demo)
   document.getElementById("btnComenzarRonda").addEventListener("click", ()=>{
-    document.getElementById("reveal").style.display="none";
-    // aquí podrías ir a ronda.html
-    // location.href = "ronda.html?code="+state.code;
+    document.getElementById("reveal").style.display = "none";
   });
 
-  // copiar/compartir
-  document.getElementById("copyBtn").addEventListener("click", async ()=>{
+  // Copiar / compartir
+  $("#copyBtn").addEventListener("click", async ()=>{
     try{ await navigator.clipboard.writeText(state.code); }catch{}
   });
-  document.getElementById("shareBtn").addEventListener("click", async ()=>{
-    const url = `${location.origin}${location.pathname.replace("crear.html","ingresar.html")}`;
-    const full = `${url}?code=${state.code}`;
-    if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:full}); }catch{} }
-    else{ try{ await navigator.clipboard.writeText(full); alert("Enlace copiado"); }catch{ alert(full); } }
+  $("#shareBtn").addEventListener("click", async ()=>{
+    const joinUrl = `${location.origin}${location.pathname.replace("crear.html","ingresar.html")}?code=${state.code}`;
+    if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); } catch{} }
+    else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); } catch{ alert(joinUrl); } }
   });
 </script>
+
 </body>
 </html>
