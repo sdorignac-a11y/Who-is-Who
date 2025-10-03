@@ -697,42 +697,64 @@
     return true;
   }
 
-  function isOneWordLatin(str){
-    return /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,24}$/.test(str);
-  }
+ function isOneWordLatin(str){
+  return /^\p{L}{2,24}$/u.test(str);
+}
 
-  // ===== Chat submit: PROMPT por turno → DISCUSS
-  document.getElementById("chatForm").addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    if (!roundState) return;
 
-    const msg = (ui.chatInput.value || "").trim();
-    if (!msg) return;
+ // Helper para mostrar errores visibles
+function showError(msg){
+  ui.cooldownHint.textContent = msg;
+  ui.cooldownHint.style.color = "#ff7b7b";
+  document.getElementById("chatInput").style.outline = "2px solid #ff7b7b";
+  setTimeout(()=>{
+    ui.cooldownHint.style.color = "";
+    document.getElementById("chatInput").style.outline = "";
+  }, 1800);
+}
 
-    const myUid = auth.currentUser?.uid;
-    const roundId = String(currentRound);
+document.getElementById("chatForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  if (!roundState) { showError("No hay ronda activa."); return; }
 
+  const raw = (ui.chatInput.value || "").trim();
+  if (!raw) return;
+
+  const myUid = auth.currentUser?.uid;
+  const roundId = String(currentRound);
+
+  try {
     if (roundState.status === "prompt") {
       const idx = roundState.turnIndex ?? 0;
       const order = roundState.order || [];
       const uidTurno = order[idx];
 
-      if (myUid !== uidTurno) {
-        ui.cooldownHint.textContent = `Esperá tu turno. Ahora: ${await nameOf(uidTurno)}.`;
-        return;
-      }
-      if (!isOneWordLatin(msg)) {
-        ui.cooldownHint.textContent = "Enviá UNA sola palabra (2–24 letras, sin espacios).";
+      // 🔒 Chequeo de turno MUY explícito
+      if (!myUid || !uidTurno || String(myUid) !== String(uidTurno)) {
+        const name = uidTurno ? await nameOf(uidTurno) : "alguien";
+        showError(`Esperá tu turno. Ahora: ${name}.`);
         return;
       }
 
+      // ✅ Validación de UNA palabra
+      if (!isOneWordLatin(raw)) {
+        showError("Enviá UNA sola palabra (2–24 letras, sin espacios).");
+        return;
+      }
+
+      // ✍️ Guardar "primera palabra" + mensaje de chat
       await setDoc(doc(db,"rooms",state.code,"rounds", roundId,"firstWords", myUid), {
-        uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp()
+        uid: myUid, name: getStoredName(), text: raw, at: serverTimestamp()
       });
+
       const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
-      await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"firstword" });
+      await setDoc(msgRef, {
+        uid: myUid, name: getStoredName(), text: raw, at: serverTimestamp(), kind:"firstword"
+      });
+
       ui.chatInput.value = "";
 
+      // 👑 Avanzar turno solo si sos host
       if (isHost) {
         const nextIdx = idx + 1;
         if (nextIdx < order.length) {
@@ -744,18 +766,24 @@
       return;
     }
 
-    if (!canSendNow()) return;
     if (roundState.status === "discuss") {
+      if (!canSendNow()) return;
       const msgRef = doc(collection(db,"rooms",state.code,"rounds", roundId, "chat"));
-      await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: msg, at: serverTimestamp(), kind:"chat" });
+      await setDoc(msgRef, { uid: myUid, name: getStoredName(), text: raw, at: serverTimestamp(), kind:"chat" });
       ui.chatInput.value = "";
       cooldownUntil = Date.now() + 3000;
       canSendNow();
       return;
     }
 
-    ui.cooldownHint.textContent = "No podés enviar ahora.";
-  });
+    showError("No podés enviar ahora.");
+
+  } catch (e) {
+    console.error(e);
+    showError(`Error al enviar: ${e?.message || e}`);
+  }
+});
+
 
   // ===== Votación
   async function renderVoteBar(){
