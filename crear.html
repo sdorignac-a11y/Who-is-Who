@@ -35,6 +35,22 @@
   #reveal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,10,20,.9)}
   .rev-card{width:min(680px,92vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:24px;text-align:center}
   .rev-content{padding:18px;background:linear-gradient(180deg,#102c4f,#0c2441);border:1px solid rgba(128,180,255,.25);border-radius:16px;min-height:110px;display:grid;place-items:center;font-size:26px;font-weight:800}
+  /* === Nombre del jugador en la barra === */
+.user-area{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
+.userbox{
+  display:flex;align-items:center;gap:8px;
+  background:linear-gradient(180deg,#0c2747,#0a213b);
+  border:1px solid rgba(128,180,255,.28);
+  border-radius:12px;padding:8px 10px;font-weight:700;color:#cfe4ff
+}
+.mini-btn{
+  padding:6px 10px;border-radius:10px;cursor:pointer;
+  background:linear-gradient(180deg,#1e68d6,#184fa5);
+  border:1px solid rgba(110,178,255,.65);color:#eaf2ff;font-weight:700
+}
+.me-badge{color:#ffd166;font-weight:900;margin-left:4px}
+.me-outline{outline:2px solid #f6c11b;outline-offset:2px;border-radius:16px}
+
 </style>
 </head>
 <body>
@@ -42,7 +58,13 @@
     <div class="room-card">
       <div class="brand"><div class="ball"></div><h1>Impostor <span>Fútbol</span></h1></div>
       <div class="code-box"><strong style="opacity:.7">CÓDIGO:</strong><div class="room-code" id="roomCode">—</div><button id="copyBtn" class="btn">Copiar</button></div>
-      <div><button id="shareBtn" class="btn">Compartir enlace</button></div>
+      <div class="user-area">
+  <div class="userbox">👤 <span id="meName">—</span>
+    <button id="editName" class="mini-btn">Editar</button>
+  </div>
+  <button id="shareBtn" class="btn">Compartir enlace</button>
+</div>
+
     </div>
 
     <div class="players" id="players"></div>
