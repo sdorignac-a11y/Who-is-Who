@@ -1,3 +1,5 @@
+ASI
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -33,6 +35,8 @@
   .selector .arrow{width:40px;height:40px;border-radius:10px;background:linear-gradient(180deg,#1e68d6,#184fa5);border:1px solid rgba(110,178,255,.7);display:grid;place-items:center;cursor:pointer;font-size:20px;font-weight:900}
   .cta{display:flex;justify-content:center}
   .btn-cta{background:linear-gradient(180deg,var(--yellow),var(--yellow-2));border:1px solid rgba(255,210,80,.9);color:#10223b;font-weight:900;font-size:28px;padding:16px 34px;border-radius:16px}
+
+  /* Overlay rol */
   #reveal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,10,20,.9);z-index:1000}
   .rev-card{width:min(680px,92vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:24px;text-align:center}
   .rev-content{padding:18px;background:linear-gradient(180deg,#102c4f,#0c2441);border:1px solid rgba(128,180,255,.25);border-radius:16px;min-height:110px;display:grid;place-items:center;font-size:26px;font-weight:800}
@@ -45,11 +49,13 @@
   .rev-avatar img{width:100%;height:100%;object-fit:cover;display:block}
   .rev-name{font-weight:800;margin-top:4px;opacity:.9}
   .tip{background:#08213a;border:1px solid rgba(128,180,255,.25);padding:8px 12px;border-radius:12px;margin:10px;opacity:.9}
+
+  /* === Sorteo (“bolillero”) === */
   #drawOverlay{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,12,24,.9);z-index:1200}
   .draw-card{width:min(760px,96vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:20px}
   .draw-title{margin:0 0 10px;text-align:center}
   .bowl{position:relative;height:240px;border-radius:16px;background:radial-gradient(circle at 50% 0%, rgba(255,255,255,.09), transparent 60%), linear-gradient(180deg,#0a2340,#0a1f37);border:1px solid rgba(128,180,255,.25);overflow:hidden;display:flex;align-items:flex-end;justify-content:center;padding-bottom:16px}
-  .ball{position:absolute;bottom:-40px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#cfe1ff 55%,#82a8ff);opacity:.7;animation:float 3s ease-in-out infinite}
+  .ball{position:absolute;bottom:-40px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff, #cfe1ff 55%, #82a8ff);opacity:.7;animation:float 3s ease-in-out infinite}
   .ball:nth-child(2){left:20%;animation-delay:.2s}.ball:nth-child(3){left:40%;animation-delay:.4s}.ball:nth-child(4){left:60%;animation-delay:.6s}.ball:nth-child(5){left:80%;animation-delay:.8s}
   @keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-18px)}100%{transform:translateY(0)}}
   .slip{position:absolute;bottom:12px;left:50%;transform:translateX(-50%) translateY(120%);background:#fff;color:#0c2441;border-radius:8px;padding:8px 12px;font-weight:900;box-shadow:0 6px 18px rgba(0,0,0,.45);opacity:0;white-space:nowrap}
@@ -174,6 +180,7 @@
       const k = localStorage.getItem("avatarKey") || "";
       return AVATAR_MAP[k] ? k : "";
     }
+
     async function editAndSaveName(playerRef){
       const prev = getStoredName();
       const nuevo = prompt("Tu nombre para mostrar (2–16 chars):", prev) ?? "";
@@ -199,86 +206,6 @@
       return genCode(8);
     }
 
-    // === NUEVO: resolver código inicial sin crear salas al recargar
-    function getInitialCode(){
-      const qp = new URLSearchParams(location.search);
-      const codeFromUrl = (qp.get("code") || "").trim().toUpperCase();
-      if (codeFromUrl) return { code: codeFromUrl, source: "url" };
-      const last = (localStorage.getItem("lastRoomCode") || "").trim().toUpperCase();
-      if (last) return { code: last, source: "storage" };
-      return null;
-    }
-
-    const state = { code:"", impostores:1, jugadores:8, temas:["Clubes","Jugadores","Mundiales"], temaIndex:0 };
-    const POOLS = {
-      Clubes:["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"],
-      Jugadores:["Lionel Messi","Cristiano Ronaldo","Diego Maradona","Pelé","Kylian Mbappé","Erling Haaland","Neymar","Zinedine Zidane","Ronaldinho","Ronaldo Nazário"],
-      Mundiales:["Mundial 2002","Mundial 2006","Mundial 2010","Mundial 2014","Mundial 2018","Mundial 2022"]
-    };
-
-    function render(){
-      roomCodeEl.textContent = state.code || "—";
-      impostoresEl.textContent = state.impostores;
-      jugadoresEl.textContent  = state.jugadores;
-      temaEl.textContent       = state.temas[state.temaIndex];
-      drawPlayers(state.jugadores, lastPlayers);
-    }
-
-    // ===== Init auth/db + room
-    await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
-
-    let isHost = false;
-    const initial = getInitialCode();
-
-    if (initial) {
-      state.code = initial.code;
-      if (initial.source === "storage" && !new URLSearchParams(location.search).get("code")) {
-        history.replaceState(null, "", `?code=${state.code}`);
-      }
-    } else {
-      state.code = await createUniqueRoomCode(db);
-      isHost = true;
-      history.replaceState(null, "", `?code=${state.code}`);
-      localStorage.setItem("lastRoomCode", state.code);
-    }
-    render();
-
-    let roomRef = doc(db, "rooms", state.code);
-
-    // Verificar / crear sala si corresponde
-    let firstSnap = await getDoc(roomRef);
-    if (!firstSnap.exists() && isHost) {
-      await setDoc(roomRef, {
-        hostUid: auth.currentUser.uid,
-        status: "lobby",
-        createdAt: Date.now(),
-        settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
-      }, { merge:true });
-      firstSnap = await getDoc(roomRef);
-    }
-    if (!firstSnap.exists() && !isHost) {
-      // storage roto → crear nueva y setearme host
-      state.code = await createUniqueRoomCode(db);
-      isHost = true;
-      history.replaceState(null, "", `?code=${state.code}`);
-      localStorage.setItem("lastRoomCode", state.code);
-      roomRef = doc(db, "rooms", state.code);
-      await setDoc(roomRef, {
-        hostUid: auth.currentUser.uid,
-        status: "lobby",
-        createdAt: Date.now(),
-        settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
-      }, { merge:true });
-      firstSnap = await getDoc(roomRef);
-      render();
-    }
-
-    localStorage.setItem("lastRoomCode", state.code);
-    if (firstSnap.exists()) {
-      isHost = firstSnap.data().hostUid === auth.currentUser.uid;
-    }
-
-    // ====== UI jugadores
     let lastPlayers = [];
     function drawPlayers(maxCount, list){
       const ordered = (list || []).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
@@ -315,6 +242,101 @@
         card.append(av,label);
         playersWrap.append(card);
       }
+    }
+
+    const state = { code:"", impostores:1, jugadores:8, temas:["Clubes","Jugadores","Mundiales"], temaIndex:0 };
+
+    const POOLS = {
+      Clubes:["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"],
+      Jugadores:["Lionel Messi","Cristiano Ronaldo","Diego Maradona","Pelé","Kylian Mbappé","Erling Haaland","Neymar","Zinedine Zidane","Ronaldinho","Ronaldo Nazário"],
+      Mundiales:["Mundial 2002","Mundial 2006","Mundial 2010","Mundial 2014","Mundial 2018","Mundial 2022"]
+    };
+
+    function render(){
+      roomCodeEl.textContent = state.code || "—";
+      impostoresEl.textContent = state.impostores;
+      jugadoresEl.textContent  = state.jugadores;
+      temaEl.textContent       = state.temas[state.temaIndex];
+      drawPlayers(state.jugadores, lastPlayers);
+    }
+
+    // ===== Init auth/db + room
+    await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
+
+ // ===== Init auth/db + room
+await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
+
+let isHost = false;
+const initial = getInitialCode();
+
+if (initial) {
+  // Hay code por URL o guardado: úsalo
+  state.code = initial.code;
+  // Asegurá que la URL tenga el ?code (si vino de storage)
+  if (initial.source === "storage" && !new URLSearchParams(location.search).get("code")) {
+    history.replaceState(null, "", `?code=${state.code}`);
+  }
+} else {
+  // No hay code: crear sala y ser host
+  state.code = await createUniqueRoomCode(db);
+  isHost = true;
+  // Fijar URL y guardar
+  history.replaceState(null, "", `?code=${state.code}`);
+  localStorage.setItem("lastRoomCode", state.code);
+}
+render();
+
+const roomRef = doc(db, "rooms", state.code);
+
+// Verificá si la sala existe
+let firstSnap = await getDoc(roomRef);
+
+// Si no existe y yo soy host -> crear
+if (!firstSnap.exists() && isHost) {
+  await setDoc(roomRef, {
+    hostUid: auth.currentUser.uid,
+    status: "lobby",
+    createdAt: Date.now(),
+    settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
+  }, { merge:true });
+  firstSnap = await getDoc(roomRef);
+}
+
+// Si no existe y no soy host (venía de storage roto) -> crear nueva sala como host
+if (!firstSnap.exists() && !isHost) {
+  state.code = await createUniqueRoomCode(db);
+  isHost = true;
+  history.replaceState(null, "", `?code=${state.code}`);
+  localStorage.setItem("lastRoomCode", state.code);
+  const newRef = doc(db, "rooms", state.code);
+  await setDoc(newRef, {
+    hostUid: auth.currentUser.uid,
+    status: "lobby",
+    createdAt: Date.now(),
+    settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
+  }, { merge:true });
+ 
+  firstSnap = await getDoc(newRef);
+ 
+}
+
+localStorage.setItem("lastRoomCode", state.code);
+
+if (firstSnap.exists()) {
+  isHost = firstSnap.data().hostUid === auth.currentUser.uid;
+}
+
+    const firstSnap = await getDoc(roomRef);
+    if (!firstSnap.exists() && isHost) {
+      await setDoc(roomRef, {
+        hostUid: auth.currentUser.uid,
+        status: "lobby",
+        createdAt: Date.now(),
+        settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
+      }, { merge:true });
+    }
+    if (firstSnap.exists()) {
+      isHost = firstSnap.data().hostUid === auth.currentUser.uid;
     }
 
     const myName   = getStoredName();
@@ -392,7 +414,7 @@
       return a;
     }
 
-    // ======== START: roles + ronda con ORDEN y status "reveal" -> "draw"
+    // ======== START: roles + ronda con ORDEN y status "reveal" -> (después) "draw"
     let starting = false;
     document.getElementById("startBtn").addEventListener("click", async ()=>{
       if (!isHost){ alert("Solo el host puede iniciar"); return; }
@@ -419,8 +441,8 @@
         if (K >= players.length){ alert("Impostores debe ser menor que jugadores."); starting = false; return; }
 
         const palabra = pickWord(tema);
-        const order   = shuffleInPlace(players.map(p=>p.id));
-        const impostorIds = new Set(order.slice(0, K));
+        const order   = shuffleInPlace(players.map(p=>p.id)); // orden aleatorio UNA sola vez
+        const impostorIds = new Set(order.slice(0, K));       // primeros K = impostores
 
         const nextRound = (room.round || 0) + 1;
         const batch = writeBatch(db);
@@ -442,6 +464,7 @@
 
         await batch.commit();
 
+        // 10s para ver el rol -> luego lanzamos sorteo "draw"
         setTimeout(async ()=>{
           try{ await updateDoc(roundRef, { status:"draw", drawStartedAt: serverTimestamp() }); }catch(e){ console.warn(e); }
         }, 10000);
@@ -454,7 +477,7 @@
       }
     });
 
-    // ===== Overlay de rol + countdown
+    // ===== Overlay de rol + countdown de 10s (visual)
     onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
       if(!s.exists()) return;
       const a = s.data();
@@ -491,7 +514,7 @@
       },1000);
     });
 
-    // ====== Sorteo del orden
+    // ====== Sorteo del orden (animación sincronizada)
     function sanitize(str){ return (str||"").replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s])); }
     async function nameOf(uid){
       try{ const snap = await getDoc(doc(db,"rooms",state.code,"players", uid)); return (snap.exists() && (snap.data().name||"Jugador")) || "Jugador"; }
@@ -505,6 +528,7 @@
       list.innerHTML = "";
       draw.style.display = "grid";
 
+      // Precreamos placeholders en la lista
       const names = await Promise.all(order.map(uid=>nameOf(uid)));
       names.forEach((n,i)=>{
         const item = document.createElement("div");
@@ -513,11 +537,12 @@
         list.appendChild(item);
       });
 
+      // Revelamos uno por uno
       for (let i=0;i<order.length;i++){
         const n = names[i];
         slip.textContent = n;
         slip.classList.remove("reveal");
-        void slip.offsetWidth;
+        void slip.offsetWidth; // reiniciar animación
         slip.classList.add("reveal");
         await new Promise(r=>setTimeout(r, 900));
         const slot = document.getElementById(`ord-${i}`);
@@ -525,6 +550,7 @@
         await new Promise(r=>setTimeout(r, 450));
       }
 
+      // Al terminar: host pasa a PROMPT
       const roomSnap = await getDoc(roomRef);
       const roundId = String(roomSnap.data().round || 0);
       if (isHost && roundId !== "0"){
@@ -583,6 +609,7 @@
       const data = s.data();
       const newRound = data.round || 0;
 
+      // Si cambió la ronda, (re)conectar hint + chat
       if (newRound && newRound !== currentRound){
         currentRound = newRound;
         subscribeRoundHint(currentRound);
@@ -628,7 +655,7 @@
       }
     });
 
-    // ===== Fallbacks de fase (solo host)
+    // ===== Fallbacks de fase (solo host) =====
     onSnapshot(roomRef, async (snap) => {
       if (!snap.exists()) return;
       if (!isHost) return;
@@ -683,6 +710,7 @@
       return /^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]{2,24}$/.test(str);
     }
 
+    // ===== Chat submit: PROMPT por turno → DISCUSS
     document.getElementById("chatForm").addEventListener("submit", async (e)=>{
       e.preventDefault();
       if (!roundState) return;
