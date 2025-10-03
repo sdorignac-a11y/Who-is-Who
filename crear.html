@@ -164,6 +164,78 @@
   // ===== Autenticación y creación/unión a sala =====
   await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
 
+  // --- helpers para código único ---
+function genCode(len = 6){
+  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin I, O, 0, 1
+  let s = ""; for (let i=0;i<len;i++) s += A[Math.floor(Math.random()*A.length)];
+  return s;
+}
+async function createUniqueRoomCode(db, tries = 10){
+  for(let i=0;i<tries;i++){
+    const candidate = genCode(6);
+    const ref = doc(db, "rooms", candidate);
+    const snap = await getDoc(ref);
+    if(!snap.exists()) return candidate; // libre
+  }
+  return genCode(8); // si hubo colisiones raras
+}
+
+// ======= calcular sala (host vs invitado) =======
+const urlCode = new URLSearchParams(location.search).get("code");
+const isHost = !urlCode;
+
+if (isHost) {
+  // HOST: generar un código realmente único en Firestore
+  state.code = await createUniqueRoomCode(db);
+} else {
+  state.code = urlCode.toUpperCase();
+}
+
+render(); // mostrar el code en UI
+const roomRef = doc(db, "rooms", state.code);
+
+// ======= crear/entrar a la sala =======
+if (isHost){
+  await setDoc(roomRef, {
+    hostUid: auth.currentUser.uid,
+    status: "lobby",
+    createdAt: Date.now(),
+    settings: {
+      maxPlayers: state.jugadores,
+      impostors:  state.impostores,
+      tema:       state.temas[state.temaIndex]
+    }
+  }, { merge:true });
+
+  await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
+    uid: auth.currentUser.uid,
+    name: "Jugador 1",
+    slot: 1,
+    online: true
+  }, { merge:true });
+
+} else {
+  const snap = await getDoc(roomRef);
+  if(!snap.exists()){ alert("La sala no existe"); location.href="index.html"; }
+  const s = snap.data().settings || {};
+  state.jugadores  = s.maxPlayers ?? state.jugadores;
+  state.impostores = s.impostors  ?? state.impostores;
+  state.temaIndex  = ["Clubes","Jugadores","Mundiales"].indexOf(s.tema ?? "Clubes");
+  if(state.temaIndex < 0) state.temaIndex = 0;
+  render();
+
+  await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
+    uid: auth.currentUser.uid,
+    name: "Jugador",
+    slot: Date.now(),
+    online: true
+  }, { merge:true });
+
+  // Los invitados no pueden tocar las flechas
+  document.querySelectorAll(".arrow").forEach(b=>b.style.pointerEvents="none");
+}
+
+  
   const urlCode = new URLSearchParams(location.search).get("code");
   const isHost = !urlCode;                 // host si no viene ?code
   state.code = (urlCode || state.code).toUpperCase();
