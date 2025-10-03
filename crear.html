@@ -412,20 +412,20 @@ const impostorIds = new Set(order.slice(0, K).map(p => p.id));
     });
 
     players.forEach(p=>{
-  const aRef = doc(db, "rooms", state.code, "assignments", p.id); // usamos id
+  const aRef = doc(db, "rooms", state.code, "assignments", p.id);
   batch.set(aRef, {
     round: nextRound,
-        uid: p.uid,
-        name: p.name || "Jugador",
-        avatarKey: p.avatarKey || null,
-        role: impostorIds.has(p.uid) ? "IMPOSTOR" : "CIVIL",
-        word: impostorIds.has(p.uid) ? null : palabra,
-        tema,
-        alive: true,
-        vote: null,
-        revealedAt: null
-      });
-    });
+    uid: p.id, // <-- cambio 1
+    name: p.name || "Jugador",
+    avatarKey: p.avatarKey || null,
+    role: impostorIds.has(p.id) ? "IMPOSTOR" : "CIVIL", // <-- cambio 2
+    word: impostorIds.has(p.id) ? null : palabra,        // <-- cambio 3
+    tema,
+    alive: true,
+    vote: null,
+    revealedAt: null
+  });
+});
 
     await batch.commit();
     console.log("Roles asignados y partida iniciada.");
