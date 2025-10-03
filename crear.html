@@ -277,6 +277,9 @@ function drawPlayers(maxCount, list){
       if(inc==="tema")       state.temaIndex  = (state.temaIndex+1)%state.temas.length;
       if(dec==="tema")       state.temaIndex  = (state.temaIndex-1+state.temas.length)%state.temas.length;
       if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
+      
+     state.jugadores = Math.max(state.jugadores, lastPlayers.length);
+      
       render();
 
       if (isHost){
