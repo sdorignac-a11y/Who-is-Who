@@ -48,6 +48,7 @@
       background: linear-gradient(180deg, #1e40af, #1e3a8a);
       box-shadow: 0 6px 16px rgba(0,0,0,0.5);
       transition: transform 0.1s ease, filter 0.2s ease;
+      text-decoration: none;
     }
     .menu-btn:hover {
       filter: brightness(1.1);
@@ -82,13 +83,13 @@
 <body>
   <div class="title">Impostor <span>Fútbol</span> ⚽</div>
 
-  <a href="crear.html" class="menu-btn yellow">
-  🏟️ CREAR SALA
-</a>
-  <button class="menu-btn">
+  <button id="btn-crear" class="menu-btn yellow">
+    🏟️ CREAR SALA
+  </button>
+  <button id="btn-ingresar" class="menu-btn">
     🔑 INGRESAR A SALA
   </button>
-  <button class="menu-btn yellow">
+  <button id="btn-azar" class="menu-btn yellow">
     🎲 UNIRSE AL AZAR
   </button>
 
@@ -97,11 +98,50 @@
     <i>👤</i>
     <i>📖</i>
   </div>
-  <script>
-  document.getElementById("btn-crear").addEventListener("click", () => {
-    window.location.href = "crear.html";
-  });
-</script>
 
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
+      authDomain: "who-is-who-6ea99.firebaseapp.com",
+      projectId: "who-is-who-6ea99",
+      storageBucket: "who-is-who-6ea99.firebasestorage.app",
+      messagingSenderId: "718537140049",
+      appId: "1:718537140049:web:7400ec7e5467b387f8d570",
+      measurementId: "G-KNC4FJXXBN"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // login anónimo
+    await signInAnonymously(auth);
+
+    // Botones
+    document.getElementById("btn-crear").addEventListener("click", () => {
+      window.location.href = "crear.html";
+    });
+
+    document.getElementById("btn-ingresar").addEventListener("click", async () => {
+      const code = prompt("Ingresá el código de sala:");
+      if(code){
+        window.location.href = `crear.html?code=${code.trim().toUpperCase()}`;
+      }
+    });
+
+    document.getElementById("btn-azar").addEventListener("click", async () => {
+      // traer salas
+      const snap = await getDocs(collection(db,"rooms"));
+      if(snap.empty){ alert("No hay salas disponibles"); return; }
+      const rooms = snap.docs.map(d=>d.id);
+      const randomCode = rooms[Math.floor(Math.random()*rooms.length)];
+      window.location.href = `crear.html?code=${randomCode}`;
+    });
+  </script>
 </body>
 </html>
