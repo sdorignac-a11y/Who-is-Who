@@ -41,7 +41,7 @@
   <div class="container">
     <div class="room-card">
       <div class="brand"><div class="ball"></div><h1>Impostor <span>Fútbol</span></h1></div>
-      <div class="code-box"><strong style="opacity:.7">CÓDIGO:</strong><div class="room-code" id="roomCode">TCZLPQ</div><button id="copyBtn" class="btn">Copiar</button></div>
+      <div class="code-box"><strong style="opacity:.7">CÓDIGO:</strong><div class="room-code" id="roomCode">—</div><button id="copyBtn" class="btn">Copiar</button></div>
       <div><button id="shareBtn" class="btn">Compartir enlace</button></div>
     </div>
 
@@ -89,7 +89,23 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // ===== Util UI local (ya tenés estos nodos en tu HTML) =====
+  // ===== Helpers código único =====
+  function genCode(len = 6){
+    const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    let s = ""; for (let i=0;i<len;i++) s += A[Math.floor(Math.random()*A.length)];
+    return s;
+  }
+  async function createUniqueRoomCode(db, tries = 10){
+    for(let i=0;i<tries;i++){
+      const candidate = genCode(6);
+      const ref = doc(db, "rooms", candidate);
+      const snap = await getDoc(ref);
+      if(!snap.exists()) return candidate;
+    }
+    return genCode(8);
+  }
+
+  // ===== Util UI =====
   const $ = s => document.querySelector(s);
   const playersWrap = $("#players");
   const roomCodeEl  = $("#roomCode");
@@ -97,9 +113,8 @@
   const jugadoresEl  = $("#jugadoresVal");
   const temaEl       = $("#temaVal");
 
-  // Estado visual local (el host puede cambiarlo con flechas)
   const state = {
-    code: "TCZLPQ",
+    code: "",            // se define más abajo
     impostores: 1,
     jugadores: 8,
     temas: ["Clubes","Jugadores","Mundiales"],
@@ -125,7 +140,7 @@
     }
   }
   function render(){
-    roomCodeEl.textContent = state.code;
+    roomCodeEl.textContent = state.code || "—";
     impostoresEl.textContent = state.impostores;
     jugadoresEl.textContent  = state.jugadores;
     temaEl.textContent       = state.temas[state.temaIndex];
@@ -133,7 +148,22 @@
   }
   render();
 
-  // Flechas (solo tendrán efecto real si sos host; abajo guardamos en Firestore)
+  // ===== Autenticación y determinación de host / invitado =====
+  await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
+
+  const urlCode = new URLSearchParams(location.search).get("code");
+  const isHost = !urlCode;
+
+  if (isHost) {
+    state.code = await createUniqueRoomCode(db); // <- código realmente único
+  } else {
+    state.code = urlCode.toUpperCase();
+  }
+  render();
+
+  const roomRef = doc(db, "rooms", state.code);
+
+  // ===== Flechas (solo host persiste en Firestore) =====
   document.querySelectorAll(".arrow").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const inc = btn.dataset.inc, dec = btn.dataset.dec;
@@ -146,7 +176,6 @@
       if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
       render();
 
-      // Si soy host, persisto cambios
       if (isHost){
         try{
           await updateDoc(roomRef, {
@@ -156,95 +185,13 @@
               tema:       state.temas[state.temaIndex]
             }
           });
-        }catch(e){ console.warn("No pude actualizar settings:", e); }
+        }catch(e){ /* puede fallar si la sala aún no existe */ }
       }
     });
   });
 
-  // ===== Autenticación y creación/unión a sala =====
-  await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
-
-  // --- helpers para código único ---
-function genCode(len = 6){
-  const A = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sin I, O, 0, 1
-  let s = ""; for (let i=0;i<len;i++) s += A[Math.floor(Math.random()*A.length)];
-  return s;
-}
-async function createUniqueRoomCode(db, tries = 10){
-  for(let i=0;i<tries;i++){
-    const candidate = genCode(6);
-    const ref = doc(db, "rooms", candidate);
-    const snap = await getDoc(ref);
-    if(!snap.exists()) return candidate; // libre
-  }
-  return genCode(8); // si hubo colisiones raras
-}
-
-// ======= calcular sala (host vs invitado) =======
-const urlCode = new URLSearchParams(location.search).get("code");
-const isHost = !urlCode;
-
-if (isHost) {
-  // HOST: generar un código realmente único en Firestore
-  state.code = await createUniqueRoomCode(db);
-} else {
-  state.code = urlCode.toUpperCase();
-}
-
-render(); // mostrar el code en UI
-const roomRef = doc(db, "rooms", state.code);
-
-// ======= crear/entrar a la sala =======
-if (isHost){
-  await setDoc(roomRef, {
-    hostUid: auth.currentUser.uid,
-    status: "lobby",
-    createdAt: Date.now(),
-    settings: {
-      maxPlayers: state.jugadores,
-      impostors:  state.impostores,
-      tema:       state.temas[state.temaIndex]
-    }
-  }, { merge:true });
-
-  await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
-    uid: auth.currentUser.uid,
-    name: "Jugador 1",
-    slot: 1,
-    online: true
-  }, { merge:true });
-
-} else {
-  const snap = await getDoc(roomRef);
-  if(!snap.exists()){ alert("La sala no existe"); location.href="index.html"; }
-  const s = snap.data().settings || {};
-  state.jugadores  = s.maxPlayers ?? state.jugadores;
-  state.impostores = s.impostors  ?? state.impostores;
-  state.temaIndex  = ["Clubes","Jugadores","Mundiales"].indexOf(s.tema ?? "Clubes");
-  if(state.temaIndex < 0) state.temaIndex = 0;
-  render();
-
-  await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
-    uid: auth.currentUser.uid,
-    name: "Jugador",
-    slot: Date.now(),
-    online: true
-  }, { merge:true });
-
-  // Los invitados no pueden tocar las flechas
-  document.querySelectorAll(".arrow").forEach(b=>b.style.pointerEvents="none");
-}
-
-  
-  const urlCode = new URLSearchParams(location.search).get("code");
-  const isHost = !urlCode;                 // host si no viene ?code
-  state.code = (urlCode || state.code).toUpperCase();
-  render();
-
-  const roomRef = doc(db, "rooms", state.code);
-
+  // ===== Crear/Unirse a sala =====
   if (isHost){
-    // Crea sala si no existe y se registra como jugador 1
     await setDoc(roomRef, {
       hostUid: auth.currentUser.uid,
       status: "lobby",
@@ -253,14 +200,10 @@ if (isHost){
     }, { merge:true });
 
     await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
-      uid: auth.currentUser.uid,
-      name: "Jugador 1",
-      slot: 1,
-      online: true
+      uid: auth.currentUser.uid, name: "Jugador 1", slot: 1, online: true
     }, { merge:true });
 
   } else {
-    // Invitado: valida sala y se agrega a players
     const snap = await getDoc(roomRef);
     if(!snap.exists()){ alert("La sala no existe"); location.href="index.html"; }
     const s = snap.data().settings || {};
@@ -271,17 +214,13 @@ if (isHost){
     render();
 
     await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
-      uid: auth.currentUser.uid,
-      name: "Jugador",
-      slot: Date.now(),   // orden de llegada
-      online: true
+      uid: auth.currentUser.uid, name: "Jugador", slot: Date.now(), online: true
     }, { merge:true });
 
-    // Invitado: bloquea flechas (host controla)
     document.querySelectorAll(".arrow").forEach(b=>b.style.pointerEvents="none");
   }
 
-  // Reflejar settings en vivo para todos
+  // ===== Sincronía en vivo =====
   onSnapshot(roomRef, s=>{
     if(!s.exists()) return;
     const st = s.data().settings || {};
@@ -291,7 +230,6 @@ if (isHost){
     renderPlayers(state.jugadores);
   });
 
-  // Lista de jugadores en vivo
   onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
     const list = snap.docs.map(d=>d.data()).sort((a,b)=>(a.slot||0)-(b.slot||0));
     playersWrap.innerHTML = "";
@@ -304,7 +242,7 @@ if (isHost){
     }
   });
 
-  // ===== Empezar partida (solo host) -> escribe assignments =====
+  // ===== Empezar partida (solo host) =====
   $("#startBtn").addEventListener("click", async ()=>{
     if(!isHost){ alert("Solo el host puede iniciar"); return; }
 
@@ -339,7 +277,7 @@ if (isHost){
     }
   });
 
-  // Cada jugador escucha su assignment y ve su rol en su propio dispositivo
+  // ===== Cada jugador ve su propio rol =====
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
     if(!s.exists()) return;
     const a = s.data();
@@ -353,17 +291,12 @@ if (isHost){
     }
   });
 
-  // Cerrar overlay (por ahora demo)
-  document.getElementById("btnComenzarRonda").addEventListener("click", ()=>{
-    document.getElementById("reveal").style.display = "none";
-  });
-
-  // Copiar / compartir
+  // Copiar / Compartir
   $("#copyBtn").addEventListener("click", async ()=>{
     try{ await navigator.clipboard.writeText(state.code); }catch{}
   });
   $("#shareBtn").addEventListener("click", async ()=>{
-    const joinUrl = `${location.origin}${location.pathname.replace("crear.html","ingresar.html")}?code=${state.code}`;
+    const joinUrl = `${location.origin}/ingresar.html?code=${state.code}`;
     if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); } catch{} }
     else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); } catch{ alert(joinUrl); } }
   });
