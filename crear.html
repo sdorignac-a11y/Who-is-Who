@@ -37,30 +37,10 @@
   .rev-card{width:min(680px,92vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:24px;text-align:center}
   .rev-content{padding:18px;background:linear-gradient(180deg,#102c4f,#0c2441);border:1px solid rgba(128,180,255,.25);border-radius:16px;min-height:110px;display:grid;place-items:center;font-size:26px;font-weight:800}
 
-  /* === Nombre visible + resalte (yo) === */
-  .user-area{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
-  .userbox{
-    display:flex;align-items:center;gap:8px;
-    background:linear-gradient(180deg,#0c2747,#0a213b);
-    border:1px solid rgba(128,180,255,.28);
-    border-radius:12px;padding:8px 10px;font-weight:700;color:#cfe4ff
-  }
-  .mini-btn{
-    padding:6px 10px;border-radius:10px;cursor:pointer;
-    background:linear-gradient(180deg,#1e68d6,#184fa5);
-    border:1px solid rgba(110,178,255,.65);color:#eaf2ff;font-weight:700
-  }
-  .me-badge{color:#ffd166;font-weight:900;margin-left:4px}
-  .me-outline{outline:2px solid #f6c11b;outline-offset:2px;border-radius:16px}
-
-  /* Avatar grande en el reveal */
-  .rev-avatar{
-    width:80px;height:80px;border-radius:50%;overflow:hidden;
-    border:2px solid rgba(255,255,255,.35);margin:0 auto 10px;
-    background:#0b203a;display:grid;place-items:center
-  }
-  .rev-avatar img{width:100%;height:100%;object-fit:cover;display:block}
-  .rev-name{font-weight:800;margin-top:4px;opacity:.9}
+  /* overlays seguros para clicks */
+  #reveal{ z-index:9999; pointer-events:auto; }
+  #reveal .rev-card{ pointer-events:auto; }
+  #btnComenzarRonda{ pointer-events:auto; }
 </style>
 </head>
 <body>
@@ -77,9 +57,30 @@
     <div class="players" id="players"></div>
 
     <div class="settings">
-      <div class="card"><h3>Impostores</h3><div class="selector"><div class="selector"><div class="arrow" data-dec="impostores">‹</div><div class="value" id="impostoresVal">1</div><div class="arrow" data-inc="impostores">›</div></div></div></div>
-      <div class="card"><h3>Jugadores</h3><div class="selector"><div class="arrow" data-dec="jugadores">‹</div><div class="value" id="jugadoresVal">8</div><div class="arrow" data-inc="jugadores">›</div></div></div>
-      <div class="card"><h3>Tema</h3><div class="selector"><div class="arrow" data-dec="tema">‹</div><div class="value" id="temaVal">Clubes</div><div class="arrow" data-inc="tema">›</div></div></div>
+      <!-- Limpieza del selector duplicado -->
+      <div class="card"><h3>Impostores</h3>
+        <div class="selector">
+          <div class="arrow" data-dec="impostores">‹</div>
+          <div class="value" id="impostoresVal">1</div>
+          <div class="arrow" data-inc="impostores">›</div>
+        </div>
+      </div>
+
+      <div class="card"><h3>Jugadores</h3>
+        <div class="selector">
+          <div class="arrow" data-dec="jugadores">‹</div>
+          <div class="value" id="jugadoresVal">8</div>
+          <div class="arrow" data-inc="jugadores">›</div>
+        </div>
+      </div>
+
+      <div class="card"><h3>Tema</h3>
+        <div class="selector">
+          <div class="arrow" data-dec="tema">‹</div>
+          <div class="value" id="temaVal">Clubes</div>
+          <div class="arrow" data-inc="tema">›</div>
+        </div>
+      </div>
     </div>
 
     <div class="cta"><button id="startBtn" class="btn-cta">EMPEZAR PARTIDA</button></div>
@@ -91,7 +92,10 @@
       <h2>Tu rol</h2>
       <div id="revContent" class="rev-content"></div>
       <div style="margin-top:12px">
-        <button id="btnComenzarRonda" class="btn-cta">🚀 Comenzar ronda</button>
+        <!-- FIX: type + onclick -->
+        <button id="btnComenzarRonda" class="btn-cta" type="button" onclick="onStartRound()">
+          🚀 Comenzar ronda
+        </button>
       </div>
     </div>
   </div>
@@ -150,15 +154,15 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
-    // ===== Avatares disponibles (clave -> ruta) =====
+    // ===== Avatares =====
     const AVATAR_MAP = {
-      a1: "avatars/a1.png",  a2: "avatars/a2.png",  a3: "avatars/a3.png",
-      a4: "avatars/a4.png",  a5: "avatars/a5.png",  a6: "avatars/a6.png",
-      a7: "avatars/a7.png",  a8: "avatars/a8.png",  a9: "avatars/a9.png",
-      a10:"avatars/a10.png", a11:"avatars/a11.png", a12:"avatars/a12.png"
+      a1:"avatars/a1.png",a2:"avatars/a2.png",a3:"avatars/a3.png",
+      a4:"avatars/a4.png",a5:"avatars/a5.png",a6:"avatars/a6.png",
+      a7:"avatars/a7.png",a8:"avatars/a8.png",a9:"avatars/a9.png",
+      a10:"avatars/a10.png",a11:"avatars/a11.png",a12:"avatars/a12.png"
     };
 
-    // ===== Nombre y avatar (URL -> localStorage) =====
+    // ===== Nombre y avatar (localStorage / query) =====
     function getStoredName(){
       const qp = new URLSearchParams(location.search);
       const qName = qp.get("name");
@@ -171,7 +175,7 @@
       const qAvatar = qp.get("avatar");
       if (qAvatar && AVATAR_MAP[qAvatar]) localStorage.setItem("avatarKey", qAvatar);
       const k = localStorage.getItem("avatarKey") || "";
-      return AVATAR_MAP[k] ? k : ""; // si no existe, placeholder
+      return AVATAR_MAP[k] ? k : "";
     }
 
     async function editAndSaveName(playerRef){
@@ -210,7 +214,7 @@
     const meNameEl     = document.getElementById("meName");
 
     // === Cache y dibujado de jugadores ===
-    let lastPlayers = []; // se actualiza con el snapshot de players
+    let lastPlayers = [];
 
     function drawPlayers(maxCount, list){
       const ordered = (list || []).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
@@ -329,7 +333,7 @@
     }
     setArrowsEnabled(isHost);
 
-    // Flechas (persisten solo si sos host)
+    // Flechas
     document.querySelectorAll(".arrow").forEach(btn=>{
       btn.addEventListener("click", async ()=>{
         const inc = btn.dataset.inc, dec = btn.dataset.dec;
@@ -340,7 +344,6 @@
         if(inc==="tema")       state.temaIndex  = (state.temaIndex+1)%state.temas.length;
         if(dec==="tema")       state.temaIndex  = (state.temaIndex-1+state.temas.length)%state.temas.length;
         if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
-        // nunca achicar por debajo de los ya conectados
         state.jugadores = Math.max(state.jugadores, lastPlayers.length);
 
         render();
@@ -393,13 +396,12 @@
       return a;
     }
 
-    let starting = false; // evita doble click
+    let starting = false;
     document.getElementById("startBtn").addEventListener("click", async ()=>{
       if (!isHost){ alert("Solo el host puede iniciar"); return; }
       if (starting) return; starting = true;
 
       try{
-        // 1) Leer sala
         const roomSnap = await getDoc(roomRef);
         if (!roomSnap.exists()){ alert("Sala no encontrada."); starting = false; return; }
 
@@ -413,7 +415,6 @@
           starting = false; return;
         }
 
-        // 2) Leer jugadores (tomando también el id real del doc)
         const ps = await getDocs(collection(db, "rooms", state.code, "players"));
         const players = ps.docs
           .map(d => ({ id: d.id, ...d.data() }))
@@ -422,12 +423,10 @@
         if (players.length < 3){ alert("Se necesitan al menos 3 jugadores."); starting = false; return; }
         if (K >= players.length){ alert("Impostores debe ser menor que jugadores."); starting = false; return; }
 
-        // 3) Sorteo
         const palabra = pickWord(tema);
         const order   = shuffleInPlace(players.slice());
         const impostorIds = new Set(order.slice(0, K).map(p => p.id));
 
-        // 4) Escribir todo en batch
         const nextRound = (room.round || 0) + 1;
         const batch = writeBatch(db);
 
@@ -441,7 +440,7 @@
           const aRef = doc(db, "rooms", state.code, "assignments", p.id);
           batch.set(aRef, {
             round: nextRound,
-            uid: p.id, // importante
+            uid: p.id,
             name: p.name || "Jugador",
             avatarKey: p.avatarKey || null,
             role: impostorIds.has(p.id) ? "IMPOSTOR" : "CIVIL",
@@ -529,12 +528,26 @@
     let currentRound = 0;
     let cooldownUntil = 0;
 
-    // Comenzar ronda: marcar revealedAt y cerrar
-    document.getElementById("btnComenzarRonda").addEventListener("click", async ()=>{
+    // === FIX: handler robusto para "Comenzar ronda"
+    async function onStartRound(){
       try{
-        await updateDoc(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), { revealedAt: serverTimestamp() });
-      }catch(e){ console.warn(e); }
-      hide(ui.reveal);
+        await updateDoc(
+          doc(db,"rooms",state.code,"assignments",auth.currentUser.uid),
+          { revealedAt: serverTimestamp() }
+        );
+      }catch(e){
+        console.warn("onStartRound updateDoc:", e);
+      }
+      const overlay = document.getElementById("reveal");
+      if (overlay) overlay.style.display = "none";
+    }
+    window.onStartRound = onStartRound; // para el onclick inline
+
+    const btnStartRound = document.getElementById("btnComenzarRonda");
+    if (btnStartRound) btnStartRound.addEventListener("click", onStartRound);
+    document.addEventListener("click",(ev)=>{
+      const t = ev.target.closest?.("#btnComenzarRonda");
+      if (t) onStartRound();
     });
 
     // Orquestación por estado de sala
@@ -543,7 +556,6 @@
       const data = s.data();
       currentRound = data.round || 0;
 
-      // cuando sala está "playing" y TODOS revelaron -> host crea round doc con status 'prompt'
       if (data.status === "playing") {
         const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
         const asg = asgSnap.docs.map(d=>d.data());
@@ -593,14 +605,14 @@
     onSnapshot(collection(db,"rooms",state.code,"rounds", String(currentRound), "prompts"), async snap=>{
       const submitted = new Set(snap.docs.map(d=>d.id));
       const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
-      const players = asgSnap.docs.map(d=>d.id);  // ids de jugadores
+      const players = asgSnap.docs.map(d=>d.id);
       const all = players.length>0 && players.every(id=>submitted.has(id));
       if (isHost && all) {
         await updateDoc(doc(db,"rooms",state.code,"rounds", String(currentRound)), { status:"discuss", discussStartedAt: serverTimestamp() });
       }
     });
 
-    // FASE DEBATE: chat (cooldown 3s)
+    // FASE DEBATE: chat con cooldown
     function canSendNow(){
       const now = Date.now();
       if (now < cooldownUntil) {
@@ -626,7 +638,7 @@
           at: serverTimestamp()
         });
         ui.chatInput.value = "";
-        cooldownUntil = Date.now() + 3000; // 3s
+        cooldownUntil = Date.now() + 3000;
         canSendNow();
       }catch(e){ console.warn(e); }
     });
@@ -645,11 +657,11 @@
       ui.chatList.scrollTop = ui.chatList.scrollHeight;
     });
 
-    // Pasar a VOTACIÓN (helper manual si querés llamarlo desde consola)
+    // Pasar a VOTACIÓN (helper para debug)
     async function gotoVote(){
       await updateDoc(doc(db,"rooms",state.code,"rounds", String(currentRound)), { status:"vote", voteStartedAt: serverTimestamp() });
     }
-    window.gotoVote = gotoVote; // opcional para debug
+    window.gotoVote = gotoVote;
 
     // UI de Votación
     async function renderVoteBar(){
@@ -683,7 +695,7 @@
       if(!rdoc.exists()) return;
       const r = rdoc.data();
       if (r.status === "vote") {
-        show(ui.phaseDiscuss); // usamos misma vista con barra de voto
+        show(ui.phaseDiscuss);
         renderVoteBar();
       }
     });
