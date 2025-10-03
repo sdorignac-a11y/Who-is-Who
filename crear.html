@@ -58,7 +58,7 @@
     <div class="room-card">
       <div class="brand"><div class="ball"></div><h1>Impostor <span>Fútbol</span></h1></div>
       <div class="code-box"><strong style="opacity:.7">CÓDIGO:</strong><div class="room-code" id="roomCode">—</div><button id="copyBtn" class="btn">Copiar</button></div>
-      <!-- Reemplazado: nombre + editar + compartir -->
+      <!-- Nombre + editar + compartir -->
       <div class="user-area">
         <div class="userbox">👤 <span id="meName">—</span> <button id="editName" class="mini-btn">Editar</button></div>
         <button id="shareBtn" class="btn">Compartir enlace</button>
@@ -109,7 +109,7 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
-  // ===== Helpers nombre =====
+  // ===== Nombre (localStorage + prompt) =====
   function getStoredName(){
     const qp = new URLSearchParams(location.search);
     const qName = qp.get("name");
@@ -154,7 +154,7 @@
   const editNameBtn  = document.getElementById("editName");
 
   const state = {
-    code: "",            // se define más abajo
+    code: "",
     impostores: 1,
     jugadores: 8,
     temas: ["Clubes","Jugadores","Mundiales"],
@@ -188,25 +188,65 @@
   }
   render();
 
-  // ===== Autenticación y determinación de host / invitado =====
+  // ===== Auth y setup de room/host =====
   await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
 
-  let isHost = false; // se recalcula con el doc de la sala
-const urlCode = new URLSearchParams(location.search).get("code");
+  const urlCode = new URLSearchParams(location.search).get("code");
+  let isHost = false;
 
-
-  if (isHost) {
-    state.code = await createUniqueRoomCode(db); // <- código realmente único
+  // 1) Determinar code
+  if (!urlCode) {
+    state.code = await createUniqueRoomCode(db);
+    isHost = true;
   } else {
     state.code = urlCode.toUpperCase();
+    isHost = false;
   }
   render();
 
   const roomRef = doc(db, "rooms", state.code);
+
+  // 2) Crear doc si soy host y aún no existe
+  const firstSnap = await getDoc(roomRef);
+  if (!firstSnap.exists() && isHost) {
+    await setDoc(roomRef, {
+      hostUid: auth.currentUser.uid,
+      status: "lobby",
+      createdAt: Date.now(),
+      settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
+    }, { merge:true });
+  }
+
+  // 3) Calcular host real si entro a sala existente
+  if (firstSnap.exists()) {
+    isHost = firstSnap.data().hostUid === auth.currentUser.uid;
+  }
+
+  // ===== Crear/Unirse: registrar jugador =====
   const myName = getStoredName();
   if (meNameEl) meNameEl.textContent = myName;
 
-  // ===== Flechas (solo host persiste en Firestore) =====
+  await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
+    uid: auth.currentUser.uid,
+    name: myName,
+    slot: isHost ? 1 : Date.now(),
+    online: true
+  }, { merge:true });
+
+  // Editar nombre
+  const playerRef = doc(db,"rooms",state.code,"players",auth.currentUser.uid);
+  editNameBtn?.addEventListener("click", ()=> editAndSaveName(playerRef));
+
+  // ===== Habilitar/deshabilitar flechas según host =====
+  function setArrowsEnabled(enabled){
+    document.querySelectorAll(".arrow").forEach(b=>{
+      b.style.pointerEvents = enabled ? "auto" : "none";
+      b.style.opacity = enabled ? "1" : ".55";
+    });
+  }
+  setArrowsEnabled(isHost);
+
+  // ===== Flechas (persisten solo si sos host) =====
   document.querySelectorAll(".arrow").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const inc = btn.dataset.inc, dec = btn.dataset.dec;
@@ -214,99 +254,44 @@ const urlCode = new URLSearchParams(location.search).get("code");
       if(dec==="impostores") state.impostores = Math.max(1, state.impostores-1);
       if(inc==="jugadores")  state.jugadores  = Math.min(10,state.jugadores+1);
       if(dec==="jugadores")  state.jugadores  = Math.max(4, state.jugadores-1);
-      if(inc==="tema") state.temaIndex = (state.temaIndex+1)%state.temas.length;
-      if(dec==="tema") state.temaIndex = (state.temaIndex-1+state.temas.length)%state.temas.length;
+      if(inc==="tema")       state.temaIndex  = (state.temaIndex+1)%state.temas.length;
+      if(dec==="tema")       state.temaIndex  = (state.temaIndex-1+state.temas.length)%state.temas.length;
       if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
       render();
 
-      // Saber si soy el host mirando el doc
-const roomSnap = await getDoc(roomRef);
-if (roomSnap.exists()) {
-  isHost = roomSnap.data().hostUid === auth.currentUser.uid;
-} else {
-  // si todavía no existe (primer render del creador), soy host
-  isHost = true;
-}
-setArrowsEnabled(isHost);
-
-// Si cambia hostUid por algún motivo, me entero:
-onSnapshot(roomRef, s=>{
-  if (!s.exists()) return;
-  const data = s.data();
-  const before = isHost;
-  isHost = data.hostUid === auth.currentUser.uid;
-  if (before !== isHost) setArrowsEnabled(isHost);
-
-  // Sincronizar ajustes desde Firestore
-  const st = data.settings || {};
-  state.jugadores  = st.maxPlayers ?? state.jugadores;
-  state.impostores = st.impostors  ?? state.impostores;
-  if (st.tema) {
-    const idx = state.temas.indexOf(st.tema);
-    state.temaIndex = idx >= 0 ? idx : 0;
-  }
-  render();
-});
-
-      
       if (isHost){
-        try{
-          await updateDoc(roomRef, {
-            settings:{
-              maxPlayers: state.jugadores,
-              impostors:  state.impostores,
-              tema:       state.temas[state.temaIndex]
-            }
-          });
-        }catch(e){ /* puede fallar si la sala aún no existe */ }
+        await setDoc(roomRef, {
+          settings:{
+            maxPlayers: state.jugadores,
+            impostors:  state.impostores,
+            tema:       state.temas[state.temaIndex]
+          }
+        }, { merge:true });
       }
     });
   });
 
-  // ===== Crear/Unirse a sala =====
-  if (isHost){
-    await setDoc(roomRef, {
-      hostUid: auth.currentUser.uid,
-      status: "lobby",
-      createdAt: Date.now(),
-      settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
-    }, { merge:true });
-
-    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
-      uid: auth.currentUser.uid, name: myName, slot: 1, online: true
-    }, { merge:true });
-
-  } else {
-    const snap = await getDoc(roomRef);
-    if(!snap.exists()){ alert("La sala no existe"); location.href="index.html"; }
-    const s = snap.data().settings || {};
-    state.jugadores = s.maxPlayers || state.jugadores;
-    state.impostores = s.impostors || state.impostores;
-    state.temaIndex = ["Clubes","Jugadores","Mundiales"].indexOf(s.tema ?? "Clubes");
-    if (state.temaIndex < 0) state.temaIndex = 0;
-    render();
-
-    await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid), {
-      uid: auth.currentUser.uid, name: myName, slot: Date.now(), online: true
-    }, { merge:true });
-
-    document.querySelectorAll(".arrow").forEach(b=>b.style.pointerEvents="none");
-  }
-
-  // ===== Conectar botón "Editar" al doc del jugador =====
-  const playerRef = doc(db,"rooms",state.code,"players",auth.currentUser.uid);
-  editNameBtn?.addEventListener("click", ()=> editAndSaveName(playerRef));
-
-  // ===== Sincronía en vivo =====
+  // ===== Sincronía del room (única) =====
   onSnapshot(roomRef, s=>{
     if(!s.exists()) return;
-    const st = s.data().settings || {};
-    state.jugadores = st.maxPlayers ?? state.jugadores;
-    state.impostores = st.impostors ?? state.impostores;
-    $("#temaVal").textContent = st.tema ?? state.temas[state.temaIndex];
-    renderPlayers(state.jugadores);
+    const data = s.data();
+
+    // host dinámico
+    const before = isHost;
+    isHost = (data.hostUid === auth.currentUser.uid);
+    if (before !== isHost) setArrowsEnabled(isHost);
+
+    const st = data.settings || {};
+    state.jugadores  = st.maxPlayers ?? state.jugadores;
+    state.impostores = st.impostors  ?? state.impostores;
+    if (st.tema) {
+      const idx = state.temas.indexOf(st.tema);
+      state.temaIndex = idx >= 0 ? idx : 0;
+    }
+    render();
   });
 
+  // ===== Lista de jugadores =====
   onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{
     const list = snap.docs.map(d=>d.data()).sort((a,b)=>(a.slot||0)-(b.slot||0));
     playersWrap.innerHTML = "";
@@ -366,7 +351,7 @@ onSnapshot(roomRef, s=>{
     }
   });
 
-  // ===== Cada jugador ve su propio rol =====
+  // ===== Ver rol propio =====
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
     if(!s.exists()) return;
     const a = s.data();
