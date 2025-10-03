@@ -261,68 +261,19 @@
     // ===== Init auth/db + room
     await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
 
- // ===== Init auth/db + room
-await signInAnonymously(auth).catch(e=>console.warn("Anon auth:", e));
+    const urlCode = new URLSearchParams(location.search).get("code");
+    let isHost = false;
 
-let isHost = false;
-const initial = getInitialCode();
+    if (!urlCode) {
+      state.code = await createUniqueRoomCode(db);
+      isHost = true;
+    } else {
+      state.code = urlCode.toUpperCase();
+      isHost = false;
+    }
+    render();
 
-if (initial) {
-  // Hay code por URL o guardado: úsalo
-  state.code = initial.code;
-  // Asegurá que la URL tenga el ?code (si vino de storage)
-  if (initial.source === "storage" && !new URLSearchParams(location.search).get("code")) {
-    history.replaceState(null, "", `?code=${state.code}`);
-  }
-} else {
-  // No hay code: crear sala y ser host
-  state.code = await createUniqueRoomCode(db);
-  isHost = true;
-  // Fijar URL y guardar
-  history.replaceState(null, "", `?code=${state.code}`);
-  localStorage.setItem("lastRoomCode", state.code);
-}
-render();
-
-const roomRef = doc(db, "rooms", state.code);
-
-// Verificá si la sala existe
-let firstSnap = await getDoc(roomRef);
-
-// Si no existe y yo soy host -> crear
-if (!firstSnap.exists() && isHost) {
-  await setDoc(roomRef, {
-    hostUid: auth.currentUser.uid,
-    status: "lobby",
-    createdAt: Date.now(),
-    settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
-  }, { merge:true });
-  firstSnap = await getDoc(roomRef);
-}
-
-// Si no existe y no soy host (venía de storage roto) -> crear nueva sala como host
-if (!firstSnap.exists() && !isHost) {
-  state.code = await createUniqueRoomCode(db);
-  isHost = true;
-  history.replaceState(null, "", `?code=${state.code}`);
-  localStorage.setItem("lastRoomCode", state.code);
-  const newRef = doc(db, "rooms", state.code);
-  await setDoc(newRef, {
-    hostUid: auth.currentUser.uid,
-    status: "lobby",
-    createdAt: Date.now(),
-    settings: { maxPlayers: state.jugadores, impostors: state.impostores, tema: state.temas[state.temaIndex] }
-  }, { merge:true });
- 
-  firstSnap = await getDoc(newRef);
- 
-}
-
-localStorage.setItem("lastRoomCode", state.code);
-
-if (firstSnap.exists()) {
-  isHost = firstSnap.data().hostUid === auth.currentUser.uid;
-}
+    const roomRef = doc(db, "rooms", state.code);
 
     const firstSnap = await getDoc(roomRef);
     if (!firstSnap.exists() && isHost) {
