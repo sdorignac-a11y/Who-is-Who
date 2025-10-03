@@ -557,6 +557,43 @@
         ui.turnHint.textContent = "Votación";
       }
     });
+// ===== Fallbacks de fase (solo host) =====
+onSnapshot(roomRef, async (snap) => {
+  if (!snap.exists()) return;
+  if (!isHost) return; // solo el host empuja las fases
+
+  const data = snap.data();
+  const rId = data.round || 0;
+  if (!rId) return;
+
+  const rRef = doc(db, "rooms", state.code, "rounds", String(rId));
+  const rDoc = await getDoc(rRef);
+  if (!rDoc.exists()) return;
+
+  const r = rDoc.data();
+
+  // Helper para leer Firestore Timestamp o valores ya en ms
+  const toMs = (ts) =>
+    ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds * 1000 : (typeof ts === "number" ? ts : 0));
+
+  const now       = Date.now();
+  const createdMs = toMs(r.createdAt);
+  const drawMs    = toMs(r.drawStartedAt);
+
+  // Si quedó colgado demasiado en REVEAL, empujamos a DRAW
+  if (r.status === "reveal" && createdMs && now - createdMs > 11000) {
+    try {
+      await updateDoc(rRef, { status: "draw", drawStartedAt: serverTimestamp() });
+    } catch (e) { /* noop */ }
+  }
+
+  // Si quedó colgado demasiado en DRAW, empujamos a PROMPT
+  if (r.status === "draw" && drawMs && now - drawMs > 20000) {
+    try {
+      await updateDoc(rRef, { status: "prompt", promptStartedAt: serverTimestamp(), turnIndex: 0 });
+    } catch (e) { /* noop */ }
+  }
+});
 
     // ===== UI / helpers chat
     const ui = {
