@@ -92,9 +92,11 @@
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import {
-    getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot,
-    collection, getDocs, writeBatch
-  } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+   import {
+  getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot,
+  collection, getDocs, writeBatch, runTransaction, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
 
   const firebaseConfig = {
     apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
@@ -349,39 +351,79 @@
     drawPlayers(state.jugadores, lastPlayers);
   });
 
-  // ===== Empezar partida (solo host) =====
-  $("#startBtn").addEventListener("click", async ()=>{
-    if(!isHost){ alert("Solo el host puede iniciar"); return; }
+  // ===== Empezar partida (solo host) — asignación atómica =====
+function pickWord(tema){
+  const pool = POOLS[tema] || ["Balón"];
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function shuffleInPlace(a){
+  for (let i=a.length-1; i>0; i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
 
-    try{
-      const roomData = (await getDoc(roomRef)).data();
-      const tema = roomData.settings.tema;
-      const K = roomData.settings.impostors;
+document.getElementById("startBtn").addEventListener("click", async ()=>{
+  if(!isHost){ alert("Solo el host puede iniciar"); return; }
 
-      const ps = await getDocs(collection(db,"rooms",state.code,"players"));
-      const players = ps.docs.map(d=>d.data());
-      if(players.length < 3){ alert("Se necesitan al menos 3 jugadores."); return; }
-      if(K >= players.length){ alert("Impostores debe ser menor que jugadores."); return; }
+  try{
+    await runTransaction(db, async (tx)=>{
+      // 1) Leer sala “en transacción”
+      const roomSnap = await tx.get(roomRef);
+      if (!roomSnap.exists()) throw new Error("Sala no encontrada.");
 
-      const palabra = sample(POOLS[tema] || ["Balón"]);
-      const seleccion = shuffle(players.slice());
-      const impostores = new Set(seleccion.slice(0, K).map(p=>p.uid));
+      const room = roomSnap.data();
+      const st   = room.settings || {};
+      const tema = st.tema || "Clubes";
+      const K    = st.impostors || 1;
 
-      const batch = writeBatch(db);
+      if (room.status === "playing") throw new Error("La partida ya está en curso.");
+      // 2) Jugadores actuales
+      const playersSnap = await tx.get(collection(db,"rooms",state.code,"players"));
+      const players = playersSnap.docs.map(d=>d.data()).filter(p => p.online !== false);
+
+      if (players.length < 3) throw new Error("Se necesitan al menos 3 jugadores.");
+      if (K >= players.length) throw new Error("Impostores debe ser menor que jugadores.");
+
+      // 3) Sorteo
+      const palabra = pickWord(tema);
+      const order   = shuffleInPlace(players.slice());
+      const impostorIds = new Set(order.slice(0, K).map(p=>p.uid));
+
+      // 4) Escribir asignaciones + pasar a playing
+      const nextRound = (room.round || 0) + 1;
+
+      tx.update(roomRef, {
+        status: "playing",
+        round: nextRound,
+        startedAt: serverTimestamp()
+      });
+
       players.forEach(p=>{
-        batch.set(doc(db,"rooms",state.code,"assignments",p.uid), {
-          role: impostores.has(p.uid) ? "IMPOSTOR" : "CIVIL",
-          word: impostores.has(p.uid) ? null : palabra,
-          tema
+        const aRef = doc(db,"rooms",state.code,"assignments",p.uid);
+        tx.set(aRef, {
+          round: nextRound,
+          uid: p.uid,
+          name: p.name || "Jugador",
+          avatarKey: p.avatarKey || null, // <- guarda el avatar elegido
+          role: impostorIds.has(p.uid) ? "IMPOSTOR" : "CIVIL",
+          word: impostorIds.has(p.uid) ? null : palabra,
+          tema,
+          alive: true,
+          vote: null,
+          revealedAt: null
         });
       });
-      batch.update(roomRef, { status:"playing" });
-      await batch.commit();
-    }catch(e){
-      console.error("Error al iniciar:", e);
-      alert("No pude iniciar la partida. Revisá la consola.");
-    }
-  });
+    });
+
+    console.log("Roles asignados y partida iniciada.");
+  }catch(e){
+    alert(e.message || "No pude iniciar la partida.");
+    console.error(e);
+  }
+});
+
 
   // ===== Ver rol propio =====
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
