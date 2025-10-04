@@ -118,7 +118,6 @@
       <div class="card"><h3>Impostores</h3><div class="selector"><div class="arrow" data-dec="impostores">‹</div><div class="value" id="impostoresVal">1</div><div class="arrow" data-inc="impostores">›</div></div></div>
       <div class="card"><h3>Jugadores</h3><div class="selector"><div class="arrow" data-dec="jugadores">‹</div><div class="value" id="jugadoresVal">8</div><div class="arrow" data-inc="jugadores">›</div></div></div>
       <div class="card"><h3>Tema</h3><div class="selector"><div class="arrow" data-dec="tema">‹</div><div class="value" id="temaVal">Clubes</div><div class="arrow" data-inc="tema">›</div></div></div>
-      <!-- NUEVO: selector de tiempo -->
       <div class="card"><h3>Tiempo</h3><div class="selector"><div class="arrow" data-dec="tiempo">‹</div><div class="value" id="tiempoVal">60s</div><div class="arrow" data-inc="tiempo">›</div></div></div>
     </div>
 
@@ -157,7 +156,6 @@
       <div style="padding:14px 16px;border-bottom:1px solid rgba(128,180,255,.15);display:flex;justify-content:space-between;align-items:center">
         <h2 style="margin:0">Debate</h2>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
-          <!-- NUEVO: timer mm:ss -->
           <small id="timer" style="opacity:.9;font-weight:800"></small>
           <small id="turnHint" style="opacity:.85"></small>
           <small id="cooldownHint" style="opacity:.7"></small>
@@ -406,7 +404,7 @@
     }catch(e){ console.error(e); alert(e.message||"No pude iniciar la partida."); } finally{ starting=false; }
   });
 
-  // ===== ABANDONAR PARTIDA (solo host) =====
+  // ABANDONAR (solo host)
   leaveBtn.addEventListener("click", async ()=>{
     if (!isHost){
       alert("Solo el host puede abandonar y resetear la sala.");
@@ -438,11 +436,10 @@
   });
 
   // Overlay rol
-  const AVATAR_MAP2 = AVATAR_MAP; // alias para el overlay
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
     if(!s.exists()) return;
     const a=s.data(); const overlay=document.getElementById("reveal"); const box=document.getElementById("revContent");
-    let avatarHtml=""; if(a.avatarKey && AVATAR_MAP2[a.avatarKey]) avatarHtml=`<div class="rev-avatar"><img src="${AVATAR_MAP2[a.avatarKey]}" alt="${a.name||'avatar'}"></div>`;
+    let avatarHtml=""; if(a.avatarKey && AVATAR_MAP[a.avatarKey]) avatarHtml=`<div class="rev-avatar"><img src="${AVATAR_MAP[a.avatarKey]}" alt="${a.name||'avatar'}"></div>`;
     const nameHtml=`<div class="rev-name">${a.name||"Jugador"}</div>`;
     overlay.style.display="grid";
     if(a.role==="IMPOSTOR"){ box.innerHTML=`${avatarHtml}${nameHtml}<div style="font-size:38px;font-weight:900;color:#ff6b6b;margin:6px 0 8px">IMPOSTOR</div><div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>`; }
@@ -478,6 +475,7 @@
   let unsubscribeRoundHint=null;
   let unsubscribeChat=null;
   let unsubscribeFirstWords=null;
+  let unsubscribeRoundPhase=null;
 
   // Turn banner
   let _turnBannerTimer=null;
@@ -522,22 +520,6 @@
         try{ await updateDoc(doc(db,"rooms",state.code,"rounds",roundId),{status:"discuss",discussStartedAt:serverTimestamp(), timeSec: tSec}); }catch(e){ console.warn(e); }
       }
     }
-  }
-
-  function subscribeRoundHint(roundId){
-    if(unsubscribeRoundHint) unsubscribeRoundHint();
-    unsubscribeRoundHint = onSnapshot(
-      doc(db,"rooms",state.code,"rounds",String(roundId)),
-      (rdoc)=>{
-        if(!rdoc.exists()) return;
-        const r=rdoc.data(); roundState=r;
-        if(r.status==="prompt"){
-          const idx=r.turnIndex??0; const uidTurno=(r.order||[])[idx];
-          if(uidTurno) nameOf(uidTurno).then(n=>{ ui.turnHint.textContent=`Turno de: ${n}`; showTurnBanner(n); });
-          advanceIfReadyByHost();
-        }
-      }
-    );
   }
 
   // ======== COUNTDOWN discuss y pase a votación (host) ========
@@ -606,54 +588,71 @@
     );
   }
 
+  // ===== NUEVO: suscripción directa a la fase (round doc) =====
+  function subscribeRoundPhase(roundId){
+    if (unsubscribeRoundPhase) unsubscribeRoundPhase();
+
+    const rRef = doc(db,"rooms",state.code,"rounds",String(roundId));
+    unsubscribeRoundPhase = onSnapshot(rRef, async (rdoc)=>{
+      if(!rdoc.exists()) return;
+
+      roundState = rdoc.data();
+      const phase = roundState.status;
+      const discussPanel = document.getElementById("phaseDiscuss");
+
+      if(phase==="reveal"){
+        discussPanel.style.display="none";
+      }
+
+      if(phase==="draw"){
+        discussPanel.style.display="none";
+        if(drawPlayedForRound!==roundId){
+          drawPlayedForRound=roundId;
+          startDrawAnimation(roundState.order||[]);
+        }
+      }
+
+      if(phase==="prompt"){
+        discussPanel.style.display="block";
+        document.getElementById("firstWordTip").style.display="block";
+        ui.chatInput.placeholder="Primero UNA palabra (2–24 letras)…";
+        const idx=roundState.turnIndex??0;
+        const uidTurno=(roundState.order||[])[idx];
+        ui.turnHint.textContent = uidTurno ? `Turno de: ${await nameOf(uidTurno)}` : "";
+        timerEl.textContent = "";
+      }
+
+      if(phase==="discuss"){
+        discussPanel.style.display="block";
+        document.getElementById("firstWordTip").style.display="none";
+        ui.turnHint.textContent="Chat libre";
+        ui.chatInput.placeholder="Decí tu pista/suspecha (3s cooldown)";
+        startDiscussCountdown(roundState, isHost);
+      }
+
+      if(phase==="vote"){
+        discussPanel.style.display="block";
+        ui.turnHint.textContent="Votación";
+        timerEl.textContent = "";
+        renderVoteBar();
+      }
+    });
+  }
+
+  // Detectar cambio de ronda desde rooms y enganchar suscripciones de la ronda
   onSnapshot(roomRef, async s=>{
     if(!s.exists()) return;
-    const data=s.data();
-    const newRound=data.round||0;
+    const data = s.data();
+    const newRound = data.round || 0;
 
-    if(newRound && newRound!==currentRound){
-      currentRound=newRound;
+    if(newRound && newRound !== currentRound){
+      currentRound = newRound;
       subscribeRoundHint(currentRound);
       subscribeChat(currentRound);
       subscribeFirstWords(currentRound);
+      subscribeRoundPhase(currentRound); // <— UI de fase en tiempo real
     }else{
-      currentRound=newRound;
-    }
-    if(!currentRound) return;
-
-    const roundRef=doc(db,"rooms",state.code,"rounds",String(currentRound));
-    const rdoc=await getDoc(roundRef);
-    if(!rdoc.exists()) return;
-    roundState=rdoc.data();
-
-    const phase=roundState.status;
-    const discussPanel=document.getElementById("phaseDiscuss");
-
-    if(phase==="reveal"){ discussPanel.style.display="none"; }
-    if(phase==="draw"){
-      discussPanel.style.display="none";
-      if(drawPlayedForRound!==currentRound){ drawPlayedForRound=currentRound; startDrawAnimation(roundState.order||[]); }
-    }
-    if(phase==="prompt"){
-      discussPanel.style.display="block";
-      document.getElementById("firstWordTip").style.display="block";
-      ui.chatInput.placeholder="Primero UNA palabra (2–24 letras)…";
-      const idx=roundState.turnIndex??0; const uidTurno=(roundState.order||[])[idx];
-      ui.turnHint.textContent = uidTurno ? `Turno de: ${await nameOf(uidTurno)}` : "";
-      timerEl.textContent = ""; // sin timer en prompt
-    }
-    if(phase==="discuss"){
-      discussPanel.style.display="block";
-      document.getElementById("firstWordTip").style.display="none";
-      ui.turnHint.textContent="Chat libre";
-      ui.chatInput.placeholder="Decí tu pista/suspecha (3s cooldown)";
-      startDiscussCountdown(roundState, isHost);
-    }
-    if(phase==="vote"){
-      discussPanel.style.display="block";
-      ui.turnHint.textContent="Votación";
-      timerEl.textContent = "";
-      renderVoteBar();
+      currentRound = newRound;
     }
   });
 
@@ -758,6 +757,7 @@
     });
   }
 
+  // Cierre automático cuando todos votan (no tocar)
   onSnapshot(roomRef, async s=>{
     if(!s.exists()) return;
     const data=s.data(); const roundId=data.round||0;
