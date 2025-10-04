@@ -651,61 +651,6 @@
     _turnBannerTimer=setTimeout(()=>{ banner.classList.remove("show"); banner.classList.add("hide"); setTimeout(()=>{ banner.style.display="none"; },350); },2200);
   }
 
-  <script type="module">
-// Suscripción para mostrar el cartel "Va ..."
-function subscribeRoundHint(roundId){
-  if (unsubscribeRoundHint) unsubscribeRoundHint(); // usa tu let unsubscribeRoundHint ya declarado
-
-  const rRef = doc(db, "rooms", state.code, "rounds", String(roundId));
-  unsubscribeRoundHint = onSnapshot(rRef, async (rdoc)=>{
-    if (!rdoc.exists()) return;
-    const r = rdoc.data();
-
-    // Solo durante la fase de primeras palabras
-    if (r.status !== "prompt") return;
-
-    const idx = r.turnIndex ?? 0;
-    const uid = (r.order || [])[idx];
-    if (!uid) return;
-
-    try{
-      const n = await nameOf(uid); // función ya definida en tu código
-      showTurnBanner(n);           // usa tu banner existente
-    }catch(e){
-      console.warn("RoundHint error:", e);
-    }
-  });
-}
-</script>
-
-
-  // Suscripción para banner "Va ..."
-let unsubscribeRoundHint = null;
-function subscribeRoundHint(roundId){
-  if (unsubscribeRoundHint) unsubscribeRoundHint();
-
-  const rRef = doc(db, "rooms", state.code, "rounds", String(roundId));
-  unsubscribeRoundHint = onSnapshot(rRef, async (rdoc)=>{
-    if (!rdoc.exists()) return;
-    const r = rdoc.data();
-
-    // Solo mostrar durante la fase PROMPT (primeras palabras)
-    if (r.status !== "prompt") return;
-
-    const idx = r.turnIndex ?? 0;
-    const uid = (r.order || [])[idx];
-    if (!uid) return;
-
-    try{
-      const n = await nameOf(uid);   // ya tenés nameOf definido más arriba
-      showTurnBanner(n);             // usa tu función existente
-    }catch(e){
-      console.warn("RoundHint:", e);
-    }
-  });
-}
-
-
   // primeras palabras
   let firstWordsMap = new Set();
   function subscribeFirstWords(roundId){
@@ -862,7 +807,6 @@ function subscribeRoundHint(roundId){
 
     if(newRound && newRound !== currentRound){
       currentRound = newRound;
-      subscribeRoundHint(currentRound);
       subscribeChat(currentRound);
       subscribeFirstWords(currentRound);
       subscribeRoundPhase(currentRound);
