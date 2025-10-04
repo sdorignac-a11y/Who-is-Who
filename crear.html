@@ -124,6 +124,10 @@
     <div class="cta">
       <button id="startBtn" class="btn-cta">EMPEZAR PARTIDA</button>
       <button id="leaveBtn" class="btn" style="margin-left:12px;display:none">ABANDONAR PARTIDA</button>
+      <!-- NUEVO: botón eliminar sala -->
+      <button id="deleteRoomBtn" class="btn" style="margin-left:12px;display:none;background:linear-gradient(180deg,#ea4335,#c92e21);border-color:#ffb3ac">
+        ELIMINAR SALA
+      </button>
     </div>
   </div>
 
@@ -204,6 +208,7 @@
   const meNameEl    = $("#meName");
   const playersWrap = $("#players");
   const leaveBtn = document.getElementById("leaveBtn");
+  const deleteRoomBtn = document.getElementById("deleteRoomBtn"); // NUEVO
 
   function getStoredName(){
     const qp = new URLSearchParams(location.search);
@@ -316,6 +321,13 @@
   function setArrowsEnabled(en){ document.querySelectorAll(".arrow").forEach(b=>{ b.style.pointerEvents=en?"auto":"none"; b.style.opacity=en?"1":".55"; }); }
   setArrowsEnabled(isHost);
 
+  // NUEVO: mostrar/ocultar botones de host (abandonar / eliminar)
+  function setHostControlsVisible(on){
+    leaveBtn.style.display = on ? "inline-block" : "none";
+    deleteRoomBtn.style.display = on ? "inline-block" : "none";
+  }
+  setHostControlsVisible(isHost);
+
   document.querySelectorAll(".arrow").forEach(btn=>{
     btn.addEventListener("click", async ()=>{
       const inc=btn.dataset.inc, dec=btn.dataset.dec;
@@ -352,6 +364,8 @@
     roomSettings = data.settings || roomSettings;
     const before=isHost; isHost=(data.hostUid===auth.currentUser.uid);
     if(before!==isHost) setArrowsEnabled(isHost);
+    if(before!==isHost) setHostControlsVisible(isHost); // NUEVO
+
     const st=data.settings||{};
     state.jugadores=st.maxPlayers??state.jugadores;
     state.impostores=st.impostors??state.impostores;
@@ -435,6 +449,57 @@
     }
   });
 
+  // ===== NUEVO: eliminar sala completa y crear otra =====
+  async function deleteCollection(collRef){
+    const snap = await getDocs(collRef);
+    const batchLimit = 400;
+    let i = 0, batch = writeBatch(db);
+    for (const d of snap.docs){
+      batch.delete(d.ref);
+      i++;
+      if(i % batchLimit === 0){ await batch.commit(); batch = writeBatch(db); }
+    }
+    if(i % batchLimit !== 0) await batch.commit();
+  }
+
+  async function deleteRoomDeep(){
+    if(!isHost){ alert("Solo el host puede eliminar la sala."); return; }
+
+    const ok = confirm("⚠️ Esto eliminará la SALA completa (jugadores, rondas, chat, votos). ¿Continuar?");
+    if(!ok) return;
+
+    try{
+      // 1) assignments
+      await deleteCollection(collection(db,"rooms",state.code,"assignments"));
+
+      // 2) rounds + subcolecciones
+      const roundsSnap = await getDocs(collection(db,"rooms",state.code,"rounds"));
+      for(const rdoc of roundsSnap.docs){
+        const rid = rdoc.id;
+        await deleteCollection(collection(db,"rooms",state.code,"rounds",rid,"chat"));
+        await deleteCollection(collection(db,"rooms",state.code,"rounds",rid,"firstWords"));
+        await deleteCollection(collection(db,"rooms",state.code,"rounds",rid,"votes"));
+        await deleteDoc(rdoc.ref);
+      }
+
+      // 3) players
+      await deleteCollection(collection(db,"rooms",state.code,"players"));
+
+      // 4) doc de la sala
+      await deleteDoc(doc(db,"rooms",state.code));
+
+      localStorage.removeItem("lastRoomCode");
+location.replace("/index.html"); // ajustá la ruta según tu hosting
+
+
+    }catch(e){
+      console.error(e);
+      alert("Error al eliminar la sala: " + (e?.message || e));
+    }
+  }
+
+  deleteRoomBtn.addEventListener("click", deleteRoomDeep); // NUEVO
+
   // Overlay rol
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
     if(!s.exists()) return;
@@ -515,14 +580,13 @@
       if(nextIdx < order.length){
         try{ await updateDoc(doc(db,"rooms",state.code,"rounds",roundId),{turnIndex:nextIdx}); }catch(e){ console.warn(e); }
       }else{
-        // Todos mandaron palabra => pasar a discuss y setear discussStartedAt + timeSec (de ronda o settings)
         const tSec = roundState?.timeSec || roomSettings?.timeSec || state.tiempos[state.tiempoIndex];
         try{ await updateDoc(doc(db,"rooms",state.code,"rounds",roundId),{status:"discuss",discussStartedAt:serverTimestamp(), timeSec: tSec}); }catch(e){ console.warn(e); }
       }
     }
   }
 
-  // ======== COUNTDOWN discuss y pase a votación (host) ========
+  // COUNTDOWN discuss y pase a votación (host)
   let discussTicker = null;
   function startDiscussCountdown(roundDocData, isHostNow){
     if(discussTicker) { clearInterval(discussTicker); discussTicker=null; }
@@ -556,7 +620,7 @@
 
   function subscribeChat(roundId){
     if(unsubscribeChat) unsubscribeChat();
-    let lastByUid = new Map(); // para rate-limit en host
+    let lastByUid = new Map();
 
     unsubscribeChat = onSnapshot(
       collection(db,"rooms",state.code,"rounds",String(roundId),"chat"),
@@ -565,7 +629,6 @@
           .map(d=>({ _doc:d, id:d.id, ...d.data() }))
           .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
 
-        // Host limpia mensajes que violen cooldown (3s) durante discuss
         if(isHost && roundState?.status==="discuss"){
           for(const m of items){
             if(m.kind!=="chat") continue;
@@ -588,7 +651,7 @@
     );
   }
 
-  // ===== NUEVO: suscripción directa a la fase (round doc) =====
+  // suscripción directa a la fase (round doc)
   function subscribeRoundPhase(roundId){
     if (unsubscribeRoundPhase) unsubscribeRoundPhase();
 
@@ -650,7 +713,7 @@
       subscribeRoundHint(currentRound);
       subscribeChat(currentRound);
       subscribeFirstWords(currentRound);
-      subscribeRoundPhase(currentRound); // <— UI de fase en tiempo real
+      subscribeRoundPhase(currentRound);
     }else{
       currentRound = newRound;
     }
@@ -757,7 +820,7 @@
     });
   }
 
-  // Cierre automático cuando todos votan (no tocar)
+  // Cierre automático cuando todos votan
   onSnapshot(roomRef, async s=>{
     if(!s.exists()) return;
     const data=s.data(); const roundId=data.round||0;
