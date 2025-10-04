@@ -163,7 +163,7 @@
       letter-spacing:.5px;
     }
 
-    /* ===== Modal / inputs (sin cambios fuertes, solo pulido) ===== */
+    /* ===== Modal / inputs ===== */
     .backdrop{position:fixed;inset:0;background:rgba(0,10,20,.55);backdrop-filter:blur(2px);display:none;place-items:center;z-index:60}
     .name-card{width:min(520px,92vw);background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.18);
       border-radius:18px;padding:20px 18px;box-shadow:0 40px 80px rgba(0,0,0,.55);font-family:"Outfit",sans-serif}
@@ -182,6 +182,33 @@
     .avatar-opt img{width:100%;height:100%;object-fit:cover;display:block}
     .avatar-opt.selected{border-color:#facc15;box-shadow:0 0 0 3px rgba(250,204,21,.35)}
     .avatar-hint{margin:8px 0 0;font-size:13px;opacity:.85}
+
+    /* ===== Overlay Loader (nuevo) ===== */
+    .overlay{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,10,20,.9);z-index:1000;padding:16px}
+    .overlay.show{display:grid}
+    .loader-card{
+      width:min(520px,96vw);
+      background:linear-gradient(180deg,#102c4f,#0c2441);
+      border:1px solid rgba(128,180,255,.28); border-radius:16px;
+      box-shadow:0 20px 60px rgba(0,0,0,.6);
+      padding:18px; text-align:center;
+      font-family:"Outfit",sans-serif;
+    }
+    .spinner{
+      width:58px; height:58px; border-radius:50%;
+      border:4px solid rgba(255,255,255,.2);
+      border-top-color:var(--gold-1);
+      margin:10px auto 12px;
+      animation:spin 1s linear infinite;
+    }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .stage{font-weight:800; letter-spacing:.3px; margin:0 0 6px}
+    .hint{opacity:.85; font-size:14px; margin:0 0 10px}
+    .err{color:#ffd5d1; background:rgba(234,67,53,.12); border:1px solid rgba(234,67,53,.35); padding:8px 10px; border-radius:10px; display:none; margin:8px 0}
+    .loader-actions{display:flex; gap:10px; justify-content:center; margin-top:10px}
+    .btn.alt{background:linear-gradient(180deg,#183861,#0f2644)}
+    .btn.red{background:linear-gradient(180deg,#ff6b6b,#ea4335); border-color:#ffb3ac}
+    .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   </style>
 </head>
 <body>
@@ -268,11 +295,11 @@
     };
   </script>
 
-  <!-- ===== Firebase + acciones (sin cambios) ===== -->
+  <!-- ===== Firebase + acciones ===== -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     (async () => {
       try {
@@ -290,28 +317,156 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        try { await signInAnonymously(auth); }
-        catch (e) { console.warn("Anon auth falló (seguimos igual):", e); }
+        /* ---------- OVERLAY LOADER (nuevo) ---------- */
+        const loader = document.createElement('div');
+        loader.id = 'room-loader';
+        loader.className = 'overlay';
+        loader.innerHTML = `
+          <div class="loader-card" role="dialog" aria-modal="true" aria-label="Creando sala">
+            <div class="spinner" aria-hidden="true"></div>
+            <p id="loaderStage" class="stage">Preparando…</p>
+            <p id="loaderHint" class="hint">No cierres esta ventana.</p>
+            <div id="loaderErr" class="err"></div>
+            <div class="loader-actions">
+              <button id="retryBtn" class="menu-btn alt" style="--c1:#183861;--c2:#0f2644;--outer:#0a1730;display:none">Reintentar</button>
+              <button id="cancelBtn" class="menu-btn red" style="--c1:#ff6b6b;--c2:#ea4335;--outer:#3b0c0c;">Cancelar</button>
+            </div>
+            <span class="sr-only" id="liveStatus"></span>
+          </div>`;
+        document.body.appendChild(loader);
 
-        const btnAzar = document.getElementById("btn-azar");
-        if (btnAzar) {
-          btnAzar.addEventListener("click", async () => {
-            try {
-              const {name, avatar} = await window.PlayerProfile.ensure();
+        const $ = s => document.querySelector(s);
+        const stageEl = () => $('#loaderStage');
+        const hintEl  = () => $('#loaderHint');
+        const errEl   = () => $('#loaderErr');
+        const showLoader = (stage, hint="")=>{
+          loader.classList.add('show');
+          stageEl().textContent = stage || 'Cargando…';
+          hintEl().textContent = hint || 'No cierres esta ventana.';
+          errEl().style.display = 'none';
+          errEl().textContent = '';
+        };
+        const showError = (msg)=>{
+          errEl().textContent = msg || 'Ocurrió un error.';
+          errEl().style.display = 'block';
+          $('#retryBtn').style.display = 'inline-block';
+        };
+        const hideLoader = ()=> loader.classList.remove('show');
 
-              const snap = await getDocs(collection(db, "rooms"));
-              if (snap.empty) { alert("No hay salas disponibles todavía."); return; }
-              const rooms = snap.docs.map(d => d.id);
-              const code = rooms[Math.floor(Math.random() * rooms.length)];
+        let cancelled = false;
+        $('#cancelBtn').addEventListener('click', ()=>{ cancelled = true; hideLoader(); });
+        $('#retryBtn').addEventListener('click', ()=>{ if(!cancelled) startCreateFlow().catch(()=>{}); });
 
-              sessionStorage.setItem('showRoomLoader','1');
-              location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`;
-            } catch (err) {
-              console.error(err);
-              alert("No pude listar salas. Probá refrescar o crear una sala.");
-            }
-          });
+        /* ---------- Utilidades ---------- */
+        function genCode(len=6){
+          const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+          let s=""; for(let i=0;i<len;i++) s+=A[Math.floor(Math.random()*A.length)];
+          return s;
         }
+        async function createUniqueRoomCode(tries=12){
+          for(let i=0;i<tries;i++){
+            const c = genCode(6);
+            const ref = doc(db,"rooms",c);
+            if(!(await getDoc(ref)).exists()) return c;
+          }
+          return genCode(8);
+        }
+        async function ensureAuth(){
+          await setPersistence(auth, browserLocalPersistence);
+          const user = await new Promise(res=>{
+            const off = onAuthStateChanged(auth, u=>{ off(); res(u); });
+          });
+          return user || (await signInAnonymously(auth)).user;
+        }
+
+        /* ---------- Navegación con perfil obligatorio ---------- */
+        const linkCrear    = document.getElementById("link-crear");
+        const linkIngresar = document.getElementById("link-ingresar");
+
+        async function ensureProfile(){
+          const {name, avatar} = await window.PlayerProfile.ensure();
+          return {name, avatar};
+        }
+
+        // CREAR SALA: ahora se hace TODO acá y recién navega
+        linkCrear?.addEventListener("click", async (e)=>{
+          e.preventDefault();
+          cancelled = false;
+          await startCreateFlow().catch(()=>{});
+        });
+
+        // INGRESAR: sigue igual, solo pide perfil y navega
+        linkIngresar?.addEventListener("click", async (e)=>{
+          e.preventDefault();
+          const {name, avatar} = await ensureProfile();
+          const sep = "ingresar.html".includes("?") ? "&" : "?";
+          location.href = `ingresar.html${sep}name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`.replace(/\s/g,"%20");
+        });
+
+        // AZAR (sin cambios fuertes, solo respeta perfil)
+        const btnAzar = document.getElementById("btn-azar");
+        btnAzar?.addEventListener("click", async ()=>{
+          try{
+            const {name, avatar} = await ensureProfile();
+            const snap = await getDocs(collection(db, "rooms"));
+            if (snap.empty) { alert("No hay salas disponibles todavía."); return; }
+            const rooms = snap.docs.map(d => d.id);
+            const code = rooms[Math.floor(Math.random() * rooms.length)];
+            location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`;
+          }catch(err){
+            console.error(err);
+            alert("No pude listar salas. Probá refrescar o crear una sala.");
+          }
+        });
+
+        /* ---------- Flujo de creación con overlay ---------- */
+        async function startCreateFlow(){
+          try{
+            showLoader("Preparando cuenta…");
+            const {name, avatar} = await ensureProfile();
+            const user = await ensureAuth();
+            if(cancelled) return;
+
+            showLoader("Generando código…");
+            const code = await createUniqueRoomCode();
+            if(cancelled) return;
+
+            showLoader("Inicializando sala…");
+            const roomRef   = doc(db,"rooms",code);
+            const playerRef = doc(db,"rooms",code,"players",user.uid);
+
+            const batch = writeBatch(db);
+            batch.set(roomRef,{
+              hostUid: user.uid,
+              status: "lobby",
+              createdAt: serverTimestamp(),
+              settings: { maxPlayers: 8, impostors: 1, tema: "Clubes", timeSec: 60 }
+            },{merge:true});
+            batch.set(playerRef,{
+              uid: user.uid,
+              name,
+              avatarKey: avatar || null,
+              slot: 1,
+              online: true
+            },{merge:true});
+            await batch.commit();
+            if(cancelled) return;
+
+            // Guardá último código por si querés reusar luego
+            localStorage.setItem("lastRoomCode", code);
+
+            showLoader("Todo listo. Entrando…");
+            setTimeout(()=>{
+              if(!cancelled){
+                location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`;
+              }
+            }, 300);
+          }catch(err){
+            console.error(err);
+            showError(`No pude crear la sala. ${err?.message ? "(" + err.message + ")" : ""}`);
+          }
+        }
+
       } catch (err) {
         console.error("Error inicializando Firebase:", err);
       }
@@ -332,31 +487,5 @@
       <div class="avatar-hint">Elegí tu avatar</div>
     </div>
   </div>
-
-  <!-- ===== Navegación que exige perfil ===== -->
-  <script>
-    document.addEventListener("DOMContentLoaded", ()=>{
-      const linkCrear    = document.getElementById("link-crear");
-      const linkIngresar = document.getElementById("link-ingresar");
-
-      async function goWithProfile(url){
-        const {name, avatar} = await window.PlayerProfile.ensure();
-
-        if (url.includes("crear.html")) {
-          sessionStorage.setItem('showRoomLoader','1');
-        } else {
-          sessionStorage.removeItem('showRoomLoader');
-        }
-
-        const sep  = url.includes("?") ? "&" : "?";
-        location.href = `${url}${sep}name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`.replace(/\s/g, "%20");
-      }
-
-      linkCrear?.addEventListener("click", (e)=>{ e.preventDefault(); goWithProfile("crear.html"); });
-      linkIngresar?.addEventListener("click", (e)=>{ e.preventDefault(); goWithProfile("ingresar.html"); });
-      // Si querés que Offline también pida perfil:
-      // document.getElementById("link-offline")?.addEventListener("click", (e)=>{ e.preventDefault(); goWithProfile("offline.html"); });
-    });
-  </script>
 </body>
 </html>
