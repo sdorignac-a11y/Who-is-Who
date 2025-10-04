@@ -1,5 +1,3 @@
-este es mi crea.html, que cambios hago
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -27,7 +25,7 @@ este es mi crea.html, que cambios hago
   .avatar.placeholder{background:radial-gradient(28px 28px at 50% 40%,#2f4b73 0 60%,#203a5e 61% 100%),radial-gradient(48px 48px at 50% 110%,#162b4a 0 58%,transparent 59%)}
   .avatar-img{width:100%;height:100%;object-fit:cover;display:block}
   .player small{color:var(--muted);font-weight:600}
-  .settings{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px}
+  .settings{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:18px}
   .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid rgba(128,180,255,.25);border-radius:16px;padding:14px}
   .card h3{margin:0 0 8px;font-size:16px;letter-spacing:.3px;color:#cce0ff;text-transform:uppercase;font-weight:800}
   .selector{display:flex;align-items:center;justify-content:space-between;gap:8px;background:linear-gradient(180deg,#0b2441,#0a213b);border:1px solid rgba(128,180,255,.28);border-radius:12px;padding:10px}
@@ -120,12 +118,14 @@ este es mi crea.html, que cambios hago
       <div class="card"><h3>Impostores</h3><div class="selector"><div class="arrow" data-dec="impostores">‹</div><div class="value" id="impostoresVal">1</div><div class="arrow" data-inc="impostores">›</div></div></div>
       <div class="card"><h3>Jugadores</h3><div class="selector"><div class="arrow" data-dec="jugadores">‹</div><div class="value" id="jugadoresVal">8</div><div class="arrow" data-inc="jugadores">›</div></div></div>
       <div class="card"><h3>Tema</h3><div class="selector"><div class="arrow" data-dec="tema">‹</div><div class="value" id="temaVal">Clubes</div><div class="arrow" data-inc="tema">›</div></div></div>
+      <!-- NUEVO: selector de tiempo -->
+      <div class="card"><h3>Tiempo</h3><div class="selector"><div class="arrow" data-dec="tiempo">‹</div><div class="value" id="tiempoVal">60s</div><div class="arrow" data-inc="tiempo">›</div></div></div>
     </div>
 
-<div class="cta">
-  <button id="startBtn" class="btn-cta">EMPEZAR PARTIDA</button>
-  <button id="leaveBtn" class="btn" style="margin-left:12px;display:none">ABANDONAR PARTIDA</button>
-</div>
+    <div class="cta">
+      <button id="startBtn" class="btn-cta">EMPEZAR PARTIDA</button>
+      <button id="leaveBtn" class="btn" style="margin-left:12px;display:none">ABANDONAR PARTIDA</button>
+    </div>
   </div>
 
   <!-- Overlay: rol + countdown -->
@@ -157,6 +157,8 @@ este es mi crea.html, que cambios hago
       <div style="padding:14px 16px;border-bottom:1px solid rgba(128,180,255,.15);display:flex;justify-content:space-between;align-items:center">
         <h2 style="margin:0">Debate</h2>
         <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <!-- NUEVO: timer mm:ss -->
+          <small id="timer" style="opacity:.9;font-weight:800"></small>
           <small id="turnHint" style="opacity:.85"></small>
           <small id="cooldownHint" style="opacity:.7"></small>
         </div>
@@ -175,7 +177,7 @@ este es mi crea.html, que cambios hago
   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs, writeBatch, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
@@ -258,18 +260,28 @@ este es mi crea.html, que cambios hago
     }
   }
 
-  const state={ code:"", impostores:1, jugadores:8, temas:["Clubes","Jugadores","Mundiales"], temaIndex:0 };
-  const POOLS={ Clubes:["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"], Jugadores:["Lionel Messi","Cristiano Ronaldo","Diego Maradona","Pelé","Kylian Mbappé","Erling Haaland","Neymar","Zinedine Zidane","Ronaldinho","Ronaldo Nazário"], Mundiales:["Mundial 2002","Mundial 2006","Mundial 2010","Mundial 2014","Mundial 2018","Mundial 2022"] };
-
   const impostoresEl = document.getElementById("impostoresVal");
   const jugadoresEl  = document.getElementById("jugadoresVal");
   const temaEl       = document.getElementById("temaVal");
+  const tiempoEl     = document.getElementById("tiempoVal");
+
+  // Estado
+  const state={ 
+    code:"",
+    impostores:1, 
+    jugadores:8, 
+    temas:["Clubes","Jugadores","Mundiales"], 
+    temaIndex:0,
+    tiempos:[30,45,60,90,120],
+    tiempoIndex:2 // 60s
+  };
 
   function render(){
     roomCodeEl.textContent = state.code || "—";
     impostoresEl.textContent = state.impostores;
     jugadoresEl.textContent  = state.jugadores;
     temaEl.textContent       = state.temas[state.temaIndex];
+    tiempoEl.textContent     = state.tiempos[state.tiempoIndex] + "s";
     drawPlayers(state.jugadores, lastPlayers);
   }
 
@@ -292,7 +304,7 @@ este es mi crea.html, que cambios hago
 
   const firstSnap = await getDoc(roomRef);
   if(!firstSnap.exists() && isHost){
-    await setDoc(roomRef,{ hostUid:auth.currentUser.uid, status:"lobby", createdAt:Date.now(), settings:{maxPlayers:state.jugadores,impostors:state.impostores,tema:state.temas[state.temaIndex]} },{merge:true});
+    await setDoc(roomRef,{ hostUid:auth.currentUser.uid, status:"lobby", createdAt:Date.now(), settings:{maxPlayers:state.jugadores,impostors:state.impostores,tema:state.temas[state.temaIndex], timeSec: state.tiempos[state.tiempoIndex]} },{merge:true});
   }
   if(firstSnap.exists()) isHost = firstSnap.data().hostUid === auth.currentUser.uid;
   if(isHost){ localStorage.setItem(lsKey,state.code); putCodeInUrl(state.code); }
@@ -315,26 +327,48 @@ este es mi crea.html, que cambios hago
       if(dec==="jugadores") state.jugadores=Math.max(4,state.jugadores-1);
       if(inc==="tema") state.temaIndex=(state.temaIndex+1)%state.temas.length;
       if(dec==="tema") state.temaIndex=(state.temaIndex-1+state.temas.length)%state.temas.length;
+      if(inc==="tiempo") state.tiempoIndex = (state.tiempoIndex+1) % state.tiempos.length;
+      if(dec==="tiempo") state.tiempoIndex = (state.tiempoIndex-1+state.tiempos.length) % state.tiempos.length;
+
       if(state.impostores>=state.jugadores) state.impostores=Math.max(1,state.jugadores-1);
       state.jugadores=Math.max(state.jugadores,lastPlayers.length);
       render();
-      if(isHost){ await setDoc(roomRef,{ settings:{maxPlayers:state.jugadores,impostors:state.impostores,tema:state.temas[state.temaIndex]} },{merge:true}); }
+
+      if(isHost){ 
+        await setDoc(roomRef,{ 
+          settings:{
+            maxPlayers:state.jugadores,
+            impostors: state.impostores,
+            tema:      state.temas[state.temaIndex],
+            timeSec:   state.tiempos[state.tiempoIndex]
+          } 
+        },{merge:true}); 
+      }
     });
   });
 
+  let roomSettings = null; // cache de settings para fallback
   onSnapshot(roomRef,s=>{
     if(!s.exists()) return;
     const data=s.data();
+    roomSettings = data.settings || roomSettings;
     const before=isHost; isHost=(data.hostUid===auth.currentUser.uid);
     if(before!==isHost) setArrowsEnabled(isHost);
     const st=data.settings||{};
     state.jugadores=st.maxPlayers??state.jugadores;
     state.impostores=st.impostors??state.impostores;
     if(st.tema){ const idx=state.temas.indexOf(st.tema); state.temaIndex = idx>=0?idx:0; }
+    if(st.timeSec){ const tidx = state.tiempos.indexOf(st.timeSec); state.tiempoIndex = tidx>=0 ? tidx : state.tiempoIndex; }
     render();
   });
 
   onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{ lastPlayers=snap.docs.map(d=>d.data()); drawPlayers(state.jugadores,lastPlayers); });
+
+  const POOLS={ 
+    Clubes:["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"], 
+    Jugadores:["Lionel Messi","Cristiano Ronaldo","Diego Maradona","Pelé","Kylian Mbappé","Erling Haaland","Neymar","Zinedine Zidane","Ronaldinho","Ronaldo Nazário"], 
+    Mundiales:["Mundial 2002","Mundial 2006","Mundial 2010","Mundial 2014","Mundial 2018","Mundial 2022"] 
+  };
 
   function pickWord(tema){ const pool=POOLS[tema]||["Balón"]; return pool[Math.floor(Math.random()*pool.length)]; }
   function shuffleInPlace(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]];} return a; }
@@ -352,6 +386,7 @@ este es mi crea.html, que cambios hago
       const ps=await getDocs(collection(db,"rooms",state.code,"players"));
       const players=ps.docs.map(d=>({id:d.id,...d.data()})).filter(p=>p.id&&p.online!==false);
       const K=st.impostors||1; const tema=st.tema||"Clubes";
+      const timeSec = st.timeSec || state.tiempos[state.tiempoIndex];
       if(players.length<3){ alert("Se necesitan al menos 3 jugadores."); starting=false; return; }
       if(K>=players.length){ alert("Impostores debe ser menor que jugadores."); starting=false; return; }
       const palabra=pickWord(tema);
@@ -359,58 +394,55 @@ este es mi crea.html, que cambios hago
       const impostorIds=new Set(order.slice(0,K));
       const nextRound=(room.round||0)+1;
       const batch=writeBatch(db);
-      batch.update(roomRef,{status:"playing",round:nextRound,startedAt:serverTimestamp()});
+      batch.update(roomRef,{status:"playing",round:nextRound,startedAt:serverTimestamp(), settings:{...st, timeSec}}); // asegura timeSec
       players.forEach(p=>{
         const aRef=doc(db,"rooms",state.code,"assignments",p.id);
         batch.set(aRef,{round:nextRound,uid:p.id,name:p.name||"Jugador",avatarKey:p.avatarKey||null,role:impostorIds.has(p.id)?"IMPOSTOR":"CIVIL",word:impostorIds.has(p.id)?null:palabra,tema,alive:true,vote:null,revealedAt:null});
       });
       const roundRef=doc(db,"rooms",state.code,"rounds",String(nextRound));
-      batch.set(roundRef,{status:"reveal",createdAt:serverTimestamp(),order,turnIndex:0});
+      batch.set(roundRef,{status:"reveal",createdAt:serverTimestamp(),order,turnIndex:0, timeSec}); // guarda timeSec en la ronda
       await batch.commit();
       setTimeout(async()=>{ try{ await updateDoc(roundRef,{status:"draw",drawStartedAt:serverTimestamp()}); }catch{} },10000);
     }catch(e){ console.error(e); alert(e.message||"No pude iniciar la partida."); } finally{ starting=false; }
   });
 
-// ===== ABANDONAR PARTIDA (solo host) =====
-leaveBtn.addEventListener("click", async ()=>{
-  if (!isHost){
-    alert("Solo el host puede abandonar y resetear la sala.");
-    return;
-  }
-  if (!confirm("¿Seguro que querés abandonar la partida actual? Esto limpia la ronda.")) return;
+  // ===== ABANDONAR PARTIDA (solo host) =====
+  leaveBtn.addEventListener("click", async ()=>{
+    if (!isHost){
+      alert("Solo el host puede abandonar y resetear la sala.");
+      return;
+    }
+    if (!confirm("¿Seguro que querés abandonar la partida actual? Esto limpia la ronda.")) return;
 
-  try {
-    // 1) Borrar subcolecciones: assignments y rounds
-    const batchDel = writeBatch(db);
-    const assignsSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
-    assignsSnap.forEach(d => batchDel.delete(d.ref));
-    const roundsSnap = await getDocs(collection(db,"rooms",state.code,"rounds"));
-    roundsSnap.forEach(d => batchDel.delete(d.ref));
-    await batchDel.commit();
+    try {
+      const batchDel = writeBatch(db);
+      const assignsSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+      assignsSnap.forEach(d => batchDel.delete(d.ref));
+      const roundsSnap = await getDocs(collection(db,"rooms",state.code,"rounds"));
+      roundsSnap.forEach(d => batchDel.delete(d.ref));
+      await batchDel.commit();
 
-    // 2) Volver la sala a lobby y limpiar campos de estado
-    await updateDoc(doc(db,"rooms",state.code), {
-      status: "lobby",
-      round: 0,
-      startedAt: null
-    });
+      await updateDoc(doc(db,"rooms",state.code), {
+        status: "lobby",
+        round: 0,
+        startedAt: null
+      });
 
-    // 3) UI local
-    document.getElementById("phaseDiscuss").style.display = "none";
-    alert("Sesión abandonada. Ya podés iniciar otra partida.");
+      document.getElementById("phaseDiscuss").style.display = "none";
+      alert("Sesión abandonada. Ya podés iniciar otra partida.");
 
-  } catch(e){
-    console.error(e);
-    alert("Error al abandonar: " + (e?.message || e));
-  }
-});
+    } catch(e){
+      console.error(e);
+      alert("Error al abandonar: " + (e?.message || e));
+    }
+  });
 
-    
   // Overlay rol
+  const AVATAR_MAP2 = AVATAR_MAP; // alias para el overlay
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
     if(!s.exists()) return;
     const a=s.data(); const overlay=document.getElementById("reveal"); const box=document.getElementById("revContent");
-    let avatarHtml=""; if(a.avatarKey && AVATAR_MAP[a.avatarKey]) avatarHtml=`<div class="rev-avatar"><img src="${AVATAR_MAP[a.avatarKey]}" alt="${a.name||'avatar'}"></div>`;
+    let avatarHtml=""; if(a.avatarKey && AVATAR_MAP2[a.avatarKey]) avatarHtml=`<div class="rev-avatar"><img src="${AVATAR_MAP2[a.avatarKey]}" alt="${a.name||'avatar'}"></div>`;
     const nameHtml=`<div class="rev-name">${a.name||"Jugador"}</div>`;
     overlay.style.display="grid";
     if(a.role==="IMPOSTOR"){ box.innerHTML=`${avatarHtml}${nameHtml}<div style="font-size:38px;font-weight:900;color:#ff6b6b;margin:6px 0 8px">IMPOSTOR</div><div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>`; }
@@ -422,8 +454,11 @@ leaveBtn.addEventListener("click", async ()=>{
   // Utils
   function sanitize(str){ return (str||"").replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s])); }
   async function nameOf(uid){ try{ const snap=await getDoc(doc(db,"rooms",state.code,"players",uid)); return (snap.exists()&&(snap.data().name||"Jugador"))||"Jugador"; }catch{ return "Jugador"; } }
+  const timerEl = document.getElementById("timer");
+  function toMillis(ts){ return ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds*1000 : (typeof ts==="number" ? ts : 0)); }
+  function fmtClock(ms){ const s=Math.max(0,Math.ceil(ms/1000)); const mm=String(Math.floor(s/60)).padStart(2,'0'); const ss=String(s%60).padStart(2,'0'); return `${mm}:${ss}`; }
 
-  // Sorteo
+  // Sorteo animación
   async function startDrawAnimation(order){
     const draw=document.getElementById("drawOverlay"); const slip=document.getElementById("slip"); const list=document.getElementById("orderList");
     list.innerHTML=""; draw.style.display="grid";
@@ -444,7 +479,7 @@ leaveBtn.addEventListener("click", async ()=>{
   let unsubscribeChat=null;
   let unsubscribeFirstWords=null;
 
-  // === Turn banner
+  // Turn banner
   let _turnBannerTimer=null;
   function showTurnBanner(name){
     const banner=document.getElementById("turnBanner");
@@ -455,7 +490,7 @@ leaveBtn.addEventListener("click", async ()=>{
     _turnBannerTimer=setTimeout(()=>{ banner.classList.remove("show"); banner.classList.add("hide"); setTimeout(()=>{ banner.style.display="none"; },350); },2200);
   }
 
-  // === NUEVO: mapa de primeras palabras por uid (de la ronda) ===
+  // primeras palabras
   let firstWordsMap = new Set();
   function subscribeFirstWords(roundId){
     if(unsubscribeFirstWords) unsubscribeFirstWords();
@@ -464,12 +499,12 @@ leaveBtn.addEventListener("click", async ()=>{
       collection(db,"rooms",state.code,"rounds",String(roundId),"firstWords"),
       snap=>{
         firstWordsMap = new Set(snap.docs.map(d=>d.id));
-        advanceIfReadyByHost(); // cada vez que llega una palabra, el host evalúa avanzar
+        advanceIfReadyByHost();
       }
     );
   }
 
-  // === NUEVO: avanzar turno automáticamente en el HOST ===
+  // host avanza turno / pasa a discuss cuando todos mandaron palabra
   async function advanceIfReadyByHost(){
     if(!isHost || !roundState || roundState.status!=="prompt") return;
     const order = roundState.order || [];
@@ -482,7 +517,9 @@ leaveBtn.addEventListener("click", async ()=>{
       if(nextIdx < order.length){
         try{ await updateDoc(doc(db,"rooms",state.code,"rounds",roundId),{turnIndex:nextIdx}); }catch(e){ console.warn(e); }
       }else{
-        try{ await updateDoc(doc(db,"rooms",state.code,"rounds",roundId),{status:"discuss",discussStartedAt:serverTimestamp()}); }catch(e){ console.warn(e); }
+        // Todos mandaron palabra => pasar a discuss y setear discussStartedAt + timeSec (de ronda o settings)
+        const tSec = roundState?.timeSec || roomSettings?.timeSec || state.tiempos[state.tiempoIndex];
+        try{ await updateDoc(doc(db,"rooms",state.code,"rounds",roundId),{status:"discuss",discussStartedAt:serverTimestamp(), timeSec: tSec}); }catch(e){ console.warn(e); }
       }
     }
   }
@@ -497,19 +534,69 @@ leaveBtn.addEventListener("click", async ()=>{
         if(r.status==="prompt"){
           const idx=r.turnIndex??0; const uidTurno=(r.order||[])[idx];
           if(uidTurno) nameOf(uidTurno).then(n=>{ ui.turnHint.textContent=`Turno de: ${n}`; showTurnBanner(n); });
-          // Host re-evalúa por si hay palabra ya guardada
           advanceIfReadyByHost();
         }
       }
     );
   }
 
+  // ======== COUNTDOWN discuss y pase a votación (host) ========
+  let discussTicker = null;
+  function startDiscussCountdown(roundDocData, isHostNow){
+    if(discussTicker) { clearInterval(discussTicker); discussTicker=null; }
+    const startMs = toMillis(roundDocData?.discussStartedAt);
+    const totalSec = roundDocData?.timeSec || roomSettings?.timeSec || state.tiempos[state.tiempoIndex];
+    const totalMs = (totalSec||60)*1000;
+
+    if(!startMs){ timerEl.textContent=""; return; }
+
+    discussTicker = setInterval(async ()=>{
+      const now = Date.now();
+      const left = (startMs + totalMs) - now;
+      timerEl.textContent = fmtClock(left);
+
+      if(left <= 0){
+        clearInterval(discussTicker); discussTicker=null;
+        timerEl.textContent = "00:00";
+        if(isHostNow){
+          try{
+            const roomSnap = await getDoc(roomRef);
+            const roundId = String(roomSnap.data().round||0);
+            await updateDoc(doc(db,"rooms",state.code,"rounds",roundId),{
+              status:"vote",
+              voteStartedAt: serverTimestamp()
+            });
+          }catch(e){ console.warn(e); }
+        }
+      }
+    }, 250);
+  }
+
   function subscribeChat(roundId){
     if(unsubscribeChat) unsubscribeChat();
+    let lastByUid = new Map(); // para rate-limit en host
+
     unsubscribeChat = onSnapshot(
       collection(db,"rooms",state.code,"rounds",String(roundId),"chat"),
-      snap=>{
-        const items=snap.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
+      async snap=>{
+        const items = snap.docs
+          .map(d=>({ _doc:d, id:d.id, ...d.data() }))
+          .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
+
+        // Host limpia mensajes que violen cooldown (3s) durante discuss
+        if(isHost && roundState?.status==="discuss"){
+          for(const m of items){
+            if(m.kind!=="chat") continue;
+            const prev = lastByUid.get(m.uid)||0;
+            const t = toMillis(m.at);
+            if(prev && (t - prev) < 3000){
+              try{ await deleteDoc(m._doc.ref); }catch(e){ console.warn("No pude borrar msg rápido", e); }
+              continue;
+            }
+            lastByUid.set(m.uid, t);
+          }
+        }
+
         ui.chatList.innerHTML = items.map(m=>{
           const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
           return `<div class="chat-row ${mine?'mine':'other'}"><div class="bubble"><div class="name">${sanitize(m.name)||"Jugador"}</div><div class="text">${sanitize(m.text||"")}</div></div></div>`;
@@ -528,7 +615,7 @@ leaveBtn.addEventListener("click", async ()=>{
       currentRound=newRound;
       subscribeRoundHint(currentRound);
       subscribeChat(currentRound);
-      subscribeFirstWords(currentRound); // <=== NUEVO
+      subscribeFirstWords(currentRound);
     }else{
       currentRound=newRound;
     }
@@ -553,16 +640,20 @@ leaveBtn.addEventListener("click", async ()=>{
       ui.chatInput.placeholder="Primero UNA palabra (2–24 letras)…";
       const idx=roundState.turnIndex??0; const uidTurno=(roundState.order||[])[idx];
       ui.turnHint.textContent = uidTurno ? `Turno de: ${await nameOf(uidTurno)}` : "";
+      timerEl.textContent = ""; // sin timer en prompt
     }
     if(phase==="discuss"){
       discussPanel.style.display="block";
       document.getElementById("firstWordTip").style.display="none";
       ui.turnHint.textContent="Chat libre";
       ui.chatInput.placeholder="Decí tu pista/suspecha (3s cooldown)";
+      startDiscussCountdown(roundState, isHost);
     }
     if(phase==="vote"){
       discussPanel.style.display="block";
       ui.turnHint.textContent="Votación";
+      timerEl.textContent = "";
+      renderVoteBar();
     }
   });
 
@@ -621,7 +712,6 @@ leaveBtn.addEventListener("click", async ()=>{
         }
         if(!isOneWordLatin(raw)){ showError("Enviá UNA sola palabra (2–24 letras, sin espacios)."); return; }
 
-        // ⛔ si ya envió su primera palabra, no permitir otra (evita update → error de reglas)
         if(firstWordsMap.has(myUid)){ showError("Ya enviaste tu palabra. Esperá que avance el turno."); return; }
 
         await setDoc(doc(db,"rooms",state.code,"rounds",roundId,"firstWords",myUid),{
@@ -630,9 +720,6 @@ leaveBtn.addEventListener("click", async ()=>{
         const msgRef=doc(collection(db,"rooms",state.code,"rounds",roundId,"chat"));
         await setDoc(msgRef,{ uid:myUid, name:getStoredName(), text:raw, at:serverTimestamp(), kind:"firstword" });
         ui.chatInput.value="";
-
-        // El avance lo hace el host (auto) cuando vea este doc en subscribeFirstWords()
-
         return;
       }
 
@@ -670,15 +757,6 @@ leaveBtn.addEventListener("click", async ()=>{
       });
     });
   }
-
-  onSnapshot(roomRef, async s=>{
-    if(!s.exists()) return;
-    const data=s.data();
-    const roundRef=doc(db,"rooms",state.code,"rounds",String(data.round||0));
-    const rdoc=await getDoc(roundRef); if(!rdoc.exists()) return;
-    const r=rdoc.data();
-    if(r.status==="vote"){ document.getElementById("phaseDiscuss").style.display="block"; renderVoteBar(); }
-  });
 
   onSnapshot(roomRef, async s=>{
     if(!s.exists()) return;
