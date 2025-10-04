@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Impostor Fútbol – Menú</title>
@@ -186,14 +187,14 @@
   <!-- ===== Perfil (nombre + avatar) ===== -->
   <script>
     // Avatares disponibles (ajustá rutas reales)
-   const AVATARS = [
-  {key:"maradona",   src:"avatars/maradona.png"},
-  {key:"ronaldo",  src:"avatars/ronaldo.png"},
-  {key:"cristiano",  src:"avatars/cristiano.png"},
-  {key:"ronaldinho",   src:"avatars/ronaldinho.png"},
-  {key:"lamine",    src:"avatars/lamine.png"},
-  {key:"odegar", src:"avatars/odegar.png"}
-];
+    const AVATARS = [
+      {key:"maradona",   src:"avatars/maradona.png"},
+      {key:"ronaldo",    src:"avatars/ronaldo.png"},
+      {key:"cristiano",  src:"avatars/cristiano.png"},
+      {key:"ronaldinho", src:"avatars/ronaldinho.png"},
+      {key:"lamine",     src:"avatars/lamine.png"},
+      {key:"odegar",     src:"avatars/odegar.png"}
+    ];
 
     window.PlayerProfile = {
       getName(){ return localStorage.getItem("displayName") || ""; },
@@ -290,6 +291,9 @@
               const rooms = snap.docs.map(d => d.id);
               const code = rooms[Math.floor(Math.random() * rooms.length)];
 
+              // ✅ ACTIVAR LOADER ANTES DE IR A crear.html
+              sessionStorage.setItem('showRoomLoader','1');
+
               location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`;
             } catch (err) {
               console.error(err);
@@ -326,6 +330,14 @@
 
       async function goWithProfile(url){
         const {name, avatar} = await window.PlayerProfile.ensure();
+
+        // ✅ SI VAMOS A CREAR.SHTML, PRENDEMOS EL LOADER
+        if (url.includes("crear.html")) {
+          sessionStorage.setItem('showRoomLoader','1');
+        } else {
+          sessionStorage.removeItem('showRoomLoader');
+        }
+
         const sep  = url.includes("?") ? "&" : "?";
         location.href = `${url}${sep}name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`.
           replace(/\s/g, "%20");
