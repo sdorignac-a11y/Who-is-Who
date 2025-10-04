@@ -1096,32 +1096,34 @@ async function startNextRoundKeepingRoles(){
     });
   }
 
-  // Cierre automático cuando todos votan (solo jugadores vivos)
+ // Cierre automático cuando todos votan (solo jugadores vivos)
 onSnapshot(roomRef, async s=>{
   if(!s.exists()) return;
-  const data=s.data(); const roundId=data.round||0;
+  const data = s.data();
+  const roundId = data.round || 0;
 
   onSnapshot(collection(db,"rooms",state.code,"rounds",String(roundId),"votes"), async snap=>{
-    // ids de quienes votaron (son los docs en /votes, con id = uid del voter)
+    // quiénes YA votaron (id del doc = uid del votante)
     const voted = new Set(snap.docs.map(d=>d.id));
 
-    // Solo cuentan los vivos
+    // Solo cuentan los jugadores vivos
     const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
     const aliveVoters = asgSnap.docs
       .map(d=>d.data())
-      .filter(p=>p.alive!==false)
-      .map(p=>p.uid)
+      .filter(p => p.alive !== false)
+      .map(p => p.uid)
       .filter(Boolean);
 
-    // Si todos los vivos ya votaron, pasamos a resultados
-    if(isHost && aliveVoters.length>0 && aliveVoters.every(id=>voted.has(id))){
+    // Si todos los vivos ya votaron → pasamos a "results"
+    if (isHost && aliveVoters.length > 0 && aliveVoters.every(id => voted.has(id))){
       await updateDoc(doc(db,"rooms",state.code,"rounds",String(roundId)),{
         status:"results",
-        resultsAt:serverTimestamp()
+        resultsAt: serverTimestamp()
       });
     }
   });
 });
+
 
 
   // Copiar / Compartir
