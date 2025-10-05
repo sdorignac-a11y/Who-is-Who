@@ -342,19 +342,112 @@
           location.href = `ingresar.html${sep}name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`.replace(/\s/g,"%20");
         });
 
-        btnAzar?.addEventListener("click", async ()=>{
-          try{
-            const {name, avatar} = await ensureProfile();
-            const snap = await getDocs(collection(db, "rooms"));
-            if (snap.empty) { alert("No hay salas disponibles todavía."); return; }
-            const rooms = snap.docs.map(d => d.id);
-            const code = rooms[Math.floor(Math.random() * rooms.length)];
-            location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`;
-          }catch(err){
-            console.error(err);
-            alert("No pude listar salas. Probá refrescar o crear una sala.");
-          }
-        });
+        // ====== UNIRSE AL AZAR -> abre modal con listado ======
+const roomsModal = document.getElementById("rooms-modal");
+const rzList     = document.getElementById("rz-list");
+const rzClose    = document.getElementById("rz-close");
+const rzRefresh  = document.getElementById("rz-refresh");
+const rzRandom   = document.getElementById("rz-random");
+const rzSearch   = document.getElementById("rz-search");
+
+let currentRooms = [];
+
+btnAzar?.addEventListener("click", async ()=>{
+  await ensureProfile();                 // así ya tenemos name/avatar si elige unirse
+  roomsModal.classList.add("show");
+  rzSearch.value = "";
+  await loadPublicRooms();
+});
+
+rzClose?.addEventListener("click", ()=> roomsModal.classList.remove("show"));
+rzRefresh?.addEventListener("click", ()=> loadPublicRooms());
+rzSearch?.addEventListener("input", ()=> filterRender(currentRooms, rzSearch.value.trim()));
+
+rzRandom?.addEventListener("click", async ()=>{
+  if (!currentRooms.length){ await loadPublicRooms(); }
+  if (!currentRooms.length){ alert("No hay salas públicas en este momento."); return; }
+  const r = currentRooms[Math.floor(Math.random()*currentRooms.length)];
+  joinRoomByCode(r.id);
+});
+
+async function loadPublicRooms(){
+  try{
+    rzList.textContent = "Cargando…";
+    // Listar solo salas públicas en lobby (máx 40)
+    const qRooms = query(
+      collection(db,"rooms"),
+      where("isPublic","==",true),
+      where("status","==","lobby"),
+      orderBy("createdAt","desc"),
+      limit(40)
+    );
+    const snap = await getDocs(qRooms);
+
+    // Contar jugadores por subcolección
+    currentRooms = await Promise.all(snap.docs.map(async d=>{
+      const data = d.data()||{};
+      const playersSnap = await getDocs(collection(db,"rooms",d.id,"players"));
+      return {
+        id: d.id,
+        tema: data.settings?.tema || "—",
+        max:  data.settings?.maxPlayers || 8,
+        players: playersSnap.size,
+      };
+    }));
+
+    filterRender(currentRooms, rzSearch.value.trim());
+  }catch(e){
+    console.error(e);
+    rzList.innerHTML = `<div style="padding:8px;color:#ffd5d1">No pude cargar salas.</div>`;
+  }
+}
+
+function filterRender(list, term){
+  const t = (term||"").toUpperCase();
+  const rows = list.filter(r => !t || String(r.id).toUpperCase().includes(t));
+  if (!rows.length){
+    rzList.innerHTML = `<div style="padding:8px;opacity:.8">No hay salas que coincidan.</div>`;
+    return;
+  }
+  rzList.innerHTML = rows.map(r => `
+    <div class="rz-item">
+      <div>
+        <div class="rz-meta">Sala <span style="color:#38bdf8">${r.id}</span>
+          <span class="rz-tag">${r.tema}</span>
+        </div>
+        <div class="rz-sub">Jugadores: ${r.players}/${r.max}</div>
+      </div>
+      <button class="rz-btn success" data-join="${r.id}">Unirse</button>
+    </div>
+  `).join("");
+
+  rzList.querySelectorAll("[data-join]").forEach(btn=>{
+    btn.onclick = ()=> joinRoomByCode(btn.dataset.join);
+  });
+}
+
+async function joinRoomByCode(code){
+  try{
+    const {name, avatar} = await ensureProfile();
+    const user = await ensureAuth();
+
+    const roomRef = doc(db,"rooms",code);
+    const roomSnap = await getDoc(roomRef);
+    if(!roomSnap.exists()){ alert("La sala ya no existe."); await loadPublicRooms(); return; }
+
+    // Registrar jugador (merge)
+    await setDoc(doc(db,"rooms",code,"players",user.uid),{
+      uid:user.uid, name, avatarKey:avatar||null, online:true, slot:Date.now()
+    },{merge:true});
+
+    // Ir a la sala
+    location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`;
+  }catch(e){
+    console.error(e);
+    alert("No se pudo entrar a la sala.");
+  }
+}
+
 
         /* ---------- Crear sala con overlay ---------- */
         async function startCreateFlow(){
