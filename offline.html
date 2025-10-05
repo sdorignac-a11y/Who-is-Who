@@ -207,13 +207,12 @@
     border:1px solid rgba(255,179,172,.75); color:#111; font-weight:900;
     padding:10px 16px; border-radius:12px; cursor:pointer;
   }
-.mini{
-  margin-left:6px; padding:4px 8px; border-radius:10px;
-  background:linear-gradient(180deg,#1e68d6,#184fa5);
-  border:1px solid rgba(110,178,255,.65);
-  color:#eaf2ff; font-weight:700; font-size:12px; cursor:pointer;
-}
-
+  .mini{
+    margin-left:6px; padding:4px 8px; border-radius:10px;
+    background:linear-gradient(180deg,#1e68d6,#184fa5);
+    border:1px solid rgba(110,178,255,.65);
+    color:#eaf2ff; font-weight:700; font-size:12px; cursor:pointer;
+  }
 </style>
 </head>
 <body>
@@ -236,8 +235,7 @@
     </div>
 
     <!-- Jugadores -->
-<div class="players" id="players"></div>
-    </div>
+    <div class="players" id="players"></div>
 
     <!-- Configuración -->
     <div class="settings">
@@ -268,7 +266,6 @@
         </div>
       </div>
 
-      <!-- NUEVO: TIEMPO -->
       <div class="card">
         <h3>Tiempo de ronda</h3>
         <div class="selector">
@@ -339,7 +336,7 @@ const NAMES_KEY = "offlineNames:v1";
 let offlineNames = {};
 try{ offlineNames = JSON.parse(localStorage.getItem(NAMES_KEY)) || {}; }catch{ offlineNames = {}; }
 
-function getName(slot){                           // slot = 1..N
+function getName(slot){
   const s = (offlineNames[slot] || "").trim();
   return s ? s : `Jugador ${slot}`;
 }
@@ -347,7 +344,6 @@ function setName(slot, name){
   offlineNames[slot] = name;
   localStorage.setItem(NAMES_KEY, JSON.stringify(offlineNames));
 }
-
 
 const $ = s => document.querySelector(s);
 const impostoresEl = $("#impostoresVal");
@@ -369,7 +365,6 @@ function render(){
     const i = wrap.children.length + 1;
     const card = document.createElement("div");
     card.className = "player";
-    // small incluye el nombre y un botón Editar
     card.innerHTML = `
       <div class="avatar ${i===1?'':'placeholder'}"></div>
       <small>
@@ -394,11 +389,10 @@ function render(){
       const v = nuevo.trim();
       if(v.length < 2 || v.length > 16) return;
       setName(slot, v);
-      render();        // repinta todo con el nuevo nombre
+      render();
     };
   });
 }
-
 
 /* ===== Selectores (flechas) ===== */
 document.querySelectorAll(".arrow").forEach(btn=>{
@@ -431,7 +425,7 @@ function shuffle(a){for(let i=a.length-1;i>0;i--){const j=randInt(i+1); [a[i],a[
 function pickKUnique(k,n){const idx=Array.from({length:n},(_,i)=>i);shuffle(idx);return idx.slice(0,k)}
 
 /* ===== Revelación ===== */
-let assignments=[];   // {player, role, word, tema}
+let assignments=[];   // {player, name, role, word, tema}
 let currentReveal=0;
 
 const $reveal=$("#reveal"), $revTitle=$("#revTitle"), $revContent=$("#revContent");
@@ -442,7 +436,7 @@ function cerrarOverlay(){ $reveal.style.display="none"; }
 
 function prepararPantallaReveal(){
   const a = assignments[currentReveal];
- $revTitle.textContent = a.name || `Jugador ${a.player}`;
+  $revTitle.textContent = a.name || `Jugador ${a.player}`;
   $revContent.innerHTML = `<p>Tocá <b>Mostrar</b> para ver tu rol</p>`;
   $btnMostrar.style.display=""; $btnOcultar.style.display="none";
   $btnSiguiente.style.display="none"; $btnComenzarRonda.style.display="none";
@@ -454,18 +448,17 @@ function iniciarPartida(){
   const palabra = sampleOne(POOLS[tema]||["Balón"]);
   const impostores = new Set(pickKUnique(K,N));
   assignments=[];
-for(let i=0;i<N;i++){
-  const slot = i+1;
-  const isImp = impostores.has(i);
-  assignments.push({
-    player: slot,
-    name: getName(slot),
-    role: isImp ? "IMPOSTOR" : "CIVIL",
-    word: isImp ? null : palabra,
-    tema
-  });
-}
-
+  for(let i=0;i<N;i++){
+    const slot = i+1;
+    const isImp = impostores.has(i);
+    assignments.push({
+      player: slot,
+      name: getName(slot),
+      role: isImp ? "IMPOSTOR" : "CIVIL",
+      word: isImp ? null : palabra,
+      tema
+    });
+  }
   currentReveal=0; abrirOverlay(); prepararPantallaReveal();
 }
 
@@ -517,15 +510,13 @@ $btnComenzarRonda.addEventListener("click", ()=>{
   startTimer(secs);
 });
 
-/* VOTING */
+/* ===== Votación ===== */
 const $voteOverlay=$("#voteOverlay"), $voteGrid=$("#voteGrid"), $closeVote=$("#closeVote"), $clearVotes=$("#clearVotes");
-let votes=[]; // array tamaño N con contadores
+let votes=[];
 
 function openVoting(){
-  // inicializar votos
   const N = state.jugadores;
   votes = Array.from({length:N},()=>0);
-  // render tarjetas
   $voteGrid.innerHTML = "";
   for(let i=0;i<N;i++){
     const card=document.createElement("button");
@@ -537,7 +528,7 @@ function openVoting(){
       <div class="name">${getName(i+1)}</div>
       <div class="count" id="vcount-${i}">Votos: 0</div>`;
     card.onclick=()=>{
-      votes[i]++; $("#vcount-"+i).textContent = "Votos: " + votes[i];
+      votes[i]++; document.getElementById("vcount-"+i).textContent = "Votos: " + votes[i];
     };
     $voteGrid.appendChild(card);
   }
@@ -545,25 +536,24 @@ function openVoting(){
 }
 
 $clearVotes.addEventListener("click", ()=>{
-  for(let i=0;i<votes.length;i++){ votes[i]=0; $("#vcount-"+i).textContent="Votos: 0"; }
+  for(let i=0;i<votes.length;i++){ votes[i]=0; document.getElementById("vcount-"+i).textContent="Votos: 0"; }
 });
 
 $closeVote.addEventListener("click", ()=>{
-  // calcular más votado
   const max = Math.max(...votes);
   const indices = votes.map((v,i)=>[v,i]).filter(([v])=>v===max).map(([_,i])=>i);
   let msg="";
   if(max===0){
     msg="Nadie recibió votos. No hay eliminado.";
   }else if(indices.length>1){
- msg = `Empate entre: ${indices.map(i=>getName(i+1)).join(", ")} (${max} votos).`;
+    msg = `Empate entre: ${indices.map(i=>getName(i+1)).join(", ")} (${max} votos).`;
   }else{
     const idx = indices[0];
-   const a = assignments[idx];   // ya tiene name
- msg = `El más votado es <b>${a.name || ("Jugador "+(idx+1))}</b> — <i>${a.role}</i>.`;
+    const a = assignments[idx];
+    msg = `El más votado es <b>${a.name || ("Jugador "+(idx+1))}</b> — <i>${a.role}</i>.`;
   }
   $voteOverlay.style.display="none";
-  // Resultado simple
+
   const result = document.createElement("div");
   result.style.cssText = "position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,10,20,.92);z-index:1300;";
   result.innerHTML = `
