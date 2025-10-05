@@ -132,6 +132,27 @@
     #publicRoomsList{ max-height:320px; overflow-y:auto; border-radius:14px; background:#0c1c32; padding:12px 14px; box-shadow:0 4px 16px rgba(0,0,0,.35); }
     .room-item{ background:#12274b; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
     .join-btn{ --c1:var(--green-1); --c2:var(--green-2); --outer:#0a2b12; padding:8px 12px; font-size:14px; border-radius:10px; }
+    /* ---- Modal salas al azar ---- */
+.rz-backdrop{position:fixed;inset:0;background:rgba(0,10,20,.6);backdrop-filter:blur(2px);
+  display:none;place-items:center;z-index:80;padding:16px}
+.rz-backdrop.show{display:grid}
+.rz-card{width:min(760px,96vw);background:#0b1220;color:#eaf2ff;border:1px solid rgba(128,180,255,.28);
+  border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.55);padding:16px}
+.rz-list{max-height:420px;overflow:auto;background:#0c1d35;border:1px solid rgba(128,180,255,.2);
+  border-radius:12px;padding:10px}
+.rz-item{display:flex;justify-content:space-between;align-items:center;gap:10px;
+  background:#112649;border:1px solid rgba(128,180,255,.25);border-radius:10px;padding:10px;margin:6px 0}
+.rz-meta{font-weight:700}
+.rz-sub{opacity:.85;font-size:12px}
+.rz-btn{cursor:pointer;border:1px solid rgba(255,255,255,.3);border-radius:10px;
+  padding:8px 12px;background:linear-gradient(180deg,#1e68d6,#184fa5);color:#fff;font-weight:800}
+.rz-btn.success{background:linear-gradient(180deg,#22c55e,#16a34a);border-color:rgba(255,255,255,.25)}
+.rz-btn.ghost{background:linear-gradient(180deg,#0f213b,#0a1a30)}
+.rz-input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.25);
+  background:#0a1f39;color:#eaf2ff}
+.rz-tag{display:inline-block;padding:2px 6px;border-radius:8px;background:#0c2441;border:1px solid rgba(128,180,255,.25);
+  font-size:12px;margin-left:6px}
+
   </style>
 </head>
 <body>
@@ -470,5 +491,26 @@
       <div class="avatar-hint">Elegí tu avatar</div>
     </div>
   </div>
+<!-- Modal: salas públicas -->
+<div id="rooms-modal" class="rz-backdrop" aria-hidden="true">
+  <div class="rz-card" role="dialog" aria-modal="true" aria-labelledby="rz-title">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <h3 id="rz-title" style="margin:0;font-family:'Bebas Neue',sans-serif;font-size:28px">Salas disponibles</h3>
+      <button id="rz-close" class="rz-btn ghost">Cerrar</button>
+    </div>
+
+    <div id="rz-tools" style="display:flex;gap:8px;margin:10px 0 12px">
+      <input id="rz-search" class="rz-input" placeholder="Buscar por código… (opcional)">
+      <button id="rz-refresh" class="rz-btn">Actualizar</button>
+    </div>
+
+    <div id="rz-list" class="rz-list">Cargando…</div>
+
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:12px">
+      <button id="rz-random" class="rz-btn success">Unirme a una al azar</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
