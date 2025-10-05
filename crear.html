@@ -242,11 +242,14 @@
   }
   #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
   body::before{
-    content:""; position:fixed; inset:-10% -10% auto -10%; height:55%;
-    background:radial-gradient(60% 55% at 80% 0%, rgba(110,178,255,.18), transparent 60%),
-                radial-gradient(60% 55% at 20% 0%, rgba(110,178,255,.18), transparent 60%);
-    pointer-events:none; animation:lights 6s ease-in-out infinite alternate; z-index:0;
-  }
+  content:"";
+  position:fixed;
+  inset:0;
+  background:url("fondo-favela.jpg") center/cover no-repeat;
+  filter:blur(8px) brightness(0.8);
+  z-index:-1;
+}
+
   @keyframes lights{ from{opacity:.55; filter:blur(0)} to{opacity:.85; filter:blur(1px)} }
   .container{ position:relative; z-index:1 }
   .icon { width:1.1em; height:1.1em; display:inline-block; vertical-align:-0.15em; }
