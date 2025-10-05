@@ -1084,13 +1084,7 @@ if(isMe){
       const impostorIds=new Set(order.slice(0,K));
       const nextRound=(room.round||0)+1;
       const batch=writeBatch(db);
-      batch.update(roomRef,{
-   status:"playing",
-   round:nextRound,
-   startedAt:serverTimestamp(),
-   settings:{...st, timeSec},
-   orderMaster: order        
-});
+      batch.update(roomRef,{status:"playing",round:nextRound,startedAt:serverTimestamp(), settings:{...st, timeSec}});
       players.forEach(p=>{
         const aRef=doc(db,"rooms",state.code,"assignments",p.id);
         batch.set(aRef,{round:nextRound,uid:p.id,name:p.name||"Jugador",avatarKey:p.avatarKey||null,role:impostorIds.has(p.id)?"IMPOSTOR":"CIVIL",word:impostorIds.has(p.id)?null:palabra,tema,alive:true,vote:null,revealedAt:null});
@@ -1179,15 +1173,13 @@ if(isMe){
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
     if(!s.exists()) return;
     const a=s.data(); const overlay=document.getElementById("reveal"); const box=document.getElementById("revContent");
-    const already = localStorage.getItem("roleShownOnce")==="1";
- if ((a.round||0) > 1 || already) return;
     let avatarHtml=""; if(a.avatarKey && AVATAR_MAP[a.avatarKey]) avatarHtml=`<div class="rev-avatar"><img src="${AVATAR_MAP[a.avatarKey]}" alt="${a.name||'avatar'}"></div>`;
     const nameHtml=`<div class="rev-name">${a.name||"Jugador"}</div>`;
     overlay.style.display="grid";
     if(a.role==="IMPOSTOR"){ box.innerHTML=`${avatarHtml}${nameHtml}<div style="font-size:clamp(24px,7vw,38px);font-weight:900;color:#ff6b6b;margin:6px 0 8px">IMPOSTOR</div><div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>`; }
     else{ box.innerHTML=`${avatarHtml}${nameHtml}<div style="opacity:.75;font-size:clamp(12px,3.8vw,14px);margin:6px 0">Palabra secreta (${a.tema})</div><div style="font-size:clamp(22px,7vw,34px);font-weight:900;color:#7cf062">${a.word}</div>`; }
     let secs=10; const countdownEl=document.getElementById("countdown");
-    countdownEl.textContent=`Pasando en ${secs}s...`; const interval=setInterval(()=>{ secs--; countdownEl.textContent=`Pasando en ${secs}s...`; if(secs<=0){ clearInterval(interval); overlay.style.display="none"; localStorage.setItem("roleShownOnce","1"); } },1000);
+    countdownEl.textContent=`Pasando en ${secs}s...`; const interval=setInterval(()=>{ secs--; countdownEl.textContent=`Pasando en ${secs}s...`; if(secs<=0){ clearInterval(interval); overlay.style.display="none"; } },1000);
   });
 
   // Utils
@@ -1250,37 +1242,44 @@ if(isMe){
   }
   function hideResultsOverlayUI(){ document.getElementById("resultsOverlay").style.display="none"; }
 
-    const master = Array.isArray(room.orderMaster) ? room.orderMaster : alive.map(p=>p.uid);
- const aliveSet = new Set(alive.map(p=>p.uid));
- const order = master.filter(uid => aliveSet.has(uid));
+  async function startNextRoundKeepingRoles(){
+    const roomSnap = await getDoc(roomRef);
+    const room = roomSnap.data()||{};
+    const st = room.settings || roomSettings || {};
+    const tema = st.tema || state.temas[state.temaIndex];
+    const timeSec = st.timeSec || state.tiempos[state.tiempoIndex];
+
+    const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+    const all = asgSnap.docs.map(d=>d.data());
+    const alive = all.filter(p => p.alive!==false);
+
+    if (alive.length < 3){
+      showResultsOverlayUI({
+        title: "No hay suficientes jugadores vivos para continuar",
+        subtitle: "Volvé al lobby y creá una nueva partida.",
+        color:"#ffd166"
+      });
+      return;
+    }
+
+    const order = shuffleInPlace(alive.map(p=>p.uid));
     const palabra = pickWord(tema);
     const nextRound = (room.round||0) + 1;
 
     const batch = writeBatch(db);
-    batch.update(roomRef,{
-   round: nextRound,
-   status: "playing",
-   startedAt: serverTimestamp(),
-   settings:{...st, timeSec}
-+});
+    batch.update(roomRef,{ round: nextRound, status: "playing", startedAt: serverTimestamp(), settings:{...st, timeSec} });
+
     for (const p of all){
       const ref = doc(db,"rooms",state.code,"assignments",p.uid);
       const word = (p.alive!==false && p.role!=="IMPOSTOR") ? palabra : null;
-      batch.set(ref,{ ...p, round: nextRound, word, tema, vote:null }, { merge:true });
+      batch.set(ref,{ ...p, round: nextRound, word, tema, revealedAt:null, vote:null }, { merge:true });
     }
 
     const roundRef = doc(db,"rooms",state.code,"rounds",String(nextRound));
-    batch.set(roundRef,{
-   status:"prompt",               
-   createdAt: serverTimestamp(),
-   promptStartedAt: serverTimestamp(),
-   order,
-   turnIndex:0,
-   timeSec
-+});
-
+    batch.set(roundRef,{ status:"reveal", createdAt: serverTimestamp(), order, turnIndex:0, timeSec });
 
     await batch.commit();
+    setTimeout(async()=>{ try{ await updateDoc(roundRef,{ status:"draw", drawStartedAt: serverTimestamp() }); }catch{} }, 10000);
   }
 
   // Estado de ronda
@@ -1466,7 +1465,8 @@ if(isMe){
       }
 
       if(phase==="draw"){
-        if(currentRound===1 && drawPlayedForRound!==roundId){
+        discussPanel.style.display="none";
+        if(drawPlayedForRound!==roundId){
           drawPlayedForRound=roundId;
           startDrawAnimation(roundState.order||[]);
         }
@@ -1516,14 +1516,16 @@ if(isMe){
     }
   });
 
-  if (rId===1){
-   if(r.status==="reveal" && createdMs && now-createdMs>11000){
-     try{ await updateDoc(rRef,{status:"draw",drawStartedAt:serverTimestamp()}); }catch{}
-   }
-  if(r.status==="draw" && drawMs && now-drawMs>20000){
-     try{ await updateDoc(rRef,{status:"prompt",promptStartedAt:serverTimestamp(),turnIndex:0}); }catch{}
-   }
- }
+  // Fallbacks de fase (host)
+  onSnapshot(roomRef, async (snap)=>{
+    if(!snap.exists()||!isHost) return;
+    const data=snap.data(); const rId=data.round||0; if(!rId) return;
+    const rRef=doc(db,"rooms",state.code,"rounds",String(rId)); const rDoc=await getDoc(rRef); if(!rDoc.exists()) return;
+    const r=rDoc.data();
+    const toMs=(ts)=>ts?.toMillis?.()??(ts?.seconds?ts.seconds*1000:(typeof ts==="number"?ts:0));
+    const now=Date.now(), createdMs=toMs(r.createdAt), drawMs=toMs(r.drawStartedAt);
+    if(r.status==="reveal" && createdMs && now-createdMs>11000) { try{ await updateDoc(rRef,{status:"draw",drawStartedAt:serverTimestamp()}); }catch{} }
+    if(r.status==="draw" && drawMs && now-drawMs>20000) { try{ await updateDoc(rRef,{status:"prompt",promptStartedAt:serverTimestamp(),turnIndex:0}); }catch{} }
   });
 
   // UI chat
