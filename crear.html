@@ -240,9 +240,71 @@
   }
   @keyframes lights{ from{opacity:.55; filter:blur(0)} to{opacity:.85; filter:blur(1px)} }
   .container{ position:relative; z-index:1 }
+  .icon { width:1.1em; height:1.1em; display:inline-block; vertical-align:-0.15em; }
+.icon-btn { display:inline-flex; align-items:center; gap:8px; }
+.player{
+  position:relative;
+  background:
+    linear-gradient(180deg,rgba(14,39,70,.92),rgba(10,30,53,.88)),
+    radial-gradient(120% 60% at 50% -10%, rgba(124,240,98,.15), transparent 60%);
+  border-radius:18px;
+  border:1px solid rgba(128,180,255,.28);
+}
+.player::before{
+  content:"";
+  position:absolute; inset:1px;
+  background:linear-gradient(120deg,transparent 30%, rgba(255,255,255,.08) 50%, transparent 70%);
+  border-radius:16px; pointer-events:none;
+}
+.badge-captain{
+  position:absolute; top:8px; right:8px;
+  width:22px; height:22px; border-radius:6px;
+  display:grid; place-items:center;
+  background:linear-gradient(180deg,#f6c11b,#f39c12);
+  color:#10223b; box-shadow:0 4px 10px rgba(0,0,0,.35);
+}
+.kick-btn{
+  margin-left:6px; border:none; background:transparent; cursor:pointer;
+  color:#ff6b6b; display:inline-flex; align-items:center;
+}
+
 </style>
 </head>
 <body>
+<!-- Sprite de íconos -->
+<svg width="0" height="0" style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
+  <symbol id="i-user" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5"/>
+  </symbol>
+  <symbol id="i-crown" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M2 7l4 3l4-5l4 5l4-3l2 12H0z"/>
+  </symbol>
+  <symbol id="i-eye" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M12 5c7 0 10 7 10 7s-3 7-10 7S2 12 2 12s3-7 10-7m0 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8"/>
+  </symbol>
+  <symbol id="i-eye-off" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M2 4.27L3.28 3L21 20.72L19.73 22l-3.03-3.03A10.9 10.9 0 0 1 12 19c-7 0-10-7-10-7a18.7 18.7 0 0 1 5.31-6.04L2 4.27M12 7a5 5 0 0 1 5 5c0 .88-.24 1.69-.66 2.39L9.61 7.66A4.9 4.9 0 0 1 12 7Z"/>
+  </symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M12 1a5 5 0 0 1 5 5v3h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h1V6a5 5 0 0 1 5-5m3 8V6a3 3 0 1 0-6 0v3z"/>
+  </symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2m6.92 6h-3.26A14.4 14.4 0 0 0 15 4.46A8 8 0 0 1 18.92 8M12 4a12.5 12.5 0 0 1 1.84 4H10.2A12.5 12.5 0 0 1 12 4M5.08 8A8 8 0 0 1 9 4.46A14.4 14.4 0 0 0 8.34 8zm13.84 8h-3.26c.26-.9.45-1.9.58-3h3.5a8 8 0 0 1-.82 3M10.2 17H13.8a12.5 12.5 0 0 1-1.8 3a12.5 12.5 0 0 1-1.8-3M4.58 13h3.5c.12 1.1.32 2.1.58 3H5.42A8 8 0 0 1 4.58 13"/>
+  </symbol>
+  <symbol id="i-whistle" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M17 6h5v5h-2a7 7 0 1 1-7-7h4z"/>
+  </symbol>
+  <symbol id="i-ball" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2m1 3l3 2l-1 3l-3 1l-3-1l-1-3l3-2zm-8 7l2-3l3 1l1 3l-2 2l-3-1zm14 0l-3 1l-2-2l1-3l3-1l1 3zM9 19l1-3l3-1l3 1l-1 3l-3 1z"/>
+  </symbol>
+  <symbol id="i-x" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z"/>
+  </symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24">
+    <path fill="currentColor" d="M9 6l6 6l-6 6"/>
+  </symbol>
+</svg>
+
   <div class="container">
     <div class="room-card">
       <div class="brand"><div class="ball"></div><h1>Impostor <span>Fútbol</span></h1></div>
@@ -266,14 +328,15 @@
       <div class="card"><h3>Tema</h3><div class="selector"><div class="arrow" data-dec="tema">‹</div><div class="value" id="temaVal">Clubes</div><div class="arrow" data-inc="tema">›</div></div></div>
       <div class="card"><h3>Tiempo</h3><div class="selector"><div class="arrow" data-dec="tiempo">‹</div><div class="value" id="tiempoVal">60s</div><div class="arrow" data-inc="tiempo">›</div></div></div>
 
-      <!-- NUEVA TARJETA: Privacidad -->
       <div class="card">
-        <h3>Privacidad</h3>
-        <div class="selector" style="justify-content:center;gap:12px;">
-          <button id="togglePrivacyBtn" class="btn">🔒 Privada</button>
-          <small id="privacyHint" style="opacity:.8;font-weight:700">Solo con código</small>
-        </div>
-      </div>
+  <h3>Privacidad</h3>
+  <div class="selector" style="justify-content:center">
+    <button id="togglePrivacyBtn" class="btn icon-btn">
+      <svg class="icon"><use href="#i-lock"></use></svg> Privada
+    </button>
+    <small id="privacyHint" style="opacity:.8;font-weight:700">Solo con código</small>
+  </div>
+</div>
     </div>
 
     <div class="cta">
@@ -392,12 +455,15 @@
   let isPublic = false;      // privada por defecto
 
   function updatePrivacyUI(){
-    togglePrivacyBtn.textContent = isPublic ? "🌍 Pública" : "🔒 Privada";
-    privacyHint.textContent = isPublic ? "Aparece en listado público" : "Solo con código";
-    togglePrivacyBtn.style.background = isPublic
-      ? "linear-gradient(180deg,#22c55e,#16a34a)"
-      : "linear-gradient(180deg,#1e68d6,#184fa5)";
-  }
+  togglePrivacyBtn.innerHTML = isPublic
+    ? `${icon("i-globe")} Pública`
+    : `${icon("i-lock")} Privada`;
+  privacyHint.textContent = isPublic ? "Aparece en listado público" : "Solo con código";
+  togglePrivacyBtn.style.background = isPublic
+    ? "linear-gradient(180deg,#22c55e,#16a34a)"
+    : "linear-gradient(180deg,#1e68d6,#184fa5)";
+}
+
   function updateCodeVisibility(){
     roomCodeEl.textContent = showCode ? (state.code || "—") : "••••••";
     toggleCodeBtn.textContent = showCode ? "🙈 Ocultar código" : "👁️ Mostrar código";
@@ -463,26 +529,33 @@
           const img=document.createElement("img"); img.className="avatar-img"; img.src=AVATAR_MAP[p.avatarKey]; img.alt=p.name||"avatar"; av.appendChild(img);
         }else{ av.className="avatar placeholder"; }
         const isMe = p.uid===(auth.currentUser&&auth.currentUser.uid);
-        const isCap = hostUid && p.uid===hostUid;
-        if(isMe){
-          card.classList.add("me-outline");
-          label.innerHTML=`${p.name||`Jugador ${i+1}`} <span class="me-badge">(yo)</span>${isCap?' <span title="Host">👑</span>':''}`;
-        }else{
-          label.innerHTML=`${p.name||`Jugador ${i+1}`}${isCap?' <span title="Host">👑</span>':''}`;
-          /* NUEVO: botón expulsar si sos host */
-          if(isHost){
-            const kick=document.createElement("button");
-            kick.textContent="❌";
-            kick.title="Expulsar";
-            kick.style.cssText="margin-left:6px;background:none;border:none;color:#ff6b6b;cursor:pointer;font-weight:900";
-            kick.onclick=async()=>{
-              if(confirm(`Expulsar a ${p.name||'Jugador'}?`)){
-                try{ await deleteDoc(doc(db,"rooms",state.code,"players",p.uid)); }catch(e){ console.warn(e); }
-              }
-            };
-            label.append(kick);
-          }
-        }
+const isCap = hostUid && p.uid===hostUid;
+
+if(isCap){
+  const cap = document.createElement("div");
+  cap.className = "badge-captain";
+  cap.innerHTML = `<svg class="icon" style="width:16px;height:16px"><use href="#i-crown"></use></svg>`;
+  card.append(cap);
+}
+
+if(isMe){
+  card.classList.add("me-outline");
+  label.innerHTML = `${p.name||`Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
+}else{
+  label.textContent = p.name || `Jugador ${i+1}`;
+  if(isHost){
+    const kick=document.createElement("button");
+    kick.className="kick-btn";
+    kick.title="Expulsar";
+    kick.innerHTML = `<svg class="icon"><use href="#i-x"></use></svg>`;
+    kick.onclick=async()=>{
+      if(confirm(`Expulsar a ${p.name||'Jugador'}?`)){
+        try{ await deleteDoc(doc(db,"rooms",state.code,"players",p.uid)); }catch(e){ console.warn(e); }
+      }
+    };
+    label.append(kick);
+  }
+}
       }else{ av.className="avatar placeholder"; label.textContent=`Jugador ${i+1}`; }
       card.append(av,label); playersWrap.append(card);
     }
