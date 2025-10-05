@@ -267,6 +267,13 @@
   margin-left:6px; border:none; background:transparent; cursor:pointer;
   color:#ff6b6b; display:inline-flex; align-items:center;
 }
+.btn-cta{
+  background:
+    radial-gradient(circle at 30% 30%, rgba(255,255,255,.2), transparent 40%),
+    repeating-conic-gradient(from 0deg, rgba(255,255,255,.08) 0 12deg, transparent 12deg 24deg),
+    linear-gradient(180deg,var(--yellow),var(--yellow-2)) !important;
+}
+.btn-cta:hover{ filter:saturate(1.05) brightness(1.03); }
 
 </style>
 </head>
@@ -315,7 +322,11 @@
         <button id="copyBtn" class="btn">Copiar</button>
       </div>
       <div class="user-area">
-        <div class="userbox">👤 <span id="meName">—</span> <button id="editName" class="mini-btn">Editar</button></div>
+      <div class="userbox">
+  <svg class="icon"><use href="#i-user"></use></svg>
+  <span id="meName">—</span>
+  <button id="editName" class="mini-btn">Editar</button>
+</div>
         <button id="shareBtn" class="btn">Compartir enlace</button>
       </div>
     </div>
@@ -379,7 +390,7 @@
   <!-- FASE: DEBATE (chat) -->
   <div id="phaseDiscuss" style="display:none;position:fixed;inset:0;background:rgba(0,10,20,.9);padding:clamp(12px,2.5vw,24px)">
     <div style="max-width:min(900px,96vw);margin:0 auto;background:#0b203a;border:1px solid rgba(128,180,255,.3);border-radius:18px;height:calc(100dvh - 2*clamp(12px,2.5vw,24px) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;position:relative">
-      <div id="turnBanner">⚽ Va <span id="turnName" class="who">—</span></div>
+<div id="turnBanner">${icon("i-ball")} Va <span id="turnName" class="who">—</span></div>
 
       <div style="padding:14px 16px;border-bottom:1px solid rgba(128,180,255,.15);display:flex;justify-content:space-between;align-items:center">
         <h2 style="margin:0;font-size:clamp(18px,6vw,22px)">Debate</h2>
@@ -440,6 +451,10 @@
   const toggleCodeBtn = document.getElementById("toggleCodeBtn");
   const privacyHint = document.getElementById("privacyHint");
 
+  function icon(id){
+  return `<svg class="icon"><use href="#${id}"></use></svg>`;
+}
+
   /* ======= TOAST simple ======= */
   function showToast(msg, ms=1400){
     const t = document.getElementById("toast");
@@ -465,9 +480,12 @@
 }
 
   function updateCodeVisibility(){
-    roomCodeEl.textContent = showCode ? (state.code || "—") : "••••••";
-    toggleCodeBtn.textContent = showCode ? "🙈 Ocultar código" : "👁️ Mostrar código";
-  }
+  roomCodeEl.textContent = showCode ? (state.code || "—") : "••••••";
+  toggleCodeBtn.innerHTML = showCode
+    ? `${icon("i-eye-off")} Ocultar código`
+    : `${icon("i-eye")} Mostrar código`;
+}
+
 
   togglePrivacyBtn.addEventListener("click", async ()=>{
     if(!isHost){ alert("Solo el host puede cambiar esto."); return; }
@@ -1252,11 +1270,15 @@ if(isMe){
     const asgSnap=await getDocs(collection(db,"rooms",state.code,"assignments"));
     const players=asgSnap.docs.map(d=>d.data()).filter(p=>p.alive!==false);
     document.getElementById("voteBar").innerHTML = players.map(p=>{
-      const src=(p.avatarKey && AVATAR_MAP[p.avatarKey])?AVATAR_MAP[p.avatarKey]:"";
-      return `<button class="btn" data-vote="${p.uid}" style="display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:12px">
-        <span style="width:28px;height:28px;border-radius:50%;overflow:hidden;display:inline-grid;place-items:center;background:#0a213b;border:1px solid rgba(128,180,255,.25)">${src?`<img src="${src}" style="width:100%;height:100%;object-fit:cover">`:"?"}</span>
-        ${sanitize(p.name)||"Jugador"}</button>`;
-    }).join("");
+  const src=(p.avatarKey && AVATAR_MAP[p.avatarKey])?AVATAR_MAP[p.avatarKey]:"";
+  return `<button class="btn vote-item" data-vote="${p.uid}">
+    <span class="vote-avatar">
+      ${src?`<img src="${src}" style="width:100%;height:100%;object-fit:cover">`:`${icon("i-ball")}`}
+    </span>
+    ${sanitize(p.name)||"Jugador"}
+  </button>`;
+}).join("");
+
     document.querySelectorAll("[data-vote]").forEach(btn=>{
       btn.addEventListener("click", async ()=>{
         const votedUid=btn.getAttribute("data-vote");
@@ -1291,11 +1313,11 @@ if(isMe){
     });
   });
 
-  // Copiar / Compartir
   document.getElementById("copyBtn").addEventListener("click", async ()=>{
-    try{ await navigator.clipboard.writeText(state.code); showToast("✅ Código copiado"); }
-    catch{ showToast("❌ No pude copiar"); }
-  });
+  try{ await navigator.clipboard.writeText(state.code); showToast("Código copiado"); }
+  catch{ showToast("No pude copiar"); }
+});
+
 
   document.getElementById("shareBtn").addEventListener("click", async ()=>{
     const joinUrl=`${location.origin}/ingresar.html?code=${state.code}`;
