@@ -487,7 +487,7 @@
   .debate-wrap{ grid-template-columns:1fr; }
   .debate-side{ order:-1; }
 }
-
+.vote-item.chosen{ outline:2px solid #7cf062; outline-offset:2px; }
 </style>
 </head>
 <body>
@@ -720,6 +720,11 @@
     <h3 class="side-title">Jugadores</h3>
     <div id="sidePlayers" class="side-players"></div>
   </div>
+  <div class="side-section" id="voteSection">
+  <h3 class="side-title">Votar</h3>
+  <div id="voteBar"></div>
+</div>
+
 </aside>
     </div>
   </div>
@@ -1637,28 +1642,52 @@ function subscribeSidePlayers(){
   });
 
   // Votación
-  async function renderVoteBar(){
-    const asgSnap=await getDocs(collection(db,"rooms",state.code,"assignments"));
-    const players=asgSnap.docs.map(d=>d.data()).filter(p=>p.alive!==false);
-    document.getElementById("voteBar").innerHTML = players.map(p=>{
-  const src=(p.avatarKey && AVATAR_MAP[p.avatarKey])?AVATAR_MAP[p.avatarKey]:"";
-  return `<button class="btn vote-item" data-vote="${p.uid}">
-    <span class="vote-avatar">
-      ${src?`<img src="${src}" style="width:100%;height:100%;object-fit:cover">`:`${icon("i-ball")}`}
-    </span>
-    ${sanitize(p.name)||"Jugador"}
-  </button>`;
-}).join("");
+ async function renderVoteBar(){
+  const myUid = auth.currentUser?.uid;
+  const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+  const players = asgSnap.docs
+    .map(d=>d.data())
+    .filter(p => p.alive !== false && p.uid !== myUid); // ⬅️ no me incluyo
 
-    document.querySelectorAll("[data-vote]").forEach(btn=>{
-      btn.addEventListener("click", async ()=>{
-        const votedUid=btn.getAttribute("data-vote");
-        const roomSnap=await getDoc(roomRef); const roundId=roomSnap.data().round||0;
-        const myVoteRef=doc(db,"rooms",state.code,"rounds",String(roundId),"votes",auth.currentUser.uid);
-        try{ await setDoc(myVoteRef,{ voter:auth.currentUser.uid, target:votedUid, at:serverTimestamp() }); document.querySelectorAll("[data-vote]").forEach(b=>b.style.opacity=".6"); btn.style.opacity="1"; }catch(e){ console.warn(e); }
-      });
+  const bar = document.getElementById("voteBar");
+  if(!bar) return;
+
+  // Leo si ya voté para resaltar
+  const roomSnap = await getDoc(roomRef);
+  const roundId = String(roomSnap.data().round || 0);
+  let chosen = null;
+  try{
+    const myVoteDoc = await getDoc(doc(db,"rooms",state.code,"rounds",roundId,"votes",myUid));
+    chosen = myVoteDoc.exists() ? (myVoteDoc.data()?.target || null) : null;
+  }catch{}
+
+  bar.innerHTML = players.map(p=>{
+    const src = (p.avatarKey && AVATAR_MAP[p.avatarKey]) ? AVATAR_MAP[p.avatarKey] : "";
+    const cls = `btn vote-item ${chosen===p.uid ? 'chosen' : ''}`;
+    return `
+      <button class="${cls}" data-vote="${p.uid}">
+        <span class="vote-avatar">
+          ${src ? `<img src="${src}" style="width:100%;height:100%;object-fit:cover">` : `${icon("i-ball")}`}
+        </span>
+        ${sanitize(p.name)||"Jugador"}
+      </button>`;
+  }).join("");
+
+  // Listeners
+  bar.querySelectorAll("[data-vote]").forEach(btn=>{
+    btn.addEventListener("click", async ()=>{
+      const targetUid = btn.getAttribute("data-vote");
+      try{
+        const myVoteRef = doc(db,"rooms",state.code,"rounds",roundId,"votes",myUid);
+        await setDoc(myVoteRef, { voter: myUid, target: targetUid, at: serverTimestamp() });
+        // feedback inmediato
+        bar.querySelectorAll(".vote-item").forEach(b=>b.classList.remove("chosen"));
+        btn.classList.add("chosen");
+      }catch(e){ console.warn(e); }
     });
-  }
+  });
+}
+
 
   // Cierre auto de votación cuando todos votan
   onSnapshot(roomRef, async s=>{
@@ -1667,6 +1696,7 @@ function subscribeSidePlayers(){
     const roundId = data.round || 0;
 
     onSnapshot(collection(db,"rooms",state.code,"rounds",String(roundId),"votes"), async snap=>{
+        try{ await renderVoteBar(); }catch{}
       const voted = new Set(snap.docs.map(d=>d.id));
       const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
       const aliveVoters = asgSnap.docs
