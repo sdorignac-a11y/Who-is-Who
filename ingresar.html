@@ -6,36 +6,177 @@
   <title>Ingresar a sala</title>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
   <style>
-    body{margin:0;height:100vh;display:grid;place-items:center;background:#0a1a33;color:#fff;font-family:Outfit,sans-serif}
-    .card{background:#0c223d;border:1px solid rgba(128,180,255,.3);padding:22px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.45);width:min(420px,94vw)}
-    h1{margin:0 0 14px} input,button{width:100%;padding:12px 14px;border-radius:10px;border:none;font:inherit}
-    input{margin-bottom:10px;background:#0a1930;color:#fff;border:1px solid rgba(128,180,255,.3)}
-    button{font-weight:900;background:#1e68d6;color:#fff;cursor:pointer}
+    :root{ --panel:#0c223d; --panel2:#0a1930; --brand:#1e68d6; }
+    *{ box-sizing:border-box }
+    body{margin:0;min-height:100vh;display:grid;place-items:center;background:#0a1a33;color:#fff;font-family:Outfit,sans-serif;padding:16px}
+    .card{background:var(--panel);border:1px solid rgba(128,180,255,.3);padding:22px;border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.45);width:min(460px,96vw)}
+    h1{margin:0 0 14px}
+    label{display:block;font-weight:800;margin:8px 0 6px;opacity:.9}
+    input,button{width:100%;padding:12px 14px;border-radius:10px;border:none;font:inherit}
+    input{background:var(--panel2);color:#fff;border:1px solid rgba(128,180,255,.3);margin-bottom:10px}
+    button{font-weight:900;background:var(--brand);color:#fff;cursor:pointer}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .muted{opacity:.8;font-size:.9rem}
+    .status{margin-top:12px;padding:10px 12px;border-radius:10px;background:#0b2342;border:1px solid rgba(128,180,255,.25);display:none}
+    .actions{display:flex;gap:10px;margin-top:10px}
+    .btn-secondary{background:#374151}
+    .ok{color:#7cf062} .warn{color:#ffd166} .bad{color:#ff7b7b}
   </style>
 </head>
 <body>
   <div class="card">
     <h1>Ingresar a sala</h1>
-    <input id="code" placeholder="Código (ej: TCZLPQ)" maxlength="6">
+
+    <label for="code">Código</label>
+    <input id="code" placeholder="Ej: TCZLPQ" maxlength="6" autocapitalize="characters">
+
+    <div class="row">
+      <div>
+        <label for="name">Nombre</label>
+        <input id="name" placeholder="Tu nombre (2–16)" maxlength="16">
+      </div>
+      <div>
+        <label for="avatar">Avatar</label>
+        <input id="avatar" placeholder="a1…a12 (opcional)" maxlength="3">
+      </div>
+    </div>
+
     <button id="join">Unirse</button>
+
+    <div id="status" class="status"></div>
+    <div id="waitingActions" class="actions" style="display:none">
+      <button id="cancel" class="btn-secondary">Cancelar solicitud</button>
+    </div>
+    <p class="muted" style="margin-top:10px">Si la sala es privada, el host deberá aprobar tu ingreso.</p>
   </div>
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getAuth, signInAnonymously, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, deleteDoc, onSnapshot, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+    // --- Firebase init ---
     const app = initializeApp({
       apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
       authDomain: "who-is-who-6ea99.firebaseapp.com",
       projectId: "who-is-who-6ea99"
     });
     const auth = getAuth(app);
+    const db = getFirestore(app);
+    await setPersistence(auth, browserLocalPersistence);
     await signInAnonymously(auth);
 
-    document.getElementById("join").addEventListener("click", ()=>{
-      const code = document.getElementById("code").value.trim().toUpperCase();
-      if(!code) return alert("Ingresá un código");
-      location.href = "crear.html?code="+code;
+    // --- Helpers de nombre/avatar persistidos ---
+    const AVATAR_KEYS = {a1:1,a2:1,a3:1,a4:1,a5:1,a6:1,a7:1,a8:1,a9:1,a10:1,a11:1,a12:1};
+    const $ = sel => document.querySelector(sel);
+    const codeEl = $('#code'), nameEl = $('#name'), avatarEl = $('#avatar');
+    const statusEl = $('#status'), waitingBar = $('#waitingActions');
+
+    function loadPrefill(){
+      const urlp = new URLSearchParams(location.search);
+      const lcName = localStorage.getItem("displayName") || "";
+      const lcAv   = localStorage.getItem("avatarKey") || "";
+      nameEl.value = (urlp.get("name") || lcName || "Jugador").slice(0,16);
+      avatarEl.value = urlp.get("avatar") || lcAv || "";
+      if(urlp.get("code")) codeEl.value = urlp.get("code").toUpperCase();
+    }
+    loadPrefill();
+
+    function savePrefs(name, avatarKey){
+      if(name && name.length>=2 && name.length<=16) localStorage.setItem("displayName", name);
+      if(avatarKey && AVATAR_KEYS[avatarKey]) localStorage.setItem("avatarKey", avatarKey);
+    }
+
+    function showStatus(msg, tone=""){ // tone: "", ok, warn, bad
+      statusEl.className = "status";
+      if(tone) statusEl.classList.add(tone);
+      statusEl.textContent = msg;
+      statusEl.style.display = "block";
+    }
+    function hideStatus(){ statusEl.style.display="none"; }
+
+    let unsubPlayer = null, unsubRequest = null;
+
+    // Cancelar solicitud (privada)
+    $('#cancel').addEventListener('click', async ()=>{
+      try{
+        const code = (codeEl.value||"").trim().toUpperCase();
+        if(!code) return;
+        const reqRef = doc(db, "rooms", code, "requests", auth.currentUser.uid);
+        await deleteDoc(reqRef);
+      }catch{}
+      waitingBar.style.display = "none";
+      showStatus("Solicitud cancelada.", "warn");
+    });
+
+    // Unirse
+    $('#join').addEventListener('click', async ()=>{
+      hideStatus();
+      if(unsubPlayer){ unsubPlayer(); unsubPlayer=null; }
+      if(unsubRequest){ unsubRequest(); unsubRequest=null; }
+
+      const rawCode = (codeEl.value||"").trim().toUpperCase();
+      if(!rawCode){ showStatus("Ingresá un código", "bad"); return; }
+      const name = (nameEl.value||"Jugador").trim();
+      const avatarKey = (avatarEl.value||"").trim();
+      if(name.length < 2 || name.length > 16){ showStatus("El nombre debe tener 2–16 caracteres.", "bad"); return; }
+      if(avatarKey && !AVATAR_KEYS[avatarKey]){ showStatus("Avatar inválido. Usá a1…a12 o dejalo vacío.", "bad"); return; }
+
+      savePrefs(name, avatarKey);
+
+      try{
+        const roomRef = doc(db, "rooms", rawCode);
+        const snap = await getDoc(roomRef);
+        if(!snap.exists()){ showStatus("La sala no existe.", "bad"); return; }
+
+        const isPublic = !!snap.data().isPublic;
+        // Si la sala es pública → entrar directo
+        if(isPublic){
+          location.href = `crear.html?code=${rawCode}&name=${encodeURIComponent(name)}${avatarKey?`&avatar=${encodeURIComponent(avatarKey)}`:""}`;
+          return;
+        }
+
+        // Sala privada → mandar solicitud y esperar
+        const reqRef = doc(db, "rooms", rawCode, "requests", auth.currentUser.uid);
+        const playerRef = doc(db, "rooms", rawCode, "players", auth.currentUser.uid);
+
+        await setDoc(reqRef, {
+          uid: auth.currentUser.uid,
+          name,
+          avatarKey: AVATAR_KEYS[avatarKey] ? avatarKey : null,
+          at: serverTimestamp()
+        });
+
+        showStatus("Solicitud enviada. Esperando aprobación del host…", "warn");
+        waitingBar.style.display = "flex";
+
+        // Si el host te agrega a players → redirigimos
+        unsubPlayer = onSnapshot(playerRef, (p)=>{
+          if(p.exists()){
+            showStatus("¡Aprobado! Entrando…", "ok");
+            // Nos aseguramos de limpiar la solicitud (si aún existe) pero sin bloquear el flujo
+            deleteDoc(reqRef).catch(()=>{});
+            location.href = `crear.html?code=${rawCode}&name=${encodeURIComponent(name)}${avatarKey?`&avatar=${encodeURIComponent(avatarKey)}`:""}`;
+          }
+        });
+
+        // Si la solicitud desaparece y todavía NO estás en players → rechazado
+        unsubRequest = onSnapshot(reqRef, async (r)=>{
+          if(!r.exists()){
+            const p = await getDoc(playerRef);
+            if(!p.exists()){
+              waitingBar.style.display = "none";
+              showStatus("Tu solicitud fue rechazada por el host.", "bad");
+              if(unsubPlayer){ unsubPlayer(); unsubPlayer=null; }
+              if(unsubRequest){ unsubRequest(); unsubRequest=null; }
+            }
+          }
+        });
+
+      }catch(e){
+        console.error(e);
+        showStatus(e?.message || "Error al intentar unirse.", "bad");
+      }
     });
   </script>
 </body>
