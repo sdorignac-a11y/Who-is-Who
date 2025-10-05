@@ -396,6 +396,119 @@
 
 /* 3) Un pelín de separación extra bajo los settings */
 .settings-bottom{ margin-bottom: 8px; }
+/* ====== DEBATE LAYOUT 70/30 ====== */
+.debate-wrap{
+  display:grid;
+  grid-template-columns: 7fr 3fr; /* 70% / 30% */
+  gap:16px;
+  height:calc(100dvh - 2*clamp(12px,2.5vw,24px) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));
+}
+
+.debate-chat{
+  position:relative;
+  display:flex; flex-direction:column;
+  border-radius:18px; overflow:hidden;
+  background:
+    linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.6)),
+    url("pared-grafiti.png") center/cover no-repeat;
+  box-shadow:
+    0 0 0 2px rgba(59,130,246,.25) inset,
+    0 0 24px rgba(59,130,246,.35);
+}
+
+.debate-header{
+  display:flex; align-items:center; justify-content:space-between; gap:10px;
+  padding:12px 14px;
+  background:rgba(10,26,47,.7);
+  border-bottom:1px solid rgba(128,180,255,.25);
+}
+.debate-header .left{
+  display:flex; align-items:center; gap:10px;
+}
+.turno-dot{
+  width:10px;height:10px;border-radius:50%;
+  background:#7cf062;box-shadow:0 0 14px #7cf062;
+  animation:pulse 1.5s infinite;
+}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6;transform:scale(1.2)}}
+
+.turno-text{ margin:0; font-size:clamp(14px,3.6vw,16px); letter-spacing:.3px; }
+.timer-box{ font-size:clamp(12px,3.4vw,14px); opacity:.9; font-weight:800; }
+
+.chat-scroll{
+  flex:1; overflow:auto; padding:16px;
+  display:flex; flex-direction:column; gap:10px;
+}
+
+/* Burbujas estilo sticker */
+.bubble{
+  max-width:80%;
+  padding:10px 14px; border-radius:16px;
+  background:#142946; border:1px solid rgba(128,180,255,.18);
+  color:#cfe4ff; box-shadow:0 6px 16px rgba(0,0,0,.25);
+  animation:fadeUp .25s ease;
+  font-size:clamp(13px,4vw,16px);
+}
+.bubble.sticker{
+  transform:rotate(-1.5deg);
+  background:#14365f;
+  outline:2px dashed rgba(255,255,255,.06);
+  outline-offset:-5px;
+}
+.chat-row{ display:flex; }
+.chat-row.mine{ justify-content:flex-end; }
+.chat-row.other{ justify-content:flex-start; }
+.bubble .name{ font-weight:800; opacity:.9; margin-bottom:2px; font-size:clamp(11px,3.2vw,13px); }
+@keyframes fadeUp{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+/* Input del chat */
+.chat-input{
+  display:flex; gap:8px; padding:12px;
+  background:rgba(0,0,0,.28);
+  border-top:1px solid rgba(128,180,255,.18);
+}
+.chat-input input{
+  flex:1; padding:12px; border-radius:12px;
+  background:#0a213b; border:1px solid rgba(128,180,255,.35);
+  color:#eaf2ff; outline:none;
+}
+.chat-input button{
+  padding:12px 18px; border-radius:12px;
+  background:linear-gradient(180deg,#1e68d6,#184fa5);
+  border:1px solid rgba(110,178,255,.7);
+  color:#fff; font-weight:800; cursor:pointer;
+}
+
+/* Panel 30% */
+.debate-panel{ display:flex; flex-direction:column; gap:16px; }
+.panel-card{
+  background:linear-gradient(180deg,#0d2747,#0b203a);
+  border:1px solid rgba(128,180,255,.3);
+  border-radius:16px; padding:14px;
+  box-shadow:0 12px 24px rgba(0,0,0,.35);
+}
+.panel-card h4{
+  margin:0 0 10px; color:#cfe2ff; letter-spacing:.4px;
+  text-transform:uppercase; font-size:clamp(14px,3.6vw,16px);
+}
+.players-list{
+  list-style:none; margin:0; padding:0;
+  display:flex; flex-direction:column; gap:8px;
+}
+.btn-vote, .panel-card .btn-full{
+  margin-top:10px; width:100%;
+  background:linear-gradient(180deg,#f6c11b,#f39c12);
+  border:1px solid rgba(255,210,80,.9);
+  color:#10223b; font-weight:900; padding:10px 14px; border-radius:12px; cursor:pointer;
+}
+
+/* Contenedor de botones de voto reutiliza #voteBar */
+#voteBar{ margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; }
+
+/* Responsive: apilar en mobile */
+@media (max-width: 900px){
+  .debate-wrap{ grid-template-columns: 1fr; }
+}
 
 </style>
 </head>
@@ -582,30 +695,44 @@
     </div>
   </div>
 
-  <!-- FASE: DEBATE (chat) -->
-  <div id="phaseDiscuss" style="display:none;position:fixed;inset:0;background:rgba(0,10,20,.9);padding:clamp(12px,2.5vw,24px)">
-    <div style="max-width:min(900px,96vw);margin:0 auto;background:#0b203a;border:1px solid rgba(128,180,255,.3);border-radius:18px;height:calc(100dvh - 2*clamp(12px,2.5vw,24px) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;position:relative">
-      <!-- FIX: el icono ahora es SVG estático, no template literal -->
-      <div id="turnBanner"><svg class="icon"><use href="#i-ball"></use></svg> Va <span id="turnName" class="who">—</span></div>
-
-      <div style="padding:14px 16px;border-bottom:1px solid rgba(128,180,255,.15);display:flex;justify-content:space-between;align-items:center">
-        <h2 style="margin:0;font-size:clamp(18px,6vw,22px)">Debate</h2>
-        <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;font-size:clamp(11px,3.5vw,13px)">
-          <small id="timer" style="opacity:.9;font-weight:800"></small>
-          <small id="turnHint" style="opacity:.85"></small>
-          <small id="cooldownHint" style="opacity:.7"></small>
+ <div id="phaseDiscuss" style="display:none;position:fixed;inset:0;background:rgba(0,10,20,.9);padding:clamp(12px,2.5vw,24px)">
+  <section class="debate-wrap">
+    <!-- 70%: Chat -->
+    <div class="debate-chat">
+      <header class="debate-header">
+        <div class="left">
+          <div class="turno-dot" aria-hidden="true"></div>
+          <h3 class="turno-text"><span id="turnHint">Turno</span></h3>
         </div>
-      </div>
-      <div id="firstWordTip" class="tip" style="display:none">Primero, cada jugador debe enviar <strong>UNA</strong> palabra (2–24 letras). Después, chat libre.</div>
-      <div id="chatList" style="flex:1;overflow:auto;-webkit-overflow-scrolling:touch"></div>
-      <form id="chatForm" style="padding:12px;display:flex;gap:10px;border-top:1px solid rgba(128,180,255,.15)">
-        <input id="chatInput" maxlength="140" placeholder="Primero UNA palabra (2–24 letras)…"
-               style="flex:1;padding:12px;border-radius:12px;border:1px solid rgba(128,180,255,.35);background:#0a213b;color:#eaf2ff;font-size:clamp(14px,4.2vw,16px)">
+        <div class="timer-box"><span id="timer">00:00</span></div>
+      </header>
+
+      <div id="chatList" class="chat-scroll"></div>
+
+      <form id="chatForm" class="chat-input">
+        <input id="chatInput" maxlength="140" placeholder="Primero UNA palabra (2–24 letras)…">
         <button class="btn" type="submit">Enviar</button>
       </form>
-      <div id="voteBar" style="padding:10px 12px;border-top:1px solid rgba(128,180,255,.15);display:flex;gap:10px;flex-wrap:wrap"></div>
     </div>
-  </div>
+
+    <!-- 30%: Panel lateral -->
+    <aside class="debate-panel">
+      <div class="panel-card">
+        <h4>Jugadores</h4>
+        <ul id="debPlayers" class="players-list"><!-- opcional: podés listar vivos/muertos aquí --></ul>
+        <!-- Reutilizamos tu barra de voto -->
+        <div id="voteBar"></div>
+        <button class="btn-vote" type="button" onclick="/* opcional: abrir/cerrar modo voto */">Votar</button>
+      </div>
+
+      <div class="panel-card">
+        <h4>Ronda</h4>
+        <div id="roundStats" class="stats"><!-- poné stats de la ronda si querés --></div>
+        <button class="btn-full" type="button" onclick="/* opcional: acción extra */">Acción</button>
+      </div>
+    </aside>
+  </section>
+</div>
 
   <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
