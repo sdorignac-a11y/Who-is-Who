@@ -207,7 +207,12 @@
   <div class="container">
     <div class="room-card">
       <div class="brand"><div class="ball"></div><h1>Impostor <span>Fútbol</span></h1></div>
-      <div class="code-box"><strong style="opacity:.7">CÓDIGO:</strong><div class="room-code" id="roomCode">—</div><button id="copyBtn" class="btn">Copiar</button></div>
+      <div class="code-box">
+        <strong style="opacity:.7">CÓDIGO:</strong>
+        <div class="room-code" id="roomCode">—</div>
+        <button id="toggleCodeBtn" class="btn">👁️ Mostrar código</button>
+        <button id="copyBtn" class="btn">Copiar</button>
+      </div>
       <div class="user-area">
         <div class="userbox">👤 <span id="meName">—</span> <button id="editName" class="mini-btn">Editar</button></div>
         <button id="shareBtn" class="btn">Compartir enlace</button>
@@ -221,6 +226,15 @@
       <div class="card"><h3>Jugadores</h3><div class="selector"><div class="arrow" data-dec="jugadores">‹</div><div class="value" id="jugadoresVal">8</div><div class="arrow" data-inc="jugadores">›</div></div></div>
       <div class="card"><h3>Tema</h3><div class="selector"><div class="arrow" data-dec="tema">‹</div><div class="value" id="temaVal">Clubes</div><div class="arrow" data-inc="tema">›</div></div></div>
       <div class="card"><h3>Tiempo</h3><div class="selector"><div class="arrow" data-dec="tiempo">‹</div><div class="value" id="tiempoVal">60s</div><div class="arrow" data-inc="tiempo">›</div></div></div>
+
+      <!-- NUEVA TARJETA: Privacidad -->
+      <div class="card">
+        <h3>Privacidad</h3>
+        <div class="selector" style="justify-content:center;gap:12px;">
+          <button id="togglePrivacyBtn" class="btn">🔒 Privada</button>
+          <small id="privacyHint" style="opacity:.8;font-weight:700">Solo con código</small>
+        </div>
+      </div>
     </div>
 
     <div class="cta">
@@ -251,15 +265,14 @@
     </div>
   </div>
 
-  <!-- Overlay: Resultados (expulsado / empate) -->
-<div id="resultsOverlay" style="display:none;position:fixed;inset:0;z-index:1400;place-items:center;background:rgba(0,10,20,.9);padding:16px">
-  <div class="rev-card" style="width:min(680px,96vw)">
-    <h2 style="margin:0 0 10px;font-size:clamp(18px,6vw,24px)">Resultados</h2>
-    <div id="resultsBox" class="rev-content"></div>
-    <div class="tip" id="resultsSub" style="margin-top:10px;opacity:.9"></div>
+  <!-- Overlay: Resultados -->
+  <div id="resultsOverlay" style="display:none;position:fixed;inset:0;z-index:1400;place-items:center;background:rgba(0,10,20,.9);padding:16px">
+    <div class="rev-card" style="width:min(680px,96vw)">
+      <h2 style="margin:0 0 10px;font-size:clamp(18px,6vw,24px)">Resultados</h2>
+      <div id="resultsBox" class="rev-content"></div>
+      <div class="tip" id="resultsSub" style="margin-top:10px;opacity:.9"></div>
+    </div>
   </div>
-</div>
-
 
   <!-- FASE: DEBATE (chat) -->
   <div id="phaseDiscuss" style="display:none;position:fixed;inset:0;background:rgba(0,10,20,.9);padding:clamp(12px,2.5vw,24px)">
@@ -317,7 +330,34 @@
   const meNameEl    = $("#meName");
   const playersWrap = $("#players");
   const leaveBtn = document.getElementById("leaveBtn");
-  const deleteRoomBtn = document.getElementById("deleteRoomBtn"); // NUEVO
+  const deleteRoomBtn = document.getElementById("deleteRoomBtn");
+  const togglePrivacyBtn = document.getElementById("togglePrivacyBtn");
+  const toggleCodeBtn = document.getElementById("toggleCodeBtn");
+  const privacyHint = document.getElementById("privacyHint");
+
+  /* ======= PRIVACIDAD & VISIBILIDAD DE CÓDIGO ======= */
+  let showCode = false;      // oculto por defecto
+  let isPublic = false;      // privada por defecto
+
+  function updatePrivacyUI(){
+    togglePrivacyBtn.textContent = isPublic ? "🌍 Pública" : "🔒 Privada";
+    privacyHint.textContent = isPublic ? "Aparece en listado público" : "Solo con código";
+    togglePrivacyBtn.style.background = isPublic
+      ? "linear-gradient(180deg,#22c55e,#16a34a)"
+      : "linear-gradient(180deg,#1e68d6,#184fa5)";
+  }
+  function updateCodeVisibility(){
+    roomCodeEl.textContent = showCode ? (state.code || "—") : "••••••";
+    toggleCodeBtn.textContent = showCode ? "🙈 Ocultar código" : "👁️ Mostrar código";
+  }
+
+  togglePrivacyBtn.addEventListener("click", async ()=>{
+    if(!isHost){ alert("Solo el host puede cambiar esto."); return; }
+    isPublic = !isPublic;
+    updatePrivacyUI();
+    try{ await updateDoc(roomRef,{ isPublic }); }catch(e){ console.warn(e); }
+  });
+  toggleCodeBtn.addEventListener("click", ()=>{ showCode = !showCode; updateCodeVisibility(); });
 
   function getStoredName(){
     const qp = new URLSearchParams(location.search);
@@ -366,7 +406,22 @@
         }else{ av.className="avatar placeholder"; }
         if(p.uid===(auth.currentUser&&auth.currentUser.uid)){
           card.classList.add("me-outline"); label.innerHTML=`${p.name||`Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
-        }else{ label.textContent=p.name||`Jugador ${i+1}`; }
+        }else{
+          label.textContent=p.name||`Jugador ${i+1}`;
+          /* NUEVO: botón expulsar si sos host */
+          if(isHost){
+            const kick=document.createElement("button");
+            kick.textContent="❌";
+            kick.title="Expulsar";
+            kick.style.cssText="margin-left:6px;background:none;border:none;color:#ff6b6b;cursor:pointer;font-weight:900";
+            kick.onclick=async()=>{
+              if(confirm(`Expulsar a ${p.name||'Jugador'}?`)){
+                try{ await deleteDoc(doc(db,"rooms",state.code,"players",p.uid)); }catch(e){ console.warn(e); }
+              }
+            };
+            label.append(kick);
+          }
+        }
       }else{ av.className="avatar placeholder"; label.textContent=`Jugador ${i+1}`; }
       card.append(av,label); playersWrap.append(card);
     }
@@ -389,7 +444,8 @@
   };
 
   function render(){
-    roomCodeEl.textContent = state.code || "—";
+    // importante: respetar visibilidad de código
+    roomCodeEl.textContent = showCode ? (state.code || "—") : "••••••";
     impostoresEl.textContent = state.impostores;
     jugadoresEl.textContent  = state.jugadores;
     temaEl.textContent       = state.temas[state.temaIndex];
@@ -416,7 +472,7 @@
 
   const firstSnap = await getDoc(roomRef);
   if(!firstSnap.exists() && isHost){
-    await setDoc(roomRef,{ hostUid:auth.currentUser.uid, status:"lobby", createdAt:Date.now(), settings:{maxPlayers:state.jugadores,impostors:state.impostores,tema:state.temas[state.temaIndex], timeSec: state.tiempos[state.tiempoIndex]} },{merge:true});
+    await setDoc(roomRef,{ hostUid:auth.currentUser.uid, status:"lobby", isPublic:false, createdAt:Date.now(), settings:{maxPlayers:state.jugadores,impostors:state.impostores,tema:state.temas[state.temaIndex], timeSec: state.tiempos[state.tiempoIndex]} },{merge:true});
   }
   if(firstSnap.exists()) isHost = firstSnap.data().hostUid === auth.currentUser.uid;
   if(isHost){ localStorage.setItem(lsKey,state.code); putCodeInUrl(state.code); }
@@ -430,7 +486,6 @@
   function setArrowsEnabled(en){ document.querySelectorAll(".arrow").forEach(b=>{ b.style.pointerEvents=en?"auto":"none"; b.style.opacity=en?"1":".55"; }); }
   setArrowsEnabled(isHost);
 
-  // NUEVO: mostrar/ocultar botones de host (abandonar / eliminar)
   function setHostControlsVisible(on){
     leaveBtn.style.display = on ? "inline-block" : "none";
     deleteRoomBtn.style.display = on ? "inline-block" : "none";
@@ -466,24 +521,57 @@
     });
   });
 
+  /* ======= SNAPSHOT PRINCIPAL (ajusta host, settings, privacidad) ======= */
   let roomSettings = null; // cache de settings para fallback
   onSnapshot(roomRef,s=>{
     if(!s.exists()) return;
     const data=s.data();
-    roomSettings = data.settings || roomSettings;
-    const before=isHost; isHost=(data.hostUid===auth.currentUser.uid);
-    if(before!==isHost) setArrowsEnabled(isHost);
-    if(before!==isHost) setHostControlsVisible(isHost); // NUEVO
 
+    // host
+    const before=isHost; isHost=(data.hostUid===auth.currentUser.uid);
+    if(before!==isHost){ setArrowsEnabled(isHost); setHostControlsVisible(isHost); }
+
+    // settings
+    roomSettings = data.settings || roomSettings;
     const st=data.settings||{};
     state.jugadores=st.maxPlayers??state.jugadores;
     state.impostores=st.impostors??state.impostores;
     if(st.tema){ const idx=state.temas.indexOf(st.tema); state.temaIndex = idx>=0?idx:0; }
     if(st.timeSec){ const tidx = state.tiempos.indexOf(st.timeSec); state.tiempoIndex = tidx>=0 ? tidx : state.tiempoIndex; }
+
+    // privacidad
+    isPublic = !!data.isPublic;
+    updatePrivacyUI();
+    updateCodeVisibility();
+
     render();
   });
 
   onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{ lastPlayers=snap.docs.map(d=>d.data()); drawPlayers(state.jugadores,lastPlayers); });
+
+  /* ======= SOLICITUDES DE UNIÓN (solo host) ======= */
+  onSnapshot(collection(db, "rooms", state.code, "requests"), snap=>{
+    if(!isHost) return;
+    snap.docChanges().forEach(async change=>{
+      if(change.type === "added"){
+        const req = change.doc.data();
+        const ok = confirm(`${req.name || "Jugador"} quiere unirse a la sala. ¿Aceptar?`);
+        try{
+          if(ok){
+            await setDoc(doc(db,"rooms",state.code,"players",req.uid),{
+              uid:req.uid,
+              name:req.name || "Jugador",
+              avatarKey:req.avatarKey||null,
+              online:true,
+              slot:Date.now()
+            },{merge:true});
+          }
+        }finally{
+          try{ await deleteDoc(change.doc.ref); }catch{}
+        }
+      }
+    });
+  });
 
   const POOLS={ 
     Clubes:["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"], 
@@ -515,13 +603,13 @@
       const impostorIds=new Set(order.slice(0,K));
       const nextRound=(room.round||0)+1;
       const batch=writeBatch(db);
-      batch.update(roomRef,{status:"playing",round:nextRound,startedAt:serverTimestamp(), settings:{...st, timeSec}}); // asegura timeSec
+      batch.update(roomRef,{status:"playing",round:nextRound,startedAt:serverTimestamp(), settings:{...st, timeSec}});
       players.forEach(p=>{
         const aRef=doc(db,"rooms",state.code,"assignments",p.id);
         batch.set(aRef,{round:nextRound,uid:p.id,name:p.name||"Jugador",avatarKey:p.avatarKey||null,role:impostorIds.has(p.id)?"IMPOSTOR":"CIVIL",word:impostorIds.has(p.id)?null:palabra,tema,alive:true,vote:null,revealedAt:null});
       });
       const roundRef=doc(db,"rooms",state.code,"rounds",String(nextRound));
-      batch.set(roundRef,{status:"reveal",createdAt:serverTimestamp(),order,turnIndex:0, timeSec}); // guarda timeSec en la ronda
+      batch.set(roundRef,{status:"reveal",createdAt:serverTimestamp(),order,turnIndex:0, timeSec});
       await batch.commit();
       setTimeout(async()=>{ try{ await updateDoc(roundRef,{status:"draw",drawStartedAt:serverTimestamp()}); }catch{} },10000);
     }catch(e){ console.error(e); alert(e.message||"No pude iniciar la partida."); } finally{ starting=false; }
@@ -558,7 +646,7 @@
     }
   });
 
-  // ===== NUEVO: eliminar sala completa y crear otra =====
+  // ===== ELIMINAR SALA =====
   async function deleteCollection(collRef){
     const snap = await getDocs(collRef);
     const batchLimit = 400;
@@ -573,15 +661,11 @@
 
   async function deleteRoomDeep(){
     if(!isHost){ alert("Solo el host puede eliminar la sala."); return; }
-
     const ok = confirm("⚠️ Esto eliminará la SALA completa (jugadores, rondas, chat, votos). ¿Continuar?");
     if(!ok) return;
 
     try{
-      // 1) assignments
       await deleteCollection(collection(db,"rooms",state.code,"assignments"));
-
-      // 2) rounds + subcolecciones
       const roundsSnap = await getDocs(collection(db,"rooms",state.code,"rounds"));
       for(const rdoc of roundsSnap.docs){
         const rid = rdoc.id;
@@ -590,23 +674,19 @@
         await deleteCollection(collection(db,"rooms",state.code,"rounds",rid,"votes"));
         await deleteDoc(rdoc.ref);
       }
-
-      // 3) players
       await deleteCollection(collection(db,"rooms",state.code,"players"));
-
-      // 4) doc de la sala
+      await deleteCollection(collection(db,"rooms",state.code,"requests"));
       await deleteDoc(doc(db,"rooms",state.code));
 
       localStorage.removeItem("lastRoomCode");
-      location.replace("/index.html"); // ajustá la ruta según tu hosting
+      location.replace("/index.html");
 
     }catch(e){
       console.error(e);
       alert("Error al eliminar la sala: " + (e?.message || e));
     }
   }
-
-  deleteRoomBtn.addEventListener("click", deleteRoomDeep); // NUEVO
+  deleteRoomBtn.addEventListener("click", deleteRoomDeep);
 
   // Overlay rol
   onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), s=>{
@@ -640,108 +720,86 @@
     setTimeout(()=>{ draw.style.display="none"; },600);
   }
 
-  // === RESULTADOS: computar votos, expulsar y mostrar ===
-async function tallyVotes(roundId){
-  // Lee votos
-  const votesSnap = await getDocs(collection(db,"rooms",state.code,"rounds",String(roundId),"votes"));
-  const counts = new Map(); // targetUid -> cantidad
-  for (const d of votesSnap.docs){
-    const v = d.data()?.target;
-    if(!v) continue;
-    counts.set(v, (counts.get(v)||0)+1);
-  }
-  if(counts.size===0) return { expelledUid:null, tie:false, counts:{} };
+  // === RESULTADOS / SIGUIENTE RONDA ===
+  async function tallyVotes(roundId){
+    const votesSnap = await getDocs(collection(db,"rooms",state.code,"rounds",String(roundId),"votes"));
+    const counts = new Map();
+    for (const d of votesSnap.docs){
+      const v = d.data()?.target;
+      if(!v) continue;
+      counts.set(v, (counts.get(v)||0)+1);
+    }
+    if(counts.size===0) return { expelledUid:null, tie:false, counts:{} };
 
-  // Mayoría y manejo de empate
-  let max = 0, winners = [];
-  for (const [uid,c] of counts){
-    if (c>max){ max=c; winners=[uid]; }
-    else if (c===max){ winners.push(uid); }
-  }
-  const tie = winners.length!==1;
-  const expelledUid = tie ? null : winners[0];
+    let max = 0, winners = [];
+    for (const [uid,c] of counts){
+      if (c>max){ max=c; winners=[uid]; }
+      else if (c===max){ winners.push(uid); }
+    }
+    const tie = winners.length!==1;
+    const expelledUid = tie ? null : winners[0];
 
-  // Devuelvo también como objeto plano para guardar en Firestore
-  const countsObj = {};
-  for (const [k,v] of counts) countsObj[k]=v;
-  return { expelledUid, tie, counts:countsObj, max };
-}
-
-async function getAssignment(uid){
-  try{
-    const a = await getDoc(doc(db,"rooms",state.code,"assignments",uid));
-    return a.exists()? a.data() : null;
-  }catch{ return null; }
-}
-
-function showResultsOverlayUI({ title, subtitle, color="#cfe4ff" }){
-  const ov = document.getElementById("resultsOverlay");
-  const box = document.getElementById("resultsBox");
-  const sub = document.getElementById("resultsSub");
-  box.innerHTML = `<div style="font-weight:900;font-size:clamp(20px,6.5vw,28px);color:${color}">${title}</div>`;
-  sub.textContent = subtitle || "";
-  ov.style.display = "grid";
-}
-
-function hideResultsOverlayUI(){ document.getElementById("resultsOverlay").style.display="none"; }
-
-// Inicia una nueva ronda manteniendo roles y marcando vivos/muertos
-async function startNextRoundKeepingRoles(){
-  // Carga sala y settings actuales
-  const roomSnap = await getDoc(roomRef);
-  const room = roomSnap.data()||{};
-  const st = room.settings || roomSettings || {};
-  const tema = st.tema || state.temas[state.temaIndex];
-  const timeSec = st.timeSec || state.tiempos[state.tiempoIndex];
-
-  // Traigo asignaciones para ver quién sigue vivo
-  const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
-  const all = asgSnap.docs.map(d=>d.data());
-  const alive = all.filter(p => p.alive!==false);
-
-  // Si quedan 0 impostores o 0 civiles, podrías terminar partida (opcional)
-  const vivosImpostor = alive.filter(p=>p.role==="IMPOSTOR").length;
-  const vivosCivil    = alive.filter(p=>p.role!=="IMPOSTOR").length;
-
-  // (Opcional) cond. de fin — por ahora seguimos siempre si hay al menos 3
-  if (alive.length < 3){
-    showResultsOverlayUI({
-      title: "No hay suficientes jugadores vivos para continuar",
-      subtitle: "Volvé al lobby y creá una nueva partida.",
-      color:"#ffd166"
-    });
-    return;
+    const countsObj = {};
+    for (const [k,v] of counts) countsObj[k]=v;
+    return { expelledUid, tie, counts:countsObj, max };
   }
 
-  // Nuevo orden y nueva palabra
-  const order = shuffleInPlace(alive.map(p=>p.uid));
-  const palabra = pickWord(tema);
-  const nextRound = (room.round||0) + 1;
-
-  const batch = writeBatch(db);
-  // Actualizo doc de sala
-  batch.update(roomRef,{ round: nextRound, status: "playing", startedAt: serverTimestamp(), settings:{...st, timeSec} });
-
-  // Actualizo asignaciones (misma doc, nuevo round y palabra solo a civiles vivos)
-  for (const p of all){
-    const ref = doc(db,"rooms",state.code,"assignments",p.uid);
-    // Mantener alive como viene; roles igual
-    const word = (p.alive!==false && p.role!=="IMPOSTOR") ? palabra : null;
-    batch.set(ref,{ ...p, round: nextRound, word, tema, // keep role & alive
-      revealedAt:null, vote:null
-    }, { merge:true });
+  async function getAssignment(uid){
+    try{
+      const a = await getDoc(doc(db,"rooms",state.code,"assignments",uid));
+      return a.exists()? a.data() : null;
+    }catch{ return null; }
   }
 
-  // Creo doc de ronda
-  const roundRef = doc(db,"rooms",state.code,"rounds",String(nextRound));
-  batch.set(roundRef,{ status:"reveal", createdAt: serverTimestamp(), order, turnIndex:0, timeSec });
+  function showResultsOverlayUI({ title, subtitle, color="#cfe4ff" }){
+    const ov = document.getElementById("resultsOverlay");
+    const box = document.getElementById("resultsBox");
+    const sub = document.getElementById("resultsSub");
+    box.innerHTML = `<div style="font-weight:900;font-size:clamp(20px,6.5vw,28px);color:${color}">${title}</div>`;
+    sub.textContent = subtitle || "";
+    ov.style.display = "grid";
+  }
+  function hideResultsOverlayUI(){ document.getElementById("resultsOverlay").style.display="none"; }
 
-  await batch.commit();
+  async function startNextRoundKeepingRoles(){
+    const roomSnap = await getDoc(roomRef);
+    const room = roomSnap.data()||{};
+    const st = room.settings || roomSettings || {};
+    const tema = st.tema || state.temas[state.temaIndex];
+    const timeSec = st.timeSec || state.tiempos[state.tiempoIndex];
 
-  // Pasar a "draw" tras la animación de rol (10s como tu flow actual)
-  setTimeout(async()=>{ try{ await updateDoc(roundRef,{ status:"draw", drawStartedAt: serverTimestamp() }); }catch{} }, 10000);
-}
+    const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+    const all = asgSnap.docs.map(d=>d.data());
+    const alive = all.filter(p => p.alive!==false);
 
+    if (alive.length < 3){
+      showResultsOverlayUI({
+        title: "No hay suficientes jugadores vivos para continuar",
+        subtitle: "Volvé al lobby y creá una nueva partida.",
+        color:"#ffd166"
+      });
+      return;
+    }
+
+    const order = shuffleInPlace(alive.map(p=>p.uid));
+    const palabra = pickWord(tema);
+    const nextRound = (room.round||0) + 1;
+
+    const batch = writeBatch(db);
+    batch.update(roomRef,{ round: nextRound, status: "playing", startedAt: serverTimestamp(), settings:{...st, timeSec} });
+
+    for (const p of all){
+      const ref = doc(db,"rooms",state.code,"assignments",p.uid);
+      const word = (p.alive!==false && p.role!=="IMPOSTOR") ? palabra : null;
+      batch.set(ref,{ ...p, round: nextRound, word, tema, revealedAt:null, vote:null }, { merge:true });
+    }
+
+    const roundRef = doc(db,"rooms",state.code,"rounds",String(nextRound));
+    batch.set(roundRef,{ status:"reveal", createdAt: serverTimestamp(), order, turnIndex:0, timeSec });
+
+    await batch.commit();
+    setTimeout(async()=>{ try{ await updateDoc(roundRef,{ status:"draw", drawStartedAt: serverTimestamp() }); }catch{} }, 10000);
+  }
 
   // Estado de ronda
   let currentRound=0;
@@ -753,7 +811,6 @@ async function startNextRoundKeepingRoles(){
   let unsubscribeFirstWords=null;
   let unsubscribeRoundPhase=null;
 
-  // Turn banner
   let _turnBannerTimer=null;
   function showTurnBanner(name){
     const banner=document.getElementById("turnBanner");
@@ -764,7 +821,6 @@ async function startNextRoundKeepingRoles(){
     _turnBannerTimer=setTimeout(()=>{ banner.classList.remove("show"); banner.classList.add("hide"); setTimeout(()=>{ banner.style.display="none"; },350); },2200);
   }
 
-  // primeras palabras
   let firstWordsMap = new Set();
   function subscribeFirstWords(roundId){
     if(unsubscribeFirstWords) unsubscribeFirstWords();
@@ -778,7 +834,6 @@ async function startNextRoundKeepingRoles(){
     );
   }
 
-  // host avanza turno / pasa a discuss cuando todos mandaron palabra
   async function advanceIfReadyByHost(){
     if(!isHost || !roundState || roundState.status!=="prompt") return;
     const order = roundState.order || [];
@@ -797,24 +852,23 @@ async function startNextRoundKeepingRoles(){
     }
   }
 
-  // COUNTDOWN discuss y pase a votación (host)
   let discussTicker = null;
+  const timerBox = document.getElementById("timer");
   function startDiscussCountdown(roundDocData, isHostNow){
     if(discussTicker) { clearInterval(discussTicker); discussTicker=null; }
     const startMs = toMillis(roundDocData?.discussStartedAt);
     const totalSec = roundDocData?.timeSec || roomSettings?.timeSec || state.tiempos[state.tiempoIndex];
     const totalMs = (totalSec||60)*1000;
-
-    if(!startMs){ timerEl.textContent=""; return; }
+    if(!startMs){ timerBox.textContent=""; return; }
 
     discussTicker = setInterval(async ()=>{
       const now = Date.now();
       const left = (startMs + totalMs) - now;
-      timerEl.textContent = fmtClock(left);
+      timerBox.textContent = fmtClock(left);
 
       if(left <= 0){
         clearInterval(discussTicker); discussTicker=null;
-        timerEl.textContent = "00:00";
+        timerBox.textContent = "00:00";
         if(isHostNow){
           try{
             const roomSnap = await getDoc(roomRef);
@@ -878,71 +932,56 @@ async function startNextRoundKeepingRoles(){
       }
 
       if(phase==="results"){
-  // Mostrar panel principal (por si estaba oculto)
-  document.getElementById("phaseDiscuss").style.display="block";
-  ui.turnHint.textContent = "Resultados";
-  timerEl.textContent = "";
+        document.getElementById("phaseDiscuss").style.display="block";
+        ui.turnHint.textContent = "Resultados";
+        timerBox.textContent = "";
 
-  const rRef = doc(db,"rooms",state.code,"rounds",String(currentRound));
-  const roundId = String(currentRound);
+        const rRef2 = doc(db,"rooms",state.code,"rounds",String(currentRound));
+        const roundId2 = String(currentRound);
 
-  // Solo el host computa una vez y guarda el resultado
-  if(isHost && !roundState.resultsComputed){
-    try{
-      const { expelledUid, tie, counts } = await tallyVotes(roundId);
+        if(isHost && !roundState.resultsComputed){
+          try{
+            const { expelledUid, tie, counts } = await tallyVotes(roundId2);
+            await updateDoc(rRef2, { resultsComputed: true, expelledUid: expelledUid || null, tie: !!tie, counts });
+            if(expelledUid){
+              await updateDoc(doc(db,"rooms",state.code,"assignments",expelledUid), { alive:false });
+            }
+          }catch(e){ console.warn("Error al computar resultados:", e); }
+        }
 
-      // Guardar resultado en la ronda (para que todos lo lean)
-      await updateDoc(rRef, {
-        resultsComputed: true,
-        expelledUid: expelledUid || null,
-        tie: !!tie,
-        counts
-      });
+        setTimeout(async ()=>{
+          try{
+            const rDoc = await getDoc(rRef2);
+            const rData = rDoc.data()||{};
+            const tie = !!rData.tie;
+            const expelledUid = rData.expelledUid || null;
 
-      // Si hay expulsado, marcarlo como muerto
-      if(expelledUid){
-        await updateDoc(doc(db,"rooms",state.code,"assignments",expelledUid), { alive:false });
+            if(tie || !expelledUid){
+              showResultsOverlayUI({
+                title: "Empate — Nadie fue expulsado",
+                subtitle: "Se jugará otra ronda con nueva palabra.",
+                color: "#ffd166"
+              });
+            }else{
+              const asg = await getAssignment(expelledUid);
+              const nombre = asg?.name || "Jugador";
+              const rol = asg?.role || "—";
+              showResultsOverlayUI({
+                title: `Eliminado: ${nombre}`,
+                subtitle: `Rol: ${rol}`,
+                color: rol==="IMPOSTOR" ? "#ff6b6b" : "#cfe4ff"
+              });
+            }
+          }catch(e){ console.warn(e); }
+        }, 250);
+
+        setTimeout(async ()=>{
+          hideResultsOverlayUI();
+          if(isHost){
+            try{ await startNextRoundKeepingRoles(); }catch(e){ console.warn(e); }
+          }
+        }, 6000);
       }
-    }catch(e){ console.warn("Error al computar resultados:", e); }
-  }
-
-  // Mostrar overlay a todos (se lee de los datos de la ronda)
-  // dar un pequeño delay para asegurar que el host haya escrito los campos
-  setTimeout(async ()=>{
-    try{
-      const rDoc = await getDoc(rRef);
-      const rData = rDoc.data()||{};
-      const tie = !!rData.tie;
-      const expelledUid = rData.expelledUid || null;
-
-      if(tie || !expelledUid){
-        showResultsOverlayUI({
-          title: "Empate — Nadie fue expulsado",
-          subtitle: "Se jugará otra ronda con nueva palabra.",
-          color: "#ffd166"
-        });
-      }else{
-        const asg = await getAssignment(expelledUid);
-        const nombre = asg?.name || "Jugador";
-        const rol = asg?.role || "—";
-        showResultsOverlayUI({
-          title: `Eliminado: ${nombre}`,
-          subtitle: `Rol: ${rol}`,
-          color: rol==="IMPOSTOR" ? "#ff6b6b" : "#cfe4ff"
-        });
-      }
-    }catch(e){ console.warn(e); }
-  }, 250);
-
-  // Tras unos segundos, ocultar overlay y arrancar siguiente ronda (host)
-  setTimeout(async ()=>{
-    hideResultsOverlayUI();
-    if(isHost){
-      try{ await startNextRoundKeepingRoles(); }catch(e){ console.warn(e); }
-    }
-  }, 6000);
-}
-
 
       if(phase==="draw"){
         discussPanel.style.display="none";
@@ -959,7 +998,7 @@ async function startNextRoundKeepingRoles(){
         const idx=roundState.turnIndex??0;
         const uidTurno=(roundState.order||[])[idx];
         ui.turnHint.textContent = uidTurno ? `Turno de: ${await nameOf(uidTurno)}` : "";
-        timerEl.textContent = "";
+        timerBox.textContent = "";
       }
 
       if(phase==="discuss"){
@@ -973,7 +1012,7 @@ async function startNextRoundKeepingRoles(){
       if(phase==="vote"){
         discussPanel.style.display="block";
         ui.turnHint.textContent="Votación";
-        timerEl.textContent = "";
+        timerBox.textContent = "";
         renderVoteBar();
       }
     });
@@ -1024,7 +1063,6 @@ async function startNextRoundKeepingRoles(){
     if(now<cooldownUntil){ const left=Math.ceil((cooldownUntil-now)/1000); ui.cooldownHint.textContent=`Esperá ${left}s para volver a enviar`; return false; }
     ui.cooldownHint.textContent=""; return true;
   }
-
   function isOneWordLatin(str){ return /^\p{L}{2,24}$/u.test(str); }
   function showError(msg){
     ui.cooldownHint.textContent=msg; ui.cooldownHint.style.color="#ff7b7b";
@@ -1036,7 +1074,6 @@ async function startNextRoundKeepingRoles(){
     e.preventDefault();
     if(!roundState) { showError("No hay ronda activa."); return; }
     const raw=(ui.chatInput.value||"").trim(); if(!raw) return;
-
     const myUid=auth.currentUser?.uid;
     const roundId=String(currentRound);
 
@@ -1096,35 +1133,29 @@ async function startNextRoundKeepingRoles(){
     });
   }
 
- // Cierre automático cuando todos votan (solo jugadores vivos)
-onSnapshot(roomRef, async s=>{
-  if(!s.exists()) return;
-  const data = s.data();
-  const roundId = data.round || 0;
+  // Cierre auto de votación cuando todos votan
+  onSnapshot(roomRef, async s=>{
+    if(!s.exists()) return;
+    const data = s.data();
+    const roundId = data.round || 0;
 
-  onSnapshot(collection(db,"rooms",state.code,"rounds",String(roundId),"votes"), async snap=>{
-    // quiénes YA votaron (id del doc = uid del votante)
-    const voted = new Set(snap.docs.map(d=>d.id));
+    onSnapshot(collection(db,"rooms",state.code,"rounds",String(roundId),"votes"), async snap=>{
+      const voted = new Set(snap.docs.map(d=>d.id));
+      const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
+      const aliveVoters = asgSnap.docs
+        .map(d=>d.data())
+        .filter(p => p.alive !== false)
+        .map(p => p.uid)
+        .filter(Boolean);
 
-    // Solo cuentan los jugadores vivos
-    const asgSnap = await getDocs(collection(db,"rooms",state.code,"assignments"));
-    const aliveVoters = asgSnap.docs
-      .map(d=>d.data())
-      .filter(p => p.alive !== false)
-      .map(p => p.uid)
-      .filter(Boolean);
-
-    // Si todos los vivos ya votaron → pasamos a "results"
-    if (isHost && aliveVoters.length > 0 && aliveVoters.every(id => voted.has(id))){
-      await updateDoc(doc(db,"rooms",state.code,"rounds",String(roundId)),{
-        status:"results",
-        resultsAt: serverTimestamp()
-      });
-    }
+      if (isHost && aliveVoters.length > 0 && aliveVoters.every(id => voted.has(id))){
+        await updateDoc(doc(db,"rooms",state.code,"rounds",String(roundId)),{
+          status:"results",
+          resultsAt: serverTimestamp()
+        });
+      }
+    });
   });
-});
-
-
 
   // Copiar / Compartir
   document.getElementById("copyBtn").addEventListener("click", async ()=>{ try{ await navigator.clipboard.writeText(state.code); }catch{} });
@@ -1133,6 +1164,7 @@ onSnapshot(roomRef, async s=>{
     if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); }catch{} }
     else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); }catch{ alert(joinUrl); } }
   });
+
   </script>
 </body>
-</html
+</html>
