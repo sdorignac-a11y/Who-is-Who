@@ -22,15 +22,14 @@
     overflow:hidden;
   }
   body::before{
-    content:"";
-    position:fixed; inset:0;
+    content:""; position:fixed; inset:0;
     background:
       radial-gradient(1200px 420px at 15% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
       radial-gradient(1200px 420px at 85% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
       linear-gradient(180deg, rgba(0,0,0,.45), rgba(0,0,0,.25) 40%, rgba(0,0,0,.45));
     pointer-events:none; z-index:-1;
   }
-  .container{ width:min(1200px, 92vw); margin:0 auto; padding:20px 0 28px; display:flex; flex-direction:column; gap:18px }
+  .container{ width:min(1200px,92vw); margin:0 auto; padding:20px 0 28px; display:flex; flex-direction:column; gap:18px }
 
   /* Header */
   .room-card{
@@ -58,18 +57,15 @@
     border:1px solid rgba(128,180,255,.28);
     border-radius:12px; padding:10px 14px; font-weight:800;
   }
-  .offline-dot{
-    width:10px; height:10px; border-radius:50%; background:#f87171; box-shadow:0 0 0 3px rgba(248,113,113,.25)
-  }
+  .offline-dot{ width:10px; height:10px; border-radius:50%; background:#f87171; box-shadow:0 0 0 3px rgba(248,113,113,.25) }
   .offline-sub{ font-size:12px; font-weight:600; color:#cfe2ff; opacity:.85 }
 
   /* Jugadores */
   .players{ display:grid; grid-template-columns: repeat(8, 1fr); gap:16px; padding:0 4px }
   .player{
     background: linear-gradient(180deg, rgba(14,39,70,.9), rgba(10,30,53,.85));
-    border:1px solid rgba(128,180,255,.25);
-    border-radius:16px; padding:10px 8px;
-    display:flex; flex-direction:column; align-items:center; gap:8px;
+    border:1px solid rgba(128,180,255,.25); border-radius:16px;
+    padding:10px 8px; display:flex; flex-direction:column; align-items:center; gap:8px;
     box-shadow: inset 0 1px 0 rgba(255,255,255,.05); min-height:108px;
   }
   .avatar{ width:56px; height:56px; border-radius:50%;
@@ -87,7 +83,7 @@
   .player small{ color:var(--muted); font-weight:600; letter-spacing:.2px }
 
   /* Settings */
-  .settings{ display:grid; grid-template-columns: 1fr 1fr 1fr; gap:18px; margin-top:6px }
+  .settings{ display:grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap:18px; margin-top:6px }
   .card{
     background: linear-gradient(180deg, var(--panel), var(--panel-2));
     border:1px solid rgba(128,180,255,.25); border-radius:16px;
@@ -125,7 +121,7 @@
 
   @media (max-width: 980px){
     .players{ grid-template-columns: repeat(4, 1fr) }
-    .settings{ grid-template-columns: 1fr }
+    .settings{ grid-template-columns: 1fr; }
     body{ overflow:auto }
   }
 
@@ -162,37 +158,79 @@
     padding:12px 18px; border-radius:12px; cursor:pointer; box-shadow:0 6px 16px rgba(0,0,0,.45);
   }
   .btn-cta.small{ font-size:18px; padding:10px 16px }
+
+  /* Overlay TIMER */
+  #timerOverlay{
+    position:fixed; inset:0; z-index:1100; display:none; place-items:center;
+    background:
+      radial-gradient(1000px 360px at 20% 10%, rgba(255,255,255,.08), transparent 60%),
+      rgba(0,10,20,.92);
+  }
+  .timer-card{
+    width:min(520px,92vw);
+    background: linear-gradient(180deg,#0d2747,#0b203a);
+    border:1px solid rgba(128,180,255,.30); border-radius:20px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+    padding:24px; text-align:center;
+  }
+  .timer-big{ font-size:84px; font-weight:900; letter-spacing:2px; margin:6px 0 0 }
+  .timer-sub{ opacity:.85; margin:0 0 8px }
+
+  /* Overlay VOTACIÓN */
+  #voteOverlay{
+    position:fixed; inset:0; z-index:1200; display:none;
+    background: rgba(0,10,20,.92);
+    padding:20px;
+  }
+  .vote-wrap{
+    width:min(1100px,96vw); margin:0 auto;
+    background: linear-gradient(180deg,#0d2747,#0b203a);
+    border:1px solid rgba(128,180,255,.30); border-radius:18px; padding:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+  }
+  .vote-grid{
+    display:grid; gap:12px; margin-top:10px;
+    grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+  }
+  .vote-card{
+    background: linear-gradient(180deg,#0f2b4b,#0c213a);
+    border:1px solid rgba(128,180,255,.25); border-radius:14px;
+    padding:12px; display:flex; flex-direction:column; align-items:center; gap:10px;
+    cursor:pointer; user-select:none;
+  }
+  .vote-card .circle{ width:64px; height:64px; border-radius:50%; background:linear-gradient(180deg,#1e68d6,#184fa5) }
+  .vote-card .name{ font-weight:800 }
+  .vote-card .count{ font-size:14px; opacity:.9 }
+  .vote-actions{ display:flex; gap:8px; justify-content:flex-end; margin-top:12px }
+  .btn-danger{
+    background: linear-gradient(180deg,#ff6b6b,#ea4335);
+    border:1px solid rgba(255,179,172,.75); color:#111; font-weight:900;
+    padding:10px 16px; border-radius:12px; cursor:pointer;
+  }
 </style>
 </head>
 <body>
 
   <div class="container">
 
-    <!-- Header (sin código/enlace/QR) -->
+    <!-- Header -->
     <div class="room-card">
       <div class="brand">
         <div class="ball" aria-hidden="true"></div>
         <h1>Impostor <span>Fútbol</span></h1>
       </div>
-
-      <div>
-        <div class="offline-badge" title="Todos juegan en el mismo dispositivo">
-          <span class="offline-dot" aria-hidden="true"></span>
-          <div>
-            Modo <b>Offline</b>
-            <div class="offline-sub">Mismo dispositivo – sin internet</div>
-          </div>
+      <div class="offline-badge" title="Todos juegan en el mismo dispositivo">
+        <span class="offline-dot" aria-hidden="true"></span>
+        <div>
+          Modo <b>Offline</b>
+          <div class="offline-sub">Mismo dispositivo – sin internet</div>
         </div>
       </div>
     </div>
 
     <!-- Jugadores -->
     <div class="players" id="players">
-      <div class="player">
-        <div class="avatar" title="Host"></div>
-        <small>Jugador 1</small>
-      </div>
-      <!-- placeholders -->
+      <div class="player"><div class="avatar"></div><small>Jugador 1</small></div>
       <div class="player"><div class="avatar placeholder"></div><small>Jugador 2</small></div>
       <div class="player"><div class="avatar placeholder"></div><small>Jugador 3</small></div>
       <div class="player"><div class="avatar placeholder"></div><small>Jugador 4</small></div>
@@ -230,6 +268,16 @@
           <div class="arrow" data-inc="tema">›</div>
         </div>
       </div>
+
+      <!-- NUEVO: TIEMPO -->
+      <div class="card">
+        <h3>Tiempo de ronda</h3>
+        <div class="selector">
+          <div class="arrow" data-dec="tiempo">‹</div>
+          <div class="value" id="tiempoVal">60s</div>
+          <div class="arrow" data-inc="tiempo">›</div>
+        </div>
+      </div>
     </div>
 
     <!-- CTA -->
@@ -238,7 +286,7 @@
     </div>
   </div>
 
-<!-- Overlay de revelación -->
+<!-- Overlay REVELACIÓN -->
 <div id="reveal">
   <div class="rev-card">
     <h2 id="revTitle">Jugador 1</h2>
@@ -254,172 +302,238 @@
   </div>
 </div>
 
-<script>
-/* ===== Modo OFFLINE: sin red, todo local ===== */
+<!-- Overlay TIMER -->
+<div id="timerOverlay">
+  <div class="timer-card">
+    <p class="timer-sub">Tiempo de la ronda</p>
+    <div id="timerText" class="timer-big">01:00</div>
+  </div>
+</div>
 
-/* Estado */
+<!-- Overlay VOTACIÓN -->
+<div id="voteOverlay">
+  <div class="vote-wrap">
+    <h2 style="margin:0;font-weight:900">Votación</h2>
+    <p style="margin:6px 0 0;opacity:.85">Toquen para acusar. Luego cerrá la votación para ver el resultado.</p>
+    <div id="voteGrid" class="vote-grid"></div>
+    <div class="vote-actions">
+      <button id="clearVotes" class="btn-ghost">Limpiar votos</button>
+      <div class="spacer"></div>
+      <button id="closeVote" class="btn-cta small">Cerrar votación</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===== Estado general ===== */
 const state = {
-  impostores: 1,          // 1–3
-  jugadores: 8,           // 4–10
+  impostores: 1,         // 1–3
+  jugadores: 8,          // 4–10
   temas: ["Clubes","Jugadores","Mundiales"],
-  temaIndex: 0
+  temaIndex: 0,
+  tiempos: [30,45,60,90], // segundos
+  tiempoIndex: 2          // por defecto 60s
 };
 
-const $ = sel => document.querySelector(sel);
+const $ = s => document.querySelector(s);
 const impostoresEl = $("#impostoresVal");
 const jugadoresEl  = $("#jugadoresVal");
 const temaEl       = $("#temaVal");
+const tiempoEl     = $("#tiempoVal");
 
-/* Render UI */
+/* ===== Render UI ===== */
 function render(){
   impostoresEl.textContent = state.impostores;
   jugadoresEl.textContent  = state.jugadores;
   temaEl.textContent       = state.temas[state.temaIndex];
+  tiempoEl.textContent     = state.tiempos[state.tiempoIndex] + "s";
 
-  // Ajustar cantidad visible de jugadores (host + placeholders)
-  const playersWrap = $("#players");
-  while(playersWrap.children.length > state.jugadores){
-    playersWrap.removeChild(playersWrap.lastElementChild);
-  }
-  while(playersWrap.children.length < state.jugadores){
-    const i = playersWrap.children.length + 1;
+  // ajustar tarjetas de jugadores visibles
+  const wrap = $("#players");
+  while (wrap.children.length > state.jugadores) wrap.removeChild(wrap.lastElementChild);
+  while (wrap.children.length < state.jugadores){
+    const i = wrap.children.length + 1;
     const card = document.createElement("div");
     card.className = "player";
-    const av = document.createElement("div");
-    av.className = "avatar placeholder";
-    const label = document.createElement("small");
-    label.textContent = `Jugador ${i}`;
-    card.appendChild(av); card.appendChild(label);
-    playersWrap.appendChild(card);
+    card.innerHTML = `<div class="avatar placeholder"></div><small>Jugador ${i}</small>`;
+    wrap.appendChild(card);
   }
 }
 
-/* Flechas de selectores */
+/* ===== Selectores (flechas) ===== */
 document.querySelectorAll(".arrow").forEach(btn=>{
   btn.addEventListener("click", ()=>{
-    const incKey = btn.dataset.inc;
-    const decKey = btn.dataset.dec;
-
-    if(incKey === "impostores") state.impostores = Math.min(3, state.impostores + 1);
-    if(decKey === "impostores") state.impostores = Math.max(1, state.impostores - 1);
-
-    if(incKey === "jugadores") state.jugadores = Math.min(10, state.jugadores + 1);
-    if(decKey === "jugadores") state.jugadores = Math.max(4, state.jugadores - 1);
-
-    if(incKey === "tema") state.temaIndex = (state.temaIndex + 1) % state.temas.length;
-    if(decKey === "tema") state.temaIndex = (state.temaIndex - 1 + state.temas.length) % state.temas.length;
-
-    // Validación: impostores < jugadores
-    if(state.impostores >= state.jugadores){
-      state.impostores = Math.max(1, state.jugadores - 1);
-    }
+    const incKey = btn.dataset.inc, decKey = btn.dataset.dec;
+    if(incKey==="impostores") state.impostores = Math.min(3, state.impostores+1);
+    if(decKey==="impostores") state.impostores = Math.max(1, state.impostores-1);
+    if(incKey==="jugadores")  state.jugadores  = Math.min(10, state.jugadores+1);
+    if(decKey==="jugadores")  state.jugadores  = Math.max(4, state.jugadores-1);
+    if(incKey==="tema")       state.temaIndex  = (state.temaIndex+1)%state.temas.length;
+    if(decKey==="tema")       state.temaIndex  = (state.temaIndex-1+state.temas.length)%state.temas.length;
+    if(incKey==="tiempo")     state.tiempoIndex= (state.tiempoIndex+1)%state.tiempos.length;
+    if(decKey==="tiempo")     state.tiempoIndex= (state.tiempoIndex-1+state.tiempos.length)%state.tiempos.length;
+    if(state.impostores >= state.jugadores) state.impostores = Math.max(1, state.jugadores-1);
     render();
   });
 });
 
-/* Pools por tema */
+/* ===== Pools por tema ===== */
 const POOLS = {
   "Clubes": ["Real Madrid","Barcelona","Boca Juniors","River Plate","PSG","Manchester City","Inter","AC Milan","Liverpool","Chelsea"],
   "Jugadores": ["Lionel Messi","Cristiano Ronaldo","Diego Maradona","Pelé","Kylian Mbappé","Erling Haaland","Neymar","Zinedine Zidane","Ronaldinho","Ronaldo Nazário"],
   "Mundiales": ["Mundial 2002","Mundial 2006","Mundial 2010","Mundial 2014","Mundial 2018","Mundial 2022"]
 };
 
-/* Utilidades */
-const randInt = n => Math.floor(Math.random()*n);
-const sampleOne = arr => arr[randInt(arr.length)];
-function shuffle(arr){ for(let i=arr.length-1;i>0;i--){ const j=randInt(i+1); [arr[i],arr[j]]=[arr[j],arr[i]] } return arr; }
-function pickKUnique(k, n){ const idx = Array.from({length:n}, (_,i)=>i); shuffle(idx); return idx.slice(0,k); }
+/* ===== Utilidades ===== */
+const randInt=n=>Math.floor(Math.random()*n);
+const sampleOne=arr=>arr[randInt(arr.length)];
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=randInt(i+1); [a[i],a[j]]=[a[j],a[i]]}return a}
+function pickKUnique(k,n){const idx=Array.from({length:n},(_,i)=>i);shuffle(idx);return idx.slice(0,k)}
 
-/* Revelación */
-let assignments = [];   // [{player, role, word, tema}]
-let currentReveal = 0;
+/* ===== Revelación ===== */
+let assignments=[];   // {player, role, word, tema}
+let currentReveal=0;
 
-const $reveal = document.getElementById("reveal");
-const $revTitle = document.getElementById("revTitle");
-const $revContent = document.getElementById("revContent");
-const $btnMostrar = document.getElementById("btnMostrar");
-const $btnOcultar = document.getElementById("btnOcultar");
-const $btnSiguiente = document.getElementById("btnSiguiente");
-const $btnComenzarRonda = document.getElementById("btnComenzarRonda");
+const $reveal=$("#reveal"), $revTitle=$("#revTitle"), $revContent=$("#revContent");
+const $btnMostrar=$("#btnMostrar"), $btnOcultar=$("#btnOcultar"), $btnSiguiente=$("#btnSiguiente"), $btnComenzarRonda=$("#btnComenzarRonda");
 
-function abrirOverlay(){ $reveal.style.display = "grid"; }
-function cerrarOverlay(){ $reveal.style.display = "none"; }
+function abrirOverlay(){ $reveal.style.display="grid"; }
+function cerrarOverlay(){ $reveal.style.display="none"; }
 
 function prepararPantallaReveal(){
   const a = assignments[currentReveal];
   $revTitle.textContent = `Jugador ${a.player}`;
   $revContent.innerHTML = `<p>Tocá <b>Mostrar</b> para ver tu rol</p>`;
-  $btnMostrar.style.display = "";
-  $btnOcultar.style.display = "none";
-  $btnSiguiente.style.display = "none";
-  $btnComenzarRonda.style.display = "none";
+  $btnMostrar.style.display=""; $btnOcultar.style.display="none";
+  $btnSiguiente.style.display="none"; $btnComenzarRonda.style.display="none";
 }
 
-/* Iniciar partida (asignación local) */
 function iniciarPartida(){
-  const N = state.jugadores;
-  const K = state.impostores;
-  const tema = state.temas[state.temaIndex];
-  if (K >= N){ alert("Impostores debe ser menor que la cantidad de jugadores."); return; }
-
-  const palabraSecreta = sampleOne(POOLS[tema] || ["Balón"]);
-  const impostorIdxs = new Set(pickKUnique(K, N));
-
-  assignments = [];
-  for (let i=0; i<N; i++){
-    const isImp = impostorIdxs.has(i);
-    assignments.push({ player: i+1, role: isImp ? "IMPOSTOR" : "CIVIL", word: isImp ? null : palabraSecreta, tema });
+  const N=state.jugadores, K=state.impostores, tema=state.temas[state.temaIndex];
+  if(K>=N){ alert("Impostores debe ser menor que jugadores."); return; }
+  const palabra = sampleOne(POOLS[tema]||["Balón"]);
+  const impostores = new Set(pickKUnique(K,N));
+  assignments=[];
+  for(let i=0;i<N;i++){
+    const isImp = impostores.has(i);
+    assignments.push({ player:i+1, role:isImp?"IMPOSTOR":"CIVIL", word:isImp?null:palabra, tema });
   }
-
-  currentReveal = 0;
-  abrirOverlay();
-  prepararPantallaReveal();
+  currentReveal=0; abrirOverlay(); prepararPantallaReveal();
 }
 
-/* Eventos overlay */
 $btnMostrar.addEventListener("click", ()=>{
   const a = assignments[currentReveal];
-  if (a.role === "IMPOSTOR"){
-    $revContent.innerHTML = `
-      <div>
-        <div style="font-size:38px; font-weight:900; color:#ff6b6b; margin-bottom:8px;">IMPOSTOR</div>
-        <div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>
-      </div>`;
-  } else {
-    $revContent.innerHTML = `
-      <div>
-        <div style="opacity:.75; font-size:14px; margin-bottom:6px;">Palabra secreta (${a.tema})</div>
-        <div style="font-size:34px; font-weight:900; color:#7cf062">${a.word}</div>
-      </div>`;
+  if(a.role==="IMPOSTOR"){
+    $revContent.innerHTML = `<div><div style="font-size:38px;font-weight:900;color:#ff6b6b;margin-bottom:8px;">IMPOSTOR</div><div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div></div>`;
+  }else{
+    $revContent.innerHTML = `<div><div style="opacity:.75;font-size:14px;margin-bottom:6px;">Palabra secreta (${a.tema})</div><div style="font-size:34px;font-weight:900;color:#7cf062">${a.word}</div></div>`;
   }
-  $btnMostrar.style.display = "none";
-  $btnOcultar.style.display = "";
-  $btnSiguiente.style.display = (currentReveal < assignments.length - 1) ? "" : "none";
-  $btnComenzarRonda.style.display = (currentReveal === assignments.length - 1) ? "" : "none";
+  $btnMostrar.style.display="none";
+  $btnOcultar.style.display="";
+  $btnSiguiente.style.display = (currentReveal < assignments.length-1) ? "" : "none";
+  $btnComenzarRonda.style.display = (currentReveal === assignments.length-1) ? "" : "none";
 });
-
 $btnOcultar.addEventListener("click", ()=>{
   $revContent.innerHTML = `<p>Pantalla oculta. Pasá el dispositivo al jugador siguiente.</p>`;
-  $btnOcultar.style.display = "none";
-  $btnSiguiente.style.display = "";
+  $btnOcultar.style.display="none"; $btnSiguiente.style.display="";
+});
+$btnSiguiente.addEventListener("click", ()=>{
+  if(currentReveal<assignments.length-1){ currentReveal++; prepararPantallaReveal(); }
 });
 
-$btnSiguiente.addEventListener("click", ()=>{
-  if (currentReveal < assignments.length - 1){
-    currentReveal++;
-    prepararPantallaReveal();
-  }
-});
+/* ===== Timer y Votación ===== */
+const $timerOverlay=$("#timerOverlay"), $timerText=$("#timerText");
+let timerId=null, remaining=0;
+
+function formatTime(s){ const m=Math.floor(s/60), r=s%60; return `${String(m).padStart(2,"0")}:${String(r).padStart(2,"0")}` }
+
+function startTimer(seconds){
+  remaining = seconds;
+  $timerText.textContent = formatTime(remaining);
+  $timerOverlay.style.display="grid";
+  clearInterval(timerId);
+  timerId = setInterval(()=>{
+    remaining--;
+    $timerText.textContent = formatTime(remaining);
+    if(remaining<=0){
+      clearInterval(timerId);
+      $timerOverlay.style.display="none";
+      openVoting();
+    }
+  },1000);
+}
 
 $btnComenzarRonda.addEventListener("click", ()=>{
   cerrarOverlay();
-  alert("¡Roles asignados! Arranca la ronda 1 🎯");
+  const secs = state.tiempos[state.tiempoIndex];
+  startTimer(secs);
+});
+
+/* VOTING */
+const $voteOverlay=$("#voteOverlay"), $voteGrid=$("#voteGrid"), $closeVote=$("#closeVote"), $clearVotes=$("#clearVotes");
+let votes=[]; // array tamaño N con contadores
+
+function openVoting(){
+  // inicializar votos
+  const N = state.jugadores;
+  votes = Array.from({length:N},()=>0);
+  // render tarjetas
+  $voteGrid.innerHTML = "";
+  for(let i=0;i<N;i++){
+    const card=document.createElement("button");
+    card.type="button";
+    card.className="vote-card";
+    card.dataset.index=i;
+    card.innerHTML = `
+      <div class="circle"></div>
+      <div class="name">Jugador ${i+1}</div>
+      <div class="count" id="vcount-${i}">Votos: 0</div>`;
+    card.onclick=()=>{
+      votes[i]++; $("#vcount-"+i).textContent = "Votos: " + votes[i];
+    };
+    $voteGrid.appendChild(card);
+  }
+  $voteOverlay.style.display="block";
+}
+
+$clearVotes.addEventListener("click", ()=>{
+  for(let i=0;i<votes.length;i++){ votes[i]=0; $("#vcount-"+i).textContent="Votos: 0"; }
+});
+
+$closeVote.addEventListener("click", ()=>{
+  // calcular más votado
+  const max = Math.max(...votes);
+  const indices = votes.map((v,i)=>[v,i]).filter(([v])=>v===max).map(([_,i])=>i);
+  let msg="";
+  if(max===0){
+    msg="Nadie recibió votos. No hay eliminado.";
+  }else if(indices.length>1){
+    msg = `Empate entre: ${indices.map(i=>"Jugador "+(i+1)).join(", ")} (${max} votos).`;
+  }else{
+    const idx = indices[0];
+    const a = assignments[idx];
+    msg = `El más votado es <b>Jugador ${idx+1}</b> — <i>${a.role}</i>.`;
+  }
+  $voteOverlay.style.display="none";
+  // Resultado simple
+  const result = document.createElement("div");
+  result.style.cssText = "position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,10,20,.92);z-index:1300;";
+  result.innerHTML = `
+    <div class="timer-card">
+      <h3 style="margin:0 0 8px">Resultado de la votación</h3>
+      <p style="margin:0 0 6px">${msg}</p>
+      <div style="display:flex;gap:8px;justify-content:center;margin-top:10px">
+        <button id="resOk" class="btn-cta small">Seguir</button>
+      </div>
+    </div>`;
+  document.body.appendChild(result);
+  result.querySelector("#resOk").onclick=()=> result.remove();
 });
 
 /* Botón principal */
 document.getElementById("startBtn").addEventListener("click", iniciarPartida);
 
-/* Primera render */
+/* Inicio */
 render();
 </script>
 </body>
