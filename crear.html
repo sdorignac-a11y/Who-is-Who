@@ -557,7 +557,8 @@
   <!-- FASE: DEBATE (chat) -->
   <div id="phaseDiscuss" style="display:none;position:fixed;inset:0;background:rgba(0,10,20,.9);padding:clamp(12px,2.5vw,24px)">
     <div style="max-width:min(900px,96vw);margin:0 auto;background:#0b203a;border:1px solid rgba(128,180,255,.3);border-radius:18px;height:calc(100dvh - 2*clamp(12px,2.5vw,24px) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;position:relative">
-<div id="turnBanner">${icon("i-ball")} Va <span id="turnName" class="who">—</span></div>
+      <!-- FIX: el icono ahora es SVG estático, no template literal -->
+      <div id="turnBanner"><svg class="icon"><use href="#i-ball"></use></svg> Va <span id="turnName" class="who">—</span></div>
 
       <div style="padding:14px 16px;border-bottom:1px solid rgba(128,180,255,.15);display:flex;justify-content:space-between;align-items:center">
         <h2 style="margin:0;font-size:clamp(18px,6vw,22px)">Debate</h2>
