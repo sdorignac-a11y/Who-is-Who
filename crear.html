@@ -584,11 +584,7 @@
   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import {
-  getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot,
-  collection, getDocs, writeBatch, serverTimestamp, deleteDoc,
-  query, orderBy
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs, writeBatch, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
@@ -811,7 +807,6 @@ if(isMe){
   const myName=getStoredName(); const myAvatar=getStoredAvatar();
   meNameEl.textContent=myName;
   await setDoc(doc(db,"rooms",state.code,"players",auth.currentUser.uid),{ uid:auth.currentUser.uid, name:myName, avatarKey:myAvatar||null, slot:isHost?1:Date.now(), online:true },{merge:true});
-  subscribeLobbyChat();
   const playerRef = doc(db,"rooms",state.code,"players",auth.currentUser.uid);
   document.getElementById("editName")?.addEventListener("click", ()=> editAndSaveName(playerRef));
 
@@ -1040,78 +1035,6 @@ if(isMe){
   const timerEl = document.getElementById("timer");
   function toMillis(ts){ return ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds*1000 : (typeof ts==="number" ? ts : 0)); }
   function fmtClock(ms){ const s=Math.max(0,Math.ceil(ms/1000)); const mm=String(Math.floor(s/60)).padStart(2,'0'); const ss=String(s%60).padStart(2,'0'); return `${mm}:${ss}`; }
-/* ======= CHAT DEL LOBBY (tiempo real) ======= */
-const lobbyUI = {
-  list:  document.getElementById("lobbyChatList"),
-  form:  document.getElementById("lobbyChatForm"),
-  input: document.getElementById("lobbyChatInput"),
-};
-
-let _unsubLobby = null;
-let _lobbyCooldownUntil = 0;
-
-function lobbyCanSend() {
-  const now = Date.now();
-  if (now < _lobbyCooldownUntil) {
-    const left = Math.ceil((_lobbyCooldownUntil - now) / 1000);
-    showToast(`Esperá ${left}s para volver a enviar`);
-    return false;
-  }
-  return true;
-}
-
-function subscribeLobbyChat() {
-  if (!lobbyUI.list) return;
-  _unsubLobby?.();
-
-  const q = query(
-    collection(db, "rooms", state.code, "lobbyChat"),
-    orderBy("at", "asc")
-  );
-
-  _unsubLobby = onSnapshot(q, (snap) => {
-    const items = snap.docs.map(d => d.data());
-    lobbyUI.list.innerHTML = items.map(m => {
-      const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
-      const name = sanitize(m.name || "Jugador");
-      const text = sanitize(m.text || "");
-      return `
-        <div class="chat-row ${mine ? 'mine' : 'other'}">
-          <div class="bubble">
-            <div class="name">${name}</div>
-            <div class="text">${text}</div>
-          </div>
-        </div>`;
-    }).join("");
-    lobbyUI.list.scrollTop = lobbyUI.list.scrollHeight;
-  });
-}
-
-async function sendLobbyMessage(raw) {
-  const text = (raw || "").trim();
-  if (!text) return;
-  if (!lobbyCanSend()) return;
-
-  try {
-    const msgRef = doc(collection(db, "rooms", state.code, "lobbyChat"));
-    await setDoc(msgRef, {
-      uid:  auth.currentUser?.uid || null,
-      name: getStoredName(),
-      text,
-      at:   serverTimestamp(),
-    });
-    lobbyUI.input.value = "";
-    _lobbyCooldownUntil = Date.now() + 2000; // anti-spam 2s
-  } catch (e) {
-    console.error(e);
-    showToast("No pude enviar el mensaje");
-  }
-}
-
-lobbyUI?.form?.addEventListener("submit", (e) => {
-  e.preventDefault();
-  sendLobbyMessage(lobbyUI.input.value);
-});
 
   // Sorteo animación
   async function startDrawAnimation(order){
