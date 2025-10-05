@@ -119,7 +119,16 @@
     font-size:clamp(18px,6.5vw,28px);
     padding:14px 24px;border-radius:16px
   }
+  /* Empujar los 3 botones hacia abajo (más aire respecto a los settings) */
+.cta{
+  margin-top: clamp(24px, 5.5vh, 80px); /* ⬅️ ajustá a gusto */
+}
 
+/* En mobile, aún más espacio */
+@media (max-width: 900px){
+  .cta{ margin-top: clamp(28px, 7.5vh, 96px); }
+}
+  
   /* ====== Overlay rol ====== */
   #reveal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,10,20,.9);z-index:1000;padding:16px}
   .rev-card{width:min(680px,96vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:20px;text-align:center}
