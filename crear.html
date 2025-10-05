@@ -274,10 +274,50 @@
     linear-gradient(180deg,var(--yellow),var(--yellow-2)) !important;
 }
 .btn-cta:hover{ filter:saturate(1.05) brightness(1.03); }
+/* === LOADER OVERLAY (5s) === */
+#loader-overlay{
+  position:fixed; inset:0; z-index:9999;
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px;
+  background: linear-gradient(180deg, rgba(3,12,30,.96), rgba(8,22,40,.96));
+  transition: opacity 400ms ease, visibility 400ms ease;
+  opacity:1; visibility:visible;
+}
+#loader-overlay.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
+
+.loader-card{
+  display:flex; align-items:center; gap:14px;
+  padding:18px 22px; border-radius:14px;
+  background: rgba(255,255,255,0.04);
+  box-shadow: 0 10px 30px rgba(2,6,20,0.6);
+  backdrop-filter: blur(6px);
+}
+.spinner{
+  width:56px; height:56px; border-radius:50%;
+  border:6px solid rgba(255,255,255,0.12);
+  border-top-color: var(--yellow);
+  animation: spin 1s linear infinite;
+}
+@keyframes spin{ to{ transform: rotate(360deg); } }
+
+#app-wrapper{ opacity:1; transition: opacity 350ms ease; }
+#app-wrapper.hidden{ opacity:0; pointer-events:none; user-select:none; }
 
 </style>
 </head>
 <body>
+<script>window.__loaderStart = performance.now();</script>
+
+<div id="loader-overlay" aria-hidden="false" role="status">
+  <div class="loader-card">
+    <div class="spinner" aria-hidden="true"></div>
+    <div>
+      <div style="font-weight:800">Cargando el sitio…</div>
+      <div style="opacity:.8;font-size:12px">Preparando todo (5s)</div>
+    </div>
+  </div>
+</div>
+
+<div id="app-wrapper" class="hidden">
 <!-- Sprite de íconos -->
 <svg width="0" height="0" style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
   <symbol id="i-user" viewBox="0 0 24 24">
@@ -1326,5 +1366,34 @@ if(isMe){
   });
 
   </script>
+  </div>
+  <script>
+(function(){
+  // 5 segundos mínimo
+  const MIN_LOADING_MS = 5000;
+
+  const overlay = document.getElementById('loader-overlay');
+  const app = document.getElementById('app-wrapper');
+  const start = window.__loaderStart || performance.now();
+
+  function finishLoading(){
+    overlay.classList.add('hidden');
+    app.classList.remove('hidden');
+    setTimeout(()=>{ overlay?.parentNode?.removeChild(overlay); }, 500);
+  }
+
+  // Espera a que termine de cargar + cumplir los 5s
+  window.addEventListener('load', () => {
+    const elapsed = performance.now() - start;
+    const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
+    setTimeout(finishLoading, remaining);
+  });
+
+  // Fallback por si 'load' no dispara
+  setTimeout(() => {
+    if (!overlay.classList.contains('hidden')) finishLoading();
+  }, 10000);
+})();
+</script>
 </body>
 </html>
