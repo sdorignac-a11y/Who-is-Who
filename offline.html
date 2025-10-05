@@ -15,12 +15,26 @@
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; color:var(--text);
-    font-family:"Outfit",system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
-    background: url("fondo-cancha.png") no-repeat center center fixed;
-    background-size: cover;
-    overflow:hidden;
-  }
+  margin:0;
+  color:var(--text);
+  font-family:"Outfit",system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+  background: radial-gradient(1200px 420px at 15% 8%, rgba(61,126,217,.20) 0, transparent 60%),
+              radial-gradient(1200px 420px at 85% 8%, rgba(61,126,217,.20) 0, transparent 60%),
+              #0a1a2f; /* color de respaldo mientras carga */
+  background-attachment: fixed;
+  background-size: cover;
+  overflow:hidden;
+}
+
+/* Cuando la imagen esté cargada */
+body.has-bg{
+  background-image: url("fondo-favela.webp");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
   body::before{
     content:""; position:fixed; inset:0;
     background:
@@ -214,6 +228,7 @@
     color:#eaf2ff; font-weight:700; font-size:12px; cursor:pointer;
   }
 </style>
+<link rel="preload" as="image" href="fondo-favela.webp" fetchpriority="high">
 </head>
 <body>
 
@@ -574,5 +589,18 @@ document.getElementById("startBtn").addEventListener("click", iniciarPartida);
 /* Inicio */
 render();
 </script>
+  <script>
+(function(){
+  const BG = "fondo-favela.webp"; // cambia si tu archivo tiene otro nombre
+  const img = new Image();
+  img.src = BG;
+  if (img.complete) {
+    document.body.classList.add("has-bg");
+    return;
+  }
+  img.onload = () => document.body.classList.add("has-bg");
+})();
+</script>
+
 </body>
 </html>
