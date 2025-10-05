@@ -171,6 +171,38 @@
   #turnBanner.hide{opacity:0;transform:translate(-50%,-50%) scale(.92);}
   #turnBanner .who{font-size:clamp(18px,6vw,30px);text-transform:uppercase;}
 
+  /* === Cartel graffiti "Le toca verdulear a..." === */
+#graffitiBanner{
+  position:absolute;
+  top:48%;
+  left:50%;
+  transform:translate(-50%,-50%) scale(.95);
+  display:none;
+  z-index:10;
+  padding:20px 32px;
+  border-radius:20px;
+  background:linear-gradient(135deg,#f6c11b,#ff4444);
+  color:#0a0a0a;
+  font-family:'Press Start 2P', 'Outfit', sans-serif;
+  font-weight:900;
+  font-size:clamp(18px,6vw,28px);
+  text-transform:uppercase;
+  text-shadow:
+    -2px -2px 0 #fff,
+    2px -2px 0 #fff,
+    -2px 2px 0 #fff,
+    2px 2px 0 #fff;
+  letter-spacing:1px;
+  box-shadow:0 10px 40px rgba(0,0,0,.55);
+  animation:popGraffiti .6s ease-out;
+}
+@keyframes popGraffiti{
+  0%{transform:translate(-50%,-50%) scale(0.8);opacity:0;}
+  60%{transform:translate(-50%,-50%) scale(1.05);opacity:1;}
+  100%{transform:translate(-50%,-50%) scale(1);}
+}
+
+  
   /* ====== Chat (fase debate) ====== */
   #chatList{ padding:14px; }
   .chat-row{ display:flex; margin:8px 0; }
@@ -680,6 +712,11 @@
       <svg class="icon" style="width:1.1em;height:1.1em;vertical-align:-.15em"><use href="#i-ball"></use></svg>
       Va <span id="turnName" class="who">—</span>
     </div>
+
+    <div id="graffitiBanner">
+  <span id="graffitiText"></span>
+</div>
+
 
     <div class="debate-head">
       <h2 class="debate-title">Debate</h2>
@@ -1332,6 +1369,18 @@ if(isMe){
     _turnBannerTimer=setTimeout(()=>{ banner.classList.remove("show"); banner.classList.add("hide"); setTimeout(()=>{ banner.style.display="none"; },350); },2200);
   }
 
+  // === Cartel estilo graffiti cuando le toca a alguien ===
+function showGraffitiTurn(name){
+  const banner=document.getElementById("graffitiBanner");
+  const text=document.getElementById("graffitiText");
+  text.textContent = `Le toca verdulear a ${name || "alguien"}!`;
+  banner.style.display="block";
+  banner.style.animation="none"; void banner.offsetWidth; banner.style.animation="";
+  banner.style.animation="popGraffiti 0.6s ease-out";
+  setTimeout(()=>{ banner.style.display="none"; },2500);
+}
+
+
   let firstWordsMap = new Set();
   function subscribeFirstWords(roundId){
     if(unsubscribeFirstWords) unsubscribeFirstWords();
@@ -1509,6 +1558,11 @@ if(isMe){
         const idx=roundState.turnIndex??0;
         const uidTurno=(roundState.order||[])[idx];
         ui.turnHint.textContent = uidTurno ? `Turno de: ${await nameOf(uidTurno)}` : "";
+        if(uidTurno){
+  const nombreTurno = await nameOf(uidTurno);
+  showGraffitiTurn(nombreTurno);
+}
+
         timerBox.textContent = "";
       }
 
