@@ -380,6 +380,22 @@
   .players{ grid-template-columns: 1fr; }
   .settings-top, .settings-bottom{ grid-template-columns: 1fr; }
 }
+/* 1) La columna principal se vuelve flex vertical */
+.main-col{
+  display:flex;
+  flex-direction:column;
+  /* opcional: fuerza una altura mínima para que se note el empuje */
+  min-height: 68vh;
+}
+
+/* 2) Empuja la CTA hacia abajo ocupando el espacio libre */
+.cta{
+  margin-top:auto;           /* ⬅︎ clave */
+  padding-top: clamp(16px, 2vh, 28px);
+}
+
+/* 3) Un pelín de separación extra bajo los settings */
+.settings-bottom{ margin-bottom: 8px; }
 
 </style>
 </head>
