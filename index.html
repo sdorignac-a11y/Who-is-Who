@@ -19,20 +19,21 @@
     }
     *{box-sizing:border-box}
     html,body{height:100%}
-    body{
-      margin:0;color:var(--text);
-      font-family:"Outfit",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
-      display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
-      min-height:100vh; overflow-x:hidden; padding:48px 16px 32px;
-      background:
-        radial-gradient(120px 80px at 12% 14%, #ffffffa8 0%, #c3e4ff33 30%, #0000 70%),
-        radial-gradient(140px 100px at 88% 18%, #ffffffa8 0%, #c3e4ff33 30%, #0000 70%),
-        radial-gradient(120% 80% at 50% 0%, #0000 60%, #0a1527 61% 68%, #0000 69%),
-        radial-gradient(120% 80% at 50% 6%, #0000 62%, #0b1a31 63% 70%, #0000 71%),
-        radial-gradient(80% 50% at 50% 100%, #0b2d15 0%, #10461e 35%, #174e24 55%, #123a1b 70%, #0b2d15 100%),
-        linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 50%, var(--sky-3) 100%);
-      background-repeat:no-repeat;background-size:cover;
-    }
+  body{
+  margin:0;color:var(--text);
+  font-family:"Outfit",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
+  display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  min-height:100vh; overflow-x:hidden; padding:48px 16px 32px;
+
+  /* ⬇️ Fondo con la imagen */
+  background:
+    /* luces suaves (opcional, dejalo si te gusta el glow) */
+    radial-gradient(120px 80px at 12% 14%, #ffffffa8 0%, #c3e4ff33 30%, #0000 70%),
+    radial-gradient(140px 100px at 88% 18%, #ffffffa8 0%, #c3e4ff33 30%, #0000 70%),
+    /* la imagen va al fondo de todo (última capa) */
+    url("img/favela-bg.png") center/cover no-repeat fixed;
+}
+
 
     .title{
       margin:0 0 28px; line-height:1; letter-spacing:1px; text-transform:uppercase;
