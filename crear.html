@@ -1264,6 +1264,48 @@ if(isMe){
   function toMillis(ts){ return ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds*1000 : (typeof ts==="number" ? ts : 0)); }
   function fmtClock(ms){ const s=Math.max(0,Math.ceil(ms/1000)); const mm=String(Math.floor(s/60)).padStart(2,'0'); const ss=String(s%60).padStart(2,'0'); return `${mm}:${ss}`; }
 
+  // === LATERAL: Jugadores (vivos/muertos) ===
+let unsubSidePlayers = null;
+
+function drawSidePlayers(items){
+  const box = document.getElementById("sidePlayers");
+  if (!box) return;
+
+  if (!items || items.length === 0){
+    box.innerHTML = `<div style="opacity:.7">Esperando jugadores…</div>`;
+    return;
+  }
+
+  const list = items.slice().sort((a,b)=> (a.name||"").localeCompare(b.name||""));
+  box.innerHTML = list.map(p=>{
+    const alive = p.alive !== false;
+    const src = (p.avatarKey && AVATAR_MAP[p.avatarKey]) ? AVATAR_MAP[p.avatarKey] : "";
+    return `
+      <div class="side-player">
+        <div class="ava">
+          ${src ? `<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover">` : ``}
+        </div>
+        <div style="flex:1">
+          <div class="name">${sanitize(p.name)||"Jugador"}</div>
+          <div class="state"><span class="dot ${alive?'alive':'dead'}"></span>${alive?'Vivo':'Muerto'}</div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function subscribeSidePlayers(){
+  if (unsubSidePlayers) unsubSidePlayers();
+  // Usamos assignments porque ahí está el estado alive de la ronda y el avatar “congelado”
+  unsubSidePlayers = onSnapshot(
+    collection(db,"rooms",state.code,"assignments"),
+    (snap) => {
+      const items = snap.docs.map(d=>d.data());
+      drawSidePlayers(items);
+    }
+  );
+}
+
+    
   // Sorteo animación
   async function startDrawAnimation(order){
     const draw=document.getElementById("drawOverlay"); const slip=document.getElementById("slip"); const list=document.getElementById("orderList");
@@ -1421,6 +1463,7 @@ if(isMe){
       const now = Date.now();
       const left = (startMs + totalMs) - now;
       timerBox.textContent = fmtClock(left);
+      document.getElementById("timerMirror")?.textContent = timerBox.textContent;
 
       if(left <= 0){
         clearInterval(discussTicker); discussTicker=null;
@@ -1480,6 +1523,7 @@ if(isMe){
       if(!rdoc.exists()) return;
 
       roundState = rdoc.data();
+      subscribeSidePlayers();
       const phase = roundState.status;
       const discussPanel = document.getElementById("phaseDiscuss");
 
@@ -1569,6 +1613,8 @@ if(isMe){
         discussPanel.style.display="block";
         ui.turnHint.textContent="Votación";
         timerBox.textContent = "";
+        document.getElementById("timerMirror")?.textContent = "";
+
         renderVoteBar();
       }
     });
