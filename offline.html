@@ -207,6 +207,13 @@
     border:1px solid rgba(255,179,172,.75); color:#111; font-weight:900;
     padding:10px 16px; border-radius:12px; cursor:pointer;
   }
+.mini{
+  margin-left:6px; padding:4px 8px; border-radius:10px;
+  background:linear-gradient(180deg,#1e68d6,#184fa5);
+  border:1px solid rgba(110,178,255,.65);
+  color:#eaf2ff; font-weight:700; font-size:12px; cursor:pointer;
+}
+
 </style>
 </head>
 <body>
@@ -335,30 +342,71 @@ const state = {
   tiempoIndex: 2          // por defecto 60s
 };
 
+// === Nombres offline (por slot 1..N) ===
+const NAMES_KEY = "offlineNames:v1";
+let offlineNames = {};
+try{ offlineNames = JSON.parse(localStorage.getItem(NAMES_KEY)) || {}; }catch{ offlineNames = {}; }
+
+function getName(slot){                           // slot = 1..N
+  const s = (offlineNames[slot] || "").trim();
+  return s ? s : `Jugador ${slot}`;
+}
+function setName(slot, name){
+  offlineNames[slot] = name;
+  localStorage.setItem(NAMES_KEY, JSON.stringify(offlineNames));
+}
+
+
 const $ = s => document.querySelector(s);
 const impostoresEl = $("#impostoresVal");
 const jugadoresEl  = $("#jugadoresVal");
 const temaEl       = $("#temaVal");
 const tiempoEl     = $("#tiempoVal");
 
-/* ===== Render UI ===== */
 function render(){
   impostoresEl.textContent = state.impostores;
   jugadoresEl.textContent  = state.jugadores;
   temaEl.textContent       = state.temas[state.temaIndex];
   tiempoEl.textContent     = state.tiempos[state.tiempoIndex] + "s";
 
-  // ajustar tarjetas de jugadores visibles
   const wrap = $("#players");
+
+  // Ajustar cantidad de tarjetas visibles
   while (wrap.children.length > state.jugadores) wrap.removeChild(wrap.lastElementChild);
   while (wrap.children.length < state.jugadores){
     const i = wrap.children.length + 1;
     const card = document.createElement("div");
     card.className = "player";
-    card.innerHTML = `<div class="avatar placeholder"></div><small>Jugador ${i}</small>`;
+    // small incluye el nombre y un botón Editar
+    card.innerHTML = `
+      <div class="avatar ${i===1?'':'placeholder'}"></div>
+      <small>
+        <span class="pname">${getName(i)}</span>
+        <button class="mini" data-slot="${i}">Editar</button>
+      </small>`;
     wrap.appendChild(card);
   }
+
+  // Actualizar nombres y enganchar los "Editar"
+  Array.from(wrap.children).forEach((card, idx)=>{
+    const slot = idx + 1;
+    const nameSpan = card.querySelector(".pname");
+    if (nameSpan) nameSpan.textContent = getName(slot);
+  });
+
+  wrap.querySelectorAll("button[data-slot]").forEach(btn=>{
+    btn.onclick = ()=>{
+      const slot = Number(btn.dataset.slot);
+      const prev = getName(slot);
+      const nuevo = prompt(`Nombre para el jugador ${slot} (2–16 chars):`, prev) ?? "";
+      const v = nuevo.trim();
+      if(v.length < 2 || v.length > 16) return;
+      setName(slot, v);
+      render();        // repinta todo con el nuevo nombre
+    };
+  });
 }
+
 
 /* ===== Selectores (flechas) ===== */
 document.querySelectorAll(".arrow").forEach(btn=>{
@@ -402,7 +450,7 @@ function cerrarOverlay(){ $reveal.style.display="none"; }
 
 function prepararPantallaReveal(){
   const a = assignments[currentReveal];
-  $revTitle.textContent = `Jugador ${a.player}`;
+ $revTitle.textContent = a.name || `Jugador ${a.player}`;
   $revContent.innerHTML = `<p>Tocá <b>Mostrar</b> para ver tu rol</p>`;
   $btnMostrar.style.display=""; $btnOcultar.style.display="none";
   $btnSiguiente.style.display="none"; $btnComenzarRonda.style.display="none";
@@ -414,10 +462,18 @@ function iniciarPartida(){
   const palabra = sampleOne(POOLS[tema]||["Balón"]);
   const impostores = new Set(pickKUnique(K,N));
   assignments=[];
-  for(let i=0;i<N;i++){
-    const isImp = impostores.has(i);
-    assignments.push({ player:i+1, role:isImp?"IMPOSTOR":"CIVIL", word:isImp?null:palabra, tema });
-  }
+for(let i=0;i<N;i++){
+  const slot = i+1;
+  const isImp = impostores.has(i);
+  assignments.push({
+    player: slot,
+    name: getName(slot),
+    role: isImp ? "IMPOSTOR" : "CIVIL",
+    word: isImp ? null : palabra,
+    tema
+  });
+}
+
   currentReveal=0; abrirOverlay(); prepararPantallaReveal();
 }
 
@@ -486,7 +542,7 @@ function openVoting(){
     card.dataset.index=i;
     card.innerHTML = `
       <div class="circle"></div>
-      <div class="name">Jugador ${i+1}</div>
+      <div class="name">${getName(i+1)}</div>
       <div class="count" id="vcount-${i}">Votos: 0</div>`;
     card.onclick=()=>{
       votes[i]++; $("#vcount-"+i).textContent = "Votos: " + votes[i];
@@ -508,11 +564,11 @@ $closeVote.addEventListener("click", ()=>{
   if(max===0){
     msg="Nadie recibió votos. No hay eliminado.";
   }else if(indices.length>1){
-    msg = `Empate entre: ${indices.map(i=>"Jugador "+(i+1)).join(", ")} (${max} votos).`;
+ msg = `Empate entre: ${indices.map(i=>getName(i+1)).join(", ")} (${max} votos).`;
   }else{
     const idx = indices[0];
-    const a = assignments[idx];
-    msg = `El más votado es <b>Jugador ${idx+1}</b> — <i>${a.role}</i>.`;
+   const a = assignments[idx];   // ya tiene name
+ msg = `El más votado es <b>${a.name || ("Jugador "+(idx+1))}</b> — <i>${a.role}</i>.`;
   }
   $voteOverlay.style.display="none";
   // Resultado simple
