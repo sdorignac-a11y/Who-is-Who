@@ -479,7 +479,14 @@
   }
   await ensureAuth();
 
-  const AVATAR_MAP = { a1:"avatars/a1.png",a2:"avatars/a2.png",a3:"avatars/a3.png",a4:"avatars/a4.png",a5:"avatars/a5.png",a6:"avatars/a6.png",a7:"avatars/a7.png",a8:"avatars/a8.png",a9:"avatars/a9.png",a10:"avatars/a10.png",a11:"avatars/a11.png",a12:"avatars/a12.png" };
+const AVATAR_MAP = {
+  maradona:   "avatars/maradona.png",
+  ronaldo:    "avatars/ronaldo.png",
+  cristiano:  "avatars/cristiano.png",
+  ronaldinho: "avatars/ronaldinho.png",
+  lamine:     "avatars/lamine.png",
+  odegar:     "avatars/odegar.png",
+};
 
   const $ = s => document.querySelector(s);
   const roomCodeEl  = $("#roomCode");
@@ -547,13 +554,15 @@
     return (s.trim().length>=2 && s.trim().length<=16) ? s.trim() : "Jugador";
   }
   function getStoredAvatar(){
-    const qp = new URLSearchParams(location.search);
-    const qAvatar = qp.get("avatar");
-    const AV = { a1:1,a2:1,a3:1,a4:1,a5:1,a6:1,a7:1,a8:1,a9:1,a10:1,a11:1,a12:1 };
-    if (qAvatar && AV[qAvatar]) localStorage.setItem("avatarKey", qAvatar);
-    const k = localStorage.getItem("avatarKey") || "";
-    return AVATAR_MAP[k] ? k : "";
+  const qp = new URLSearchParams(location.search);
+  const qAvatar = qp.get("avatar");             // viene de index.html
+  if (qAvatar && AVATAR_MAP[qAvatar]) {
+    localStorage.setItem("avatarKey", qAvatar);
   }
+  const k = localStorage.getItem("avatarKey") || "";
+  return AVATAR_MAP[k] ? k : "";                // si no existe, vuelve vacío (placeholder)
+}
+
 
   async function editAndSaveName(playerRef){
     const prev = getStoredName();
