@@ -185,7 +185,6 @@
 
   /* ====== RESPONSIVE LAYOUT ====== */
   @media (max-width: 900px){
-    /* Fondo fijo puede jankear en iOS; cámbialo en móviles */
     body{ background-attachment:scroll; }
     .room-card{
       grid-template-columns:1fr;
@@ -195,12 +194,52 @@
     }
     .user-area{align-items:center}
   }
-
   @media (max-width: 420px){
     .selector .arrow{width:36px;height:36px}
     .avatar{width:52px;height:52px}
-    .order-list{grid-template-columns:1fr} /* lista a una columna */
+    .order-list{grid-template-columns:1fr}
   }
+
+  /* ====== MEJORAS VISUALES (FIFA-like) ====== */
+  :root{ --glow:#7cf062; --shine:rgba(255,255,255,.18); }
+  .room-card,.card,.selector,.userbox,.code-box{
+    backdrop-filter:saturate(1.2) blur(6px);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 10px 26px rgba(0,0,0,.35);
+  }
+  .card:hover,.player:hover{
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 14px 34px rgba(0,0,0,.45);
+    transform:translateY(-1px);
+    transition:transform .18s ease, box-shadow .18s ease;
+  }
+  .btn,.btn-cta{transition:transform .15s ease, box-shadow .15s ease, filter .15s ease}
+  .btn:hover,.btn-cta:hover{transform:translateY(-1px)}
+  .btn:active,.btn-cta:active{transform:translateY(0)}
+  .btn:focus-visible,.btn-cta:focus-visible{ outline:2px solid var(--glow); outline-offset:2px; }
+  .btn-cta{ position:relative; overflow:hidden; box-shadow:0 10px 26px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.2); }
+  .btn-cta::after{
+    content:""; position:absolute; inset:0; translate:-120% 0;
+    background:linear-gradient(110deg, transparent 0 40%, var(--shine) 50%, transparent 60% 100%);
+    animation:shine 2.8s linear infinite;
+  }
+  @keyframes shine{ to{ translate:120% 0 } }
+  .me-outline{ box-shadow:0 0 0 2px #f6c11b, 0 0 22px rgba(246,193,27,.25) !important; }
+  #toast{
+    position:fixed; left:50%; bottom:18px; transform:translateX(-50%) translateY(20px);
+    background:linear-gradient(180deg,#0d2747,#0b203a);
+    border:1px solid rgba(128,180,255,.35); color:#eaf2ff;
+    padding:10px 14px; border-radius:12px; z-index:2000; opacity:0; pointer-events:none;
+    box-shadow:0 12px 28px rgba(0,0,0,.45);
+    transition:opacity .22s ease, transform .22s ease; font-weight:800
+  }
+  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  body::before{
+    content:""; position:fixed; inset:-10% -10% auto -10%; height:55%;
+    background:radial-gradient(60% 55% at 80% 0%, rgba(110,178,255,.18), transparent 60%),
+                radial-gradient(60% 55% at 20% 0%, rgba(110,178,255,.18), transparent 60%);
+    pointer-events:none; animation:lights 6s ease-in-out infinite alternate; z-index:0;
+  }
+  @keyframes lights{ from{opacity:.55; filter:blur(0)} to{opacity:.85; filter:blur(1px)} }
+  .container{ position:relative; z-index:1 }
 </style>
 </head>
 <body>
@@ -298,6 +337,9 @@
     </div>
   </div>
 
+  <!-- Toast -->
+  <div id="toast" role="status" aria-live="polite"></div>
+
   <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -335,6 +377,16 @@
   const toggleCodeBtn = document.getElementById("toggleCodeBtn");
   const privacyHint = document.getElementById("privacyHint");
 
+  /* ======= TOAST simple ======= */
+  function showToast(msg, ms=1400){
+    const t = document.getElementById("toast");
+    if(!t) return;
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(showToast._h);
+    showToast._h = setTimeout(()=> t.classList.remove("show"), ms);
+  }
+
   /* ======= PRIVACIDAD & VISIBILIDAD DE CÓDIGO ======= */
   let showCode = false;      // oculto por defecto
   let isPublic = false;      // privada por defecto
@@ -356,8 +408,12 @@
     isPublic = !isPublic;
     updatePrivacyUI();
     try{ await updateDoc(roomRef,{ isPublic }); }catch(e){ console.warn(e); }
+    showToast(isPublic ? "🌍 Sala pública" : "🔒 Sala privada");
   });
-  toggleCodeBtn.addEventListener("click", ()=>{ showCode = !showCode; updateCodeVisibility(); });
+  toggleCodeBtn.addEventListener("click", ()=>{
+    showCode = !showCode; updateCodeVisibility();
+    showToast(showCode ? "👁️ Código visible" : "🙈 Código oculto");
+  });
 
   function getStoredName(){
     const qp = new URLSearchParams(location.search);
@@ -392,6 +448,8 @@
   }
 
   let lastPlayers=[];
+  let hostUid = null; // <<< NUEVO: guardamos uid del host
+
   function drawPlayers(maxCount,list){
     const ordered=(list||[]).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
     playersWrap.innerHTML="";
@@ -404,10 +462,13 @@
           av.className="avatar";
           const img=document.createElement("img"); img.className="avatar-img"; img.src=AVATAR_MAP[p.avatarKey]; img.alt=p.name||"avatar"; av.appendChild(img);
         }else{ av.className="avatar placeholder"; }
-        if(p.uid===(auth.currentUser&&auth.currentUser.uid)){
-          card.classList.add("me-outline"); label.innerHTML=`${p.name||`Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
+        const isMe = p.uid===(auth.currentUser&&auth.currentUser.uid);
+        const isCap = hostUid && p.uid===hostUid;
+        if(isMe){
+          card.classList.add("me-outline");
+          label.innerHTML=`${p.name||`Jugador ${i+1}`} <span class="me-badge">(yo)</span>${isCap?' <span title="Host">👑</span>':''}`;
         }else{
-          label.textContent=p.name||`Jugador ${i+1}`;
+          label.innerHTML=`${p.name||`Jugador ${i+1}`}${isCap?' <span title="Host">👑</span>':''}`;
           /* NUEVO: botón expulsar si sos host */
           if(isHost){
             const kick=document.createElement("button");
@@ -444,7 +505,6 @@
   };
 
   function render(){
-    // importante: respetar visibilidad de código
     roomCodeEl.textContent = showCode ? (state.code || "—") : "••••••";
     impostoresEl.textContent = state.impostores;
     jugadoresEl.textContent  = state.jugadores;
@@ -529,6 +589,7 @@
 
     // host
     const before=isHost; isHost=(data.hostUid===auth.currentUser.uid);
+    hostUid = data.hostUid || null; // <<< NUEVO: guardamos host uid
     if(before!==isHost){ setArrowsEnabled(isHost); setHostControlsVisible(isHost); }
 
     // settings
@@ -733,7 +794,7 @@
 
     let max = 0, winners = [];
     for (const [uid,c] of counts){
-      if (c>max){ max=c; winners=[uid]; }
+      if (c>max){ winners=[uid]; max=c; }
       else if (c===max){ winners.push(uid); }
     }
     const tie = winners.length!==1;
@@ -993,7 +1054,7 @@
 
       if(phase==="prompt"){
         discussPanel.style.display="block";
-        document.getElementById("firstWordTip").style.display="block";
+        document.getElementById("firstWordTip").style.display="none"; /* oculto tip si no lo usás */
         ui.chatInput.placeholder="Primero UNA palabra (2–24 letras)…";
         const idx=roundState.turnIndex??0;
         const uidTurno=(roundState.order||[])[idx];
@@ -1158,11 +1219,15 @@
   });
 
   // Copiar / Compartir
-  document.getElementById("copyBtn").addEventListener("click", async ()=>{ try{ await navigator.clipboard.writeText(state.code); }catch{} });
+  document.getElementById("copyBtn").addEventListener("click", async ()=>{
+    try{ await navigator.clipboard.writeText(state.code); showToast("✅ Código copiado"); }
+    catch{ showToast("❌ No pude copiar"); }
+  });
+
   document.getElementById("shareBtn").addEventListener("click", async ()=>{
     const joinUrl=`${location.origin}/ingresar.html?code=${state.code}`;
     if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); }catch{} }
-    else { try{ await navigator.clipboard.writeText(joinUrl); alert("Enlace copiado"); }catch{ alert(joinUrl); } }
+    else { try{ await navigator.clipboard.writeText(joinUrl); showToast("🔗 Enlace copiado"); }catch{ alert(joinUrl); } }
   });
 
   </script>
