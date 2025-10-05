@@ -1501,6 +1501,96 @@ if(isMe){
     if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); }catch{} }
     else { try{ await navigator.clipboard.writeText(joinUrl); showToast("🔗 Enlace copiado"); }catch{ alert(joinUrl); } }
   });
+// =======================
+//  LOBBY CHAT (Realtime)
+// =======================
+const lobbyUI = {
+  list: document.getElementById("lobbyChatList"),
+  form: document.getElementById("lobbyChatForm"),
+  input: document.getElementById("lobbyChatInput"),
+};
+
+let unsubLobbyChat = null;
+let lobbyCooldownUntil = 0;
+
+function canSendLobbyNow(){
+  const now = Date.now();
+  if (now < lobbyCooldownUntil) return false;
+  return true;
+}
+
+function renderLobbyMessages(items){
+  lobbyUI.list.innerHTML = items.map(m => {
+    const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
+    return `
+      <div class="msg-row" style="${mine ? 'justify-content:flex-end' : 'justify-content:flex-start'}">
+        <div class="msg ${mine ? 'mine' : ''}">
+          <div class="name">${sanitize(m.name) || "Jugador"}</div>
+          <div>${sanitize(m.text || "")}</div>
+        </div>
+      </div>`;
+  }).join("");
+  lobbyUI.list.scrollTop = lobbyUI.list.scrollHeight;
+}
+
+function subscribeLobbyChat(){
+  if (unsubLobbyChat) unsubLobbyChat();
+  unsubLobbyChat = onSnapshot(
+    collection(db, "rooms", state.code, "lobbyChat"),
+    (snap) => {
+      const items = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        // Ordenamos por timestamp ascendente (sin orderBy para evitar más imports)
+        .sort((a,b) => {
+          const ta = a.at?.seconds || 0;
+          const tb = b.at?.seconds || 0;
+          return ta - tb;
+        });
+      renderLobbyMessages(items);
+    }
+  );
+}
+
+lobbyUI.form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const raw = (lobbyUI.input.value || "").trim();
+  if (!raw) return;
+
+  // Anti-spam suave: 1.5s entre mensajes por usuario
+  if (!canSendLobbyNow()){
+    // feedback mínimo en el placeholder
+    const ph = lobbyUI.input.placeholder;
+    lobbyUI.input.placeholder = "Esperá un toque…";
+    setTimeout(()=> lobbyUI.input.placeholder = ph, 1200);
+    return;
+  }
+
+  // Longitud y sanitización básica
+  if (raw.length > 180){
+    alert("Máximo 180 caracteres.");
+    return;
+  }
+
+  try{
+    const myUid = auth.currentUser?.uid;
+    const msgRef = doc(collection(db, "rooms", state.code, "lobbyChat"));
+    await setDoc(msgRef, {
+      uid: myUid || "anon",
+      name: getStoredName(),
+      text: raw,
+      at: serverTimestamp(),
+      kind: "chat"
+    });
+    lobbyUI.input.value = "";
+    lobbyCooldownUntil = Date.now() + 1500;
+  }catch(e){
+    console.warn("Error enviando lobby msg:", e);
+    alert("No pude enviar el mensaje.");
+  }
+});
+
+// arrancamos la suscripción cuando ya tenemos código de sala
+subscribeLobbyChat();
 
   </script>
   </div>
