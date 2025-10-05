@@ -301,6 +301,73 @@
 
 #app-wrapper{ opacity:1; transition: opacity 350ms ease; }
 #app-wrapper.hidden{ opacity:0; pointer-events:none; user-select:none; }
+/* ===== Lobby layout (main + sidebar) ===== */
+.lobby-layout{
+  display:grid;
+  grid-template-columns: 2fr 1fr;  /* izquierda más ancha */
+  gap:16px;
+}
+
+/* Sidebar */
+.side-col .chat-card{
+  height:100%;
+  background:linear-gradient(180deg,#0d2747,#0b203a);
+  border:1px solid rgba(128,180,255,.3);
+  border-radius:16px;
+  display:flex; flex-direction:column;
+  min-height:420px;
+}
+.chat-head{ padding:12px 14px; border-bottom:1px solid rgba(128,180,255,.18); }
+.chat-head h3{ margin:0; font-size:clamp(14px,3.6vw,16px); }
+.chat-list{
+  flex:1; overflow:auto; padding:12px 12px 6px;
+}
+.chat-form{
+  display:flex; gap:8px; padding:10px 12px; border-top:1px solid rgba(128,180,255,.18);
+}
+.chat-form input{
+  flex:1; padding:10px 12px; border-radius:12px;
+  border:1px solid rgba(128,180,255,.35);
+  background:#0a213b; color:#eaf2ff; font-size:14px;
+}
+
+/* Mensajes lobby (aprovechamos tu estilo de burbujas) */
+.msg-row{ display:flex; margin:6px 0; }
+.msg{ max-width:88%; padding:8px 12px; border-radius:12px;
+      background:#142946; border:1px solid rgba(128,180,255,.18);
+      color:#cfe4ff; box-shadow:0 4px 12px rgba(0,0,0,.25); }
+.msg .name{ font-weight:800; font-size:12px; opacity:.9; margin-bottom:2px; }
+.msg.mine{ background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; border-color:rgba(255,255,255,.2); margin-left:auto; }
+
+/* Players: 3 por fila en desktop */
+.players{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap:12px;
+}
+
+/* Settings: se ven como 2 filas (arriba y abajo) */
+.settings-top{
+  display:grid; grid-template-columns: repeat(3, minmax(180px,1fr)); gap:12px; margin-top:8px;
+}
+.settings-bottom{
+  display:grid; grid-template-columns: repeat(2, minmax(180px,1fr)); gap:12px; margin-top:8px;
+}
+
+/* Responsivo */
+@media (max-width: 1100px){
+  .lobby-layout{ grid-template-columns: 1.6fr 1fr; }
+}
+@media (max-width: 900px){
+  .lobby-layout{ grid-template-columns: 1fr; }
+  .side-col{ order: 3; }         /* sidebar baja en mobile */
+  .settings-top{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+  .players{ grid-template-columns: repeat(2, minmax(0,1fr)); }
+}
+@media (max-width: 520px){
+  .players{ grid-template-columns: 1fr; }
+  .settings-top, .settings-bottom{ grid-template-columns: 1fr; }
+}
 
 </style>
 </head>
@@ -371,31 +438,91 @@
       </div>
     </div>
 
+    <!-- ====== LOBBY LAYOUT: IZQ (jugadores/settings) + DER (chat) ====== -->
+<div class="lobby-layout">
+  <!-- Columna izquierda -->
+  <main class="main-col">
+    <!-- Jugadores (3 por fila) -->
     <div class="players" id="players"></div>
 
-    <div class="settings">
-      <div class="card"><h3>Impostores</h3><div class="selector"><div class="arrow" data-dec="impostores">‹</div><div class="value" id="impostoresVal">1</div><div class="arrow" data-inc="impostores">›</div></div></div>
-      <div class="card"><h3>Jugadores</h3><div class="selector"><div class="arrow" data-dec="jugadores">‹</div><div class="value" id="jugadoresVal">8</div><div class="arrow" data-inc="jugadores">›</div></div></div>
-      <div class="card"><h3>Tema</h3><div class="selector"><div class="arrow" data-dec="tema">‹</div><div class="value" id="temaVal">Clubes</div><div class="arrow" data-inc="tema">›</div></div></div>
-      <div class="card"><h3>Tiempo</h3><div class="selector"><div class="arrow" data-dec="tiempo">‹</div><div class="value" id="tiempoVal">60s</div><div class="arrow" data-inc="tiempo">›</div></div></div>
+    <!-- Settings (fila 1) -->
+    <div class="settings settings-top">
+      <div class="card">
+        <h3>Impostores</h3>
+        <div class="selector">
+          <div class="arrow" data-dec="impostores">‹</div>
+          <div class="value" id="impostoresVal">1</div>
+          <div class="arrow" data-inc="impostores">›</div>
+        </div>
+      </div>
 
       <div class="card">
-  <h3>Privacidad</h3>
-  <div class="selector" style="justify-content:center">
-    <button id="togglePrivacyBtn" class="btn icon-btn">
-      <svg class="icon"><use href="#i-lock"></use></svg> Privada
-    </button>
-    <small id="privacyHint" style="opacity:.8;font-weight:700">Solo con código</small>
-  </div>
-</div>
+        <h3>Jugadores</h3>
+        <div class="selector">
+          <div class="arrow" data-dec="jugadores">‹</div>
+          <div class="value" id="jugadoresVal">8</div>
+          <div class="arrow" data-inc="jugadores">›</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Tema</h3>
+        <div class="selector">
+          <div class="arrow" data-dec="tema">‹</div>
+          <div class="value" id="temaVal">Clubes</div>
+          <div class="arrow" data-inc="tema">›</div>
+        </div>
+      </div>
     </div>
 
+    <!-- Settings (fila 2 – ABAJO A LA IZQUIERDA) -->
+    <div class="settings settings-bottom">
+      <div class="card">
+        <h3>Tiempo</h3>
+        <div class="selector">
+          <div class="arrow" data-dec="tiempo">‹</div>
+          <div class="value" id="tiempoVal">60s</div>
+          <div class="arrow" data-inc="tiempo">›</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Privacidad</h3>
+        <div class="selector" style="justify-content:center">
+          <button id="togglePrivacyBtn" class="btn icon-btn">
+            <svg class="icon"><use href="#i-lock"></use></svg> Privada
+          </button>
+          <small id="privacyHint" style="opacity:.8;font-weight:700">Solo con código</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- CTA -->
     <div class="cta">
       <button id="startBtn" class="btn-cta">EMPEZAR PARTIDA</button>
       <button id="leaveBtn" class="btn" style="display:none">ABANDONAR PARTIDA</button>
       <button id="deleteRoomBtn" class="btn" style="display:none;background:linear-gradient(180deg,#ea4335,#c92e21);border-color:#ffb3ac">ELIMINAR SALA</button>
     </div>
-  </div>
+  </main>
+
+  <!-- Columna derecha: CHAT DE LOBBY -->
+  <aside class="side-col">
+    <div class="chat-card">
+      <div class="chat-head">
+        <h3>Chat de la sala</h3>
+        <small id="lobbyChatHint">Chateá mientras esperan</small>
+      </div>
+
+      <div id="lobbyChatList" class="chat-list"></div>
+
+      <form id="lobbyChatForm" class="chat-form">
+        <input id="lobbyChatInput" maxlength="180" placeholder="Escribí un mensaje…">
+        <button class="btn" type="submit">Enviar</button>
+      </form>
+    </div>
+  </aside>
+</div>
+
 
   <!-- Overlay: rol + countdown -->
   <div id="reveal">
