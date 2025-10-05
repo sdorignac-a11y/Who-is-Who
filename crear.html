@@ -1,5 +1,3 @@
-asi
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -454,6 +452,29 @@ asi
 .dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
 .dot.alive{ background:#22c55e } .dot.dead{ background:#ff6b6b }
 
+.side-player.dead .name{
+  text-decoration: line-through;
+  opacity: .75;
+}
+.side-player .state-badge{
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.12);
+}
+.state-badge.alive{
+  color:#16a34a;
+  background: rgba(34,197,94,.10);
+  border-color: rgba(34,197,94,.25);
+}
+.state-badge.dead{
+  color:#ff6b6b;
+  background: rgba(255,107,107,.10);
+  border-color: rgba(255,107,107,.25);
+}
+
+  
 #voteBar{ display:grid; grid-template-columns:1fr; gap:8px; }  /* en lateral */
 .vote-item{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; width:100%; justify-content:flex-start; }
 .vote-avatar{ width:28px; height:28px; border-radius:50%; overflow:hidden; background:#163257; display:grid; place-items:center; }
@@ -686,29 +707,20 @@ asi
       </section>
 
       <!-- 30%: PANEL LATERAL -->
-      <aside class="debate-side">
-        <div class="side-section">
-          <h3 class="side-title">Ronda</h3>
-          <div class="side-row">
-            <small>Tiempo</small>
-            <small id="timerMirror"></small>
-          </div>
-        </div>
+     <aside class="debate-side">
+  <div class="side-section">
+    <h3 class="side-title">Ronda</h3>
+    <div class="side-row">
+      <small>Tiempo</small>
+      <small id="timerMirror"></small>
+    </div>
+  </div>
 
-        <div class="side-section">
-          <h3 class="side-title">Jugadores</h3>
-          <div id="sidePlayers" class="side-players"></div>
-        </div>
-
-        <div class="side-section" style="border-bottom:0">
-          <h3 class="side-title">Votar</h3>
-          <div id="voteBar"></div>
-          <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap">
-            <button id="skipVoteBtn" class="btn" type="button">Omitir voto</button>
-            <button id="voteNowBtn" class="btn-cta" type="button" style="font-size:16px;padding:10px 14px">Votar ahora</button>
-          </div>
-        </div>
-      </aside>
+  <div class="side-section" style="border-bottom:0">
+    <h3 class="side-title">Jugadores</h3>
+    <div id="sidePlayers" class="side-players"></div>
+  </div>
+</aside>
     </div>
   </div>
 </div>
@@ -1493,6 +1505,7 @@ if(isMe){
       subscribeChat(currentRound);
       subscribeFirstWords(currentRound);
       subscribeRoundPhase(currentRound);
+      subscribeSidePlayers(); 
     }else{
       currentRound = newRound;
     }
@@ -1519,6 +1532,52 @@ if(isMe){
     cooldownHint:document.getElementById("cooldownHint"),
     turnHint:document.getElementById("turnHint"),
   };
+
+  // ===== LATERAL DE JUGADORES (debate): vivo / eliminado =====
+const sidePlayersEl = document.getElementById("sidePlayers");
+let unsubSidePlayers = null;
+
+function renderSidePlayers(assignments){
+  if(!sidePlayersEl) return;
+  // Orden por nombre (vivos arriba)
+  const ordered = assignments
+    .slice()
+    .sort((a,b)=>{
+      const av = (a.alive!==false), bv=(b.alive!==false);
+      if(av!==bv) return av? -1 : 1;
+      return (a.name||"").localeCompare(b.name||"");
+    });
+
+  sidePlayersEl.innerHTML = ordered.map(p=>{
+    const alive = p.alive !== false;
+    const src = (p.avatarKey && AVATAR_MAP[p.avatarKey]) ? AVATAR_MAP[p.avatarKey] : "";
+    return `
+      <div class="side-player ${alive?'':'dead'}">
+        <div class="ava">${src?`<img src="${src}" alt="" style="width:100%;height:100%;object-fit:cover">`:''}</div>
+        <div style="display:flex;flex-direction:column;gap:2px">
+          <div class="name" title="${(p.role||'')}">
+            <span class="dot ${alive?'alive':'dead'}"></span>${sanitize(p.name)||'Jugador'}
+          </div>
+          <div class="state-badge ${alive?'alive':'dead'}">
+            ${alive ? 'Vivo' : 'Eliminado'}
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+// Suscripción en tiempo real a los assignments (roles/estado)
+function subscribeSidePlayers(){
+  if(unsubSidePlayers) unsubSidePlayers();
+  unsubSidePlayers = onSnapshot(
+    collection(db,"rooms",state.code,"assignments"),
+    snap=>{
+      const arr = snap.docs.map(d=>d.data());
+      renderSidePlayers(arr);
+    }
+  );
+}
+
 
   let cooldownUntil=0;
   function canSendNow(){
