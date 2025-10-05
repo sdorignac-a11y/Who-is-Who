@@ -10,71 +10,37 @@
 
   <style>
     :root{
-      /* Paleta moderna estadio */
-      --sky-1:#0a1c33;
-      --sky-2:#0f2b4f;
-      --sky-3:#0a1f3b;
-      --grass:#1f7b2e;
-
-      --gold-1:#f5c63b;
-      --gold-2:#c79416;
-
-      --blue-1:#2b6fe4;
-      --blue-2:#1448a6;
-
-      --green-1:#2dbb4f;
-      --green-2:#14823a;
-
-      --dark-1:#2b2f36;
-      --dark-2:#1b1f26;
-
-      --text:#eef3ff;
-      --shadow:#07101f;
-      --glow:#79c7ff;
+      --sky-1:#0a1c33; --sky-2:#0f2b4f; --sky-3:#0a1f3b; --grass:#1f7b2e;
+      --gold-1:#f5c63b; --gold-2:#c79416;
+      --blue-1:#2b6fe4; --blue-2:#1448a6;
+      --green-1:#2dbb4f; --green-2:#14823a;
+      --dark-1:#2b2f36; --dark-2:#1b1f26;
+      --text:#eef3ff; --shadow:#07101f; --glow:#79c7ff;
     }
-
     *{box-sizing:border-box}
     html,body{height:100%}
     body{
-      margin:0;
-      color:var(--text);
+      margin:0;color:var(--text);
       font-family:"Outfit",system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial,sans-serif;
-      display:flex;flex-direction:column;align-items:center;justify-content:center;
-      text-align:center;
-      min-height:100vh;
-      overflow-x:hidden;
-
-      /* ==== Fondo: estadio nocturno en CSS puro ==== */
+      display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+      min-height:100vh; overflow-x:hidden; padding:48px 16px 32px;
       background:
-        /* flares de luces */
         radial-gradient(120px 80px at 12% 14%, #ffffffa8 0%, #c3e4ff33 30%, #0000 70%),
         radial-gradient(140px 100px at 88% 18%, #ffffffa8 0%, #c3e4ff33 30%, #0000 70%),
-        /* anillo de tribunas */
         radial-gradient(120% 80% at 50% 0%, #0000 60%, #0a1527 61% 68%, #0000 69%),
         radial-gradient(120% 80% at 50% 6%, #0000 62%, #0b1a31 63% 70%, #0000 71%),
-        /* césped con viñeta */
         radial-gradient(80% 50% at 50% 100%, #0b2d15 0%, #10461e 35%, #174e24 55%, #123a1b 70%, #0b2d15 100%),
-        /* cielo */
         linear-gradient(180deg, var(--sky-1) 0%, var(--sky-2) 50%, var(--sky-3) 100%);
-      background-repeat:no-repeat;
-      background-size:cover;
-      padding:48px 16px;
+      background-repeat:no-repeat;background-size:cover;
     }
 
-    /* ==== Título tipo 3D metálico ==== */
     .title{
-      margin:0 0 28px;
-      line-height:1;
-      letter-spacing:1px;
-      text-transform:uppercase;
-      /* dos líneas apiladas responsivas */
-      font-family:"Bebas Neue","Outfit",sans-serif;
-      font-size:clamp(48px, 8vw, 120px);
+      margin:0 0 28px; line-height:1; letter-spacing:1px; text-transform:uppercase;
+      font-family:"Bebas Neue","Outfit",sans-serif; font-size:clamp(48px, 8vw, 120px);
       display:flex;gap:18px;align-items:flex-end;justify-content:center;flex-wrap:wrap;
       filter: drop-shadow(0 10px 24px #0006);
     }
     .title .light{
-      /* blanco metálico */
       background:linear-gradient(180deg,#ffffff,#d9e2f9 45%,#a6b3d6 60%,#ffffff 100%);
       -webkit-background-clip:text;background-clip:text;color:transparent;
       text-shadow:0 1px 0 #fff8, 0 12px 24px #0006;
@@ -85,85 +51,41 @@
       text-shadow:0 1px 0 #fff6, 0 8px 18px #0007;
       margin-left:12px;
     }
-    .title .ball{
-      font-size:clamp(36px,6vw,72px);
-      transform:translateY(-6px);
-      filter: drop-shadow(0 6px 16px #0007);
-    }
+    .title .ball{ font-size:clamp(36px,6vw,72px); transform:translateY(-6px); filter: drop-shadow(0 6px 16px #0007); }
 
-    /* ==== Botones estilo neón/brillo ==== */
     .menu-btn{
-      --c1: var(--blue-1);
-      --c2: var(--blue-2);
-      --outer:#0a1730;
-
+      --c1: var(--blue-1); --c2: var(--blue-2); --outer:#0a1730;
       display:flex;align-items:center;justify-content:center;gap:14px;
-      width:min(900px, 92vw);
-      padding:22px 26px;
-      margin:14px auto;
-      font-weight:900;
-      font-size:clamp(18px,2.4vw,32px);
-      letter-spacing:.5px;
-      color:#f7fbff;
-      text-decoration:none;
-      cursor:pointer;
-
+      width:min(900px, 92vw); padding:22px 26px; margin:14px auto;
+      font-weight:900; font-size:clamp(18px,2.4vw,32px); letter-spacing:.5px;
+      color:#f7fbff; text-decoration:none; cursor:pointer;
       background:
         radial-gradient(120% 180% at 50% 0%, #ffffff22 0 20%, #0000 30%),
         linear-gradient(180deg, var(--c1), var(--c2));
-      border-radius:16px;
-      border:1px solid #ffffff22;
-      box-shadow:
-        0 0 0 4px var(--outer),
-        0 12px 24px rgba(0,0,0,.35),
-        inset 0 1px 0 #ffffff80,
-        inset 0 -4px 0 rgba(0,0,0,.25),
-        0 0 24px calc(0.4 * 1px) color-mix(in oklab, var(--c1), white 30%);
+      border-radius:16px; border:1px solid #ffffff22;
+      box-shadow: 0 0 0 4px var(--outer), 0 12px 24px rgba(0,0,0,.35),
+                  inset 0 1px 0 #ffffff80, inset 0 -4px 0 rgba(0,0,0,.25),
+                  0 0 24px color-mix(in oklab, var(--c1), white 30%);
       transition:transform .15s ease, box-shadow .15s ease, filter .15s ease;
     }
     .menu-btn:hover{
       transform: translateY(-3px);
-      box-shadow:
-        0 0 0 4px var(--outer),
-        0 18px 30px rgba(0,0,0,.45),
-        inset 0 1px 0 #ffffffaa,
-        inset 0 -4px 0 rgba(0,0,0,.3),
-        0 0 36px color-mix(in oklab, var(--c1), white 40%);
+      box-shadow: 0 0 0 4px var(--outer), 0 18px 30px rgba(0,0,0,.45),
+                  inset 0 1px 0 #ffffffaa, inset 0 -4px 0 rgba(0,0,0,.3),
+                  0 0 36px color-mix(in oklab, var(--c1), white 40%);
       filter: saturate(1.08) brightness(1.03);
     }
     .menu-btn:active{ transform:translateY(0); }
 
-    /* Dorado (Crear sala) */
-    .yellow{
-      --c1: var(--gold-1);
-      --c2: var(--gold-2);
-      --outer:#3b2a05;
-      color:#1a1305;
-      text-shadow:0 1px 0 #fff6;
-    }
-
-    /* Gris para Offline */
-    #link-offline{
-      --c1: var(--dark-1);
-      --c2: var(--dark-2);
-      --outer:#0b0e13;
-      color:#e8edf7;
-    }
-
-    /* Cápsula “AZAR” */
+    .yellow{ --c1: var(--gold-1); --c2: var(--gold-2); --outer:#3b2a05; color:#1a1305; text-shadow:0 1px 0 #fff6; }
+    #link-offline{ --c1: var(--dark-1); --c2: var(--dark-2); --outer:#0b0e13; color:#e8edf7; }
     .caps{
-      display:inline-block;
-      padding:6px 12px;
-      background:linear-gradient(180deg,#1f3e8a,#112a64);
-      color:#e6f1ff;
-      border:1px solid #ffffff33;
-      border-radius:10px;
-      font-size:.65em;
-      box-shadow:inset 0 -3px 0 #0b1a3a, 0 3px 10px #0006;
-      letter-spacing:.5px;
+      display:inline-block; padding:6px 12px; background:linear-gradient(180deg,#1f3e8a,#112a64);
+      color:#e6f1ff; border:1px solid #ffffff33; border-radius:10px; font-size:.65em;
+      box-shadow:inset 0 -3px 0 #0b1a3a, 0 3px 10px #0006; letter-spacing:.5px;
     }
 
-    /* ===== Modal / inputs ===== */
+    /* Modal perfil */
     .backdrop{position:fixed;inset:0;background:rgba(0,10,20,.55);backdrop-filter:blur(2px);display:none;place-items:center;z-index:60}
     .name-card{width:min(520px,92vw);background:#0b1220;color:#fff;border:1px solid rgba(255,255,255,.18);
       border-radius:18px;padding:20px 18px;box-shadow:0 40px 80px rgba(0,0,0,.55);font-family:"Outfit",sans-serif}
@@ -176,14 +98,13 @@
     .name-btn{padding:12px 16px;border-radius:12px;border:1px solid rgba(255,255,255,.35);cursor:pointer;
       background:linear-gradient(180deg,#facc15,#eab308);color:#111;font-weight:900}
     .name-error{margin-top:8px;font-size:13px;color:#fb7185;min-height:18px}
-
     .avatar-grid{display:grid;grid-template-columns:repeat(6,56px);gap:10px;justify-content:center;margin-top:12px}
     .avatar-opt{width:56px;height:56px;border-radius:50%;overflow:hidden;cursor:pointer;border:2px solid transparent;background:#0f172a;display:grid;place-items:center}
     .avatar-opt img{width:100%;height:100%;object-fit:cover;display:block}
     .avatar-opt.selected{border-color:#facc15;box-shadow:0 0 0 3px rgba(250,204,21,.35)}
     .avatar-hint{margin:8px 0 0;font-size:13px;opacity:.85}
 
-    /* ===== Overlay Loader (nuevo) ===== */
+    /* Overlay loader */
     .overlay{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,10,20,.9);z-index:1000;padding:16px}
     .overlay.show{display:grid}
     .loader-card{
@@ -191,15 +112,11 @@
       background:linear-gradient(180deg,#102c4f,#0c2441);
       border:1px solid rgba(128,180,255,.28); border-radius:16px;
       box-shadow:0 20px 60px rgba(0,0,0,.6);
-      padding:18px; text-align:center;
-      font-family:"Outfit",sans-serif;
+      padding:18px; text-align:center; font-family:"Outfit",sans-serif;
     }
-    .spinner{
-      width:58px; height:58px; border-radius:50%;
-      border:4px solid rgba(255,255,255,.2);
-      border-top-color:var(--gold-1);
-      margin:10px auto 12px;
-      animation:spin 1s linear infinite;
+    .spinner{ width:58px; height:58px; border-radius:50%;
+      border:4px solid rgba(255,255,255,.2); border-top-color:var(--gold-1);
+      margin:10px auto 12px; animation:spin 1s linear infinite;
     }
     @keyframes spin{to{transform:rotate(360deg)}}
     .stage{font-weight:800; letter-spacing:.3px; margin:0 0 6px}
@@ -209,6 +126,12 @@
     .btn.alt{background:linear-gradient(180deg,#183861,#0f2644)}
     .btn.red{background:linear-gradient(180deg,#ff6b6b,#ea4335); border-color:#ffb3ac}
     .sr-only{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+
+    /* Tarjeta listado público */
+    #publicRoomsCard{ width:min(900px,92vw); margin-top:24px; text-align:left; }
+    #publicRoomsList{ max-height:320px; overflow-y:auto; border-radius:14px; background:#0c1c32; padding:12px 14px; box-shadow:0 4px 16px rgba(0,0,0,.35); }
+    .room-item{ background:#12274b; border-radius:10px; padding:10px 12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center; }
+    .join-btn{ --c1:var(--green-1); --c2:var(--green-2); --outer:#0a2b12; padding:8px 12px; font-size:14px; border-radius:10px; }
   </style>
 </head>
 <body>
@@ -227,6 +150,13 @@
     🎲 UNIRSE AL <span class="caps">AZAR</span>
   </button>
 
+  <!-- ==== SALAS PÚBLICAS ==== -->
+  <div id="publicRoomsCard">
+    <h2 style="font-family:'Bebas Neue',sans-serif;font-size:32px;margin:0 0 8px;">🏟️ Salas públicas disponibles</h2>
+    <p style="margin:0 0 10px;color:#a3b8da;font-size:15px;">Elegí una para unirte al instante:</p>
+    <div id="publicRoomsList"></div>
+  </div>
+
   <!-- ===== Perfil (nombre + avatar) ===== -->
   <script>
     const AVATARS = [
@@ -237,16 +167,14 @@
       {key:"lamine",     src:"avatars/lamine.png"},
       {key:"odegar",     src:"avatars/odegar.png"}
     ];
-
     window.PlayerProfile = {
       getName(){ return localStorage.getItem("displayName") || ""; },
       setName(n){ localStorage.setItem("displayName", n); },
       getAvatar(){ return localStorage.getItem("avatarKey") || ""; },
       setAvatar(k){ localStorage.setItem("avatarKey", k); },
-
       async ensure(){
-        let name = this.getName();
-        let avatar = this.getAvatar();
+        const valid = s => typeof s==="string" && s.trim().length>=2 && s.trim().length<=16;
+        let name = this.getName(), avatar = this.getAvatar();
         if (valid(name) && avatar) return {name, avatar};
 
         const modal = document.getElementById("name-modal");
@@ -279,18 +207,13 @@
             const v = (input.value||"").trim();
             if(!valid(v)){ errEl.textContent = "Usá entre 2 y 16 caracteres."; return; }
             if(!avatar){ errEl.textContent = "Elegí un avatar."; return; }
-            this.setName(v);
-            this.setAvatar(avatar);
-            errEl.textContent = "";
-            close();
-            resolve({name:v, avatar});
+            this.setName(v); this.setAvatar(avatar);
+            errEl.textContent = ""; close(); resolve({name:v, avatar});
           };
           btn.onclick = save;
           input.onkeydown = (e)=>{ if(e.key==="Enter") save(); if(e.key==="Escape") close(); };
           modal.onclick = (e)=>{ if(e.target===modal){ input.focus(); } };
         });
-
-        function valid(s){ return typeof s==="string" && s.trim().length>=2 && s.trim().length<=16; }
       }
     };
   </script>
@@ -299,7 +222,10 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import {
+      getFirestore, doc, setDoc, getDoc, collection, getDocs, writeBatch, serverTimestamp,
+      query, where, onSnapshot, orderBy, limit
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     (async () => {
       try {
@@ -317,7 +243,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        /* ---------- OVERLAY LOADER (nuevo) ---------- */
+        /* ---------- OVERLAY LOADER ---------- */
         const loader = document.createElement('div');
         loader.id = 'room-loader';
         loader.className = 'overlay';
@@ -342,9 +268,8 @@
         const showLoader = (stage, hint="")=>{
           loader.classList.add('show');
           stageEl().textContent = stage || 'Cargando…';
-          hintEl().textContent = hint || 'No cierres esta ventana.';
-          errEl().style.display = 'none';
-          errEl().textContent = '';
+          hintEl().textContent  = hint || 'No cierres esta ventana.';
+          errEl().style.display = 'none'; errEl().textContent = '';
         };
         const showError = (msg)=>{
           errEl().textContent = msg || 'Ocurrió un error.';
@@ -357,10 +282,17 @@
         $('#cancelBtn').addEventListener('click', ()=>{ cancelled = true; hideLoader(); });
         $('#retryBtn').addEventListener('click', ()=>{ if(!cancelled) startCreateFlow().catch(()=>{}); });
 
-        /* ---------- Utilidades ---------- */
+        /* ---------- Utils ---------- */
+        async function ensureAuth(){
+          await setPersistence(auth, browserLocalPersistence);
+          const user = await new Promise(res=>{
+            const off = onAuthStateChanged(auth, u=>{ off(); res(u); });
+          });
+          return user || (await signInAnonymously(auth)).user;
+        }
         function genCode(len=6){
-          const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-          let s=""; for(let i=0;i<len;i++) s+=A[Math.floor(Math.random()*A.length)];
+          const A="ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s="";
+          for(let i=0;i<len;i++) s+=A[Math.floor(Math.random()*A.length)];
           return s;
         }
         async function createUniqueRoomCode(tries=12){
@@ -371,31 +303,17 @@
           }
           return genCode(8);
         }
-        async function ensureAuth(){
-          await setPersistence(auth, browserLocalPersistence);
-          const user = await new Promise(res=>{
-            const off = onAuthStateChanged(auth, u=>{ off(); res(u); });
-          });
-          return user || (await signInAnonymously(auth)).user;
-        }
+        async function ensureProfile(){ const {name, avatar} = await window.PlayerProfile.ensure(); return {name, avatar}; }
 
-        /* ---------- Navegación con perfil obligatorio ---------- */
+        /* ---------- Navegación ---------- */
         const linkCrear    = document.getElementById("link-crear");
         const linkIngresar = document.getElementById("link-ingresar");
+        const btnAzar      = document.getElementById("btn-azar");
 
-        async function ensureProfile(){
-          const {name, avatar} = await window.PlayerProfile.ensure();
-          return {name, avatar};
-        }
-
-        // CREAR SALA: ahora se hace TODO acá y recién navega
         linkCrear?.addEventListener("click", async (e)=>{
-          e.preventDefault();
-          cancelled = false;
-          await startCreateFlow().catch(()=>{});
+          e.preventDefault(); cancelled = false; await startCreateFlow().catch(()=>{});
         });
 
-        // INGRESAR: sigue igual, solo pide perfil y navega
         linkIngresar?.addEventListener("click", async (e)=>{
           e.preventDefault();
           const {name, avatar} = await ensureProfile();
@@ -403,8 +321,6 @@
           location.href = `ingresar.html${sep}name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`.replace(/\s/g,"%20");
         });
 
-        // AZAR (sin cambios fuertes, solo respeta perfil)
-        const btnAzar = document.getElementById("btn-azar");
         btnAzar?.addEventListener("click", async ()=>{
           try{
             const {name, avatar} = await ensureProfile();
@@ -419,7 +335,7 @@
           }
         });
 
-        /* ---------- Flujo de creación con overlay ---------- */
+        /* ---------- Crear sala con overlay ---------- */
         async function startCreateFlow(){
           try{
             showLoader("Preparando cuenta…");
@@ -439,22 +355,17 @@
             batch.set(roomRef,{
               hostUid: user.uid,
               status: "lobby",
+              isPublic: true,                 // <- aparece en la lista pública
               createdAt: serverTimestamp(),
               settings: { maxPlayers: 8, impostors: 1, tema: "Clubes", timeSec: 60 }
             },{merge:true});
             batch.set(playerRef,{
-              uid: user.uid,
-              name,
-              avatarKey: avatar || null,
-              slot: 1,
-              online: true
+              uid: user.uid, name, avatarKey: avatar || null, slot: 1, online: true
             },{merge:true});
             await batch.commit();
             if(cancelled) return;
 
-            // Guardá último código por si querés reusar luego
             localStorage.setItem("lastRoomCode", code);
-
             showLoader("Todo listo. Entrando…");
             setTimeout(()=>{
               if(!cancelled){
@@ -466,6 +377,78 @@
             showError(`No pude crear la sala. ${err?.message ? "(" + err.message + ")" : ""}`);
           }
         }
+
+        /* ---------- Salas públicas (lista en vivo) ---------- */
+        const listEl = document.getElementById("publicRoomsList");
+
+        function renderPublicRooms(rooms){
+          if (!rooms.length){
+            listEl.innerHTML = `<div style="opacity:.8;padding:6px 0;">No hay salas públicas disponibles</div>`;
+            return;
+          }
+          listEl.innerHTML = rooms.map(r => `
+            <div class="room-item">
+              <div>
+                <div style="font-weight:700;">Sala <span style="color:#38bdf8">${r.id}</span></div>
+                <small style="opacity:.85;">Tema: ${r.tema} · Jugadores: ${r.players || 0}/${r.max}</small>
+              </div>
+              <button class="menu-btn join-btn" data-join="${r.id}">Unirse</button>
+            </div>
+          `).join("");
+
+          listEl.querySelectorAll("[data-join]").forEach(btn=>{
+            btn.onclick = ()=> joinPublicRoom(btn.dataset.join);
+          });
+        }
+
+        async function joinPublicRoom(code){
+          try{
+            const {name, avatar} = await ensureProfile();
+            const user = await ensureAuth();
+
+            const roomRef = doc(db,"rooms",code);
+            const roomSnap = await getDoc(roomRef);
+            if(!roomSnap.exists()){ alert("La sala ya no existe."); return; }
+
+            const pRef = doc(db,"rooms",code,"players",user.uid);
+            await setDoc(pRef,{
+              uid:user.uid, name, avatarKey:avatar || null, online:true, slot:Date.now()
+            },{merge:true});
+
+            location.href = `crear.html?code=${code}&name=${encodeURIComponent(name)}&avatar=${encodeURIComponent(avatar)}`;
+          }catch(e){
+            console.error(e);
+            alert("No se pudo entrar a la sala.");
+          }
+        }
+
+        function subscribePublicRooms(){
+          const qRooms = query(
+            collection(db,"rooms"),
+            where("isPublic","==",true),
+            where("status","==","lobby"),
+            orderBy("createdAt","desc"),
+            limit(30)
+          );
+
+          onSnapshot(qRooms, async snap=>{
+            // Nota: contamos jugadores por subcolección
+            const rooms = await Promise.all(snap.docs.map(async d=>{
+              const data = d.data();
+              const playersSnap = await getDocs(collection(db,"rooms",d.id,"players"));
+              return {
+                id: d.id,
+                tema: data.settings?.tema || "—",
+                max: data.settings?.maxPlayers || 8,
+                players: playersSnap.size
+              };
+            }));
+            renderPublicRooms(rooms);
+          });
+        }
+
+        // Arrancar
+        subscribePublicRooms();
 
       } catch (err) {
         console.error("Error inicializando Firebase:", err);
