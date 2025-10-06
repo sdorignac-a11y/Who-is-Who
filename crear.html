@@ -792,6 +792,29 @@
   const auth = getAuth(app);
   const db = getFirestore(app);
 
+  // === Frases graciosas ===
+const frasesEntrada = [
+  "Se suma al equipo como fichaje estrella 🤑",
+  "¡Nuevo refuerzo! Esperemos que no venga libre por algo…",
+  "Llega al vestuario con toda la ilusión ✨",
+  "¡Ojito! Dicen que este jugador tiene buen pie ⚽"
+];
+
+const frasesSalida = [
+  "Expulsado por doble amarilla 🚩",
+  "VAR revisa… y lo echan 😭",
+  "Abandona el campo entre silbidos 👋",
+  "Sale lesionado, pide el cambio 😢"
+];
+
+// === Función para mostrar una frase random en el chat ===
+function mensajeFutbolero(tipo, nombre){
+  const lista = tipo === "entrada" ? frasesEntrada : frasesSalida;
+  const frase = lista[Math.floor(Math.random() * lista.length)];
+  addChatMessage("Narrador", `${nombre} ${frase}`);
+}
+
+
   await setPersistence(auth, browserLocalPersistence);
   async function ensureAuth(){
     const u = await new Promise(r=>{ const un = onAuthStateChanged(auth,(x)=>{un(); r(x);}); });
