@@ -520,6 +520,52 @@
   .debate-side{ order:-1; }
 }
 .vote-item.chosen{ outline:2px solid #7cf062; outline-offset:2px; }
+/* Botón campana + badge */
+.icon-btn{
+  display:inline-flex; align-items:center; gap:8px;
+  padding:8px 12px; border-radius:10px; cursor:pointer;
+  border:1px solid rgba(255,255,255,.2);
+  background:linear-gradient(180deg,#13305a,#0c2342); color:#eaf2ff;
+  font-weight:800;
+}
+.icon-btn:hover{ filter:brightness(1.08) }
+
+.badge{
+  min-width:18px; height:18px; padding:0 6px; border-radius:9px;
+  background:#ef4444; color:#fff; font-size:12px; display:inline-grid; place-items:center;
+}
+
+/* Drawer lateral derecho */
+.req-drawer{
+  position:fixed; top:0; right:0; height:100vh; width:min(420px, 92vw);
+  background:#0b1220; color:#eaf2ff; border-left:1px solid rgba(128,180,255,.25);
+  box-shadow:-24px 0 60px rgba(0,0,0,.5);
+  transform:translateX(100%); transition:transform .22s ease;
+  z-index:110;
+  display:flex; flex-direction:column;
+}
+.req-drawer.show{ transform:translateX(0) }
+
+.req-head{
+  display:flex; justify-content:space-between; align-items:center;
+  padding:14px 16px; border-bottom:1px solid rgba(128,180,255,.2);
+  background:linear-gradient(180deg,#0f1c34,#0b1426);
+}
+.icon-x{ cursor:pointer; background:#101b31; border:1px solid rgba(255,255,255,.2); color:#eaf2ff; border-radius:8px; padding:6px 10px }
+
+.req-body{ padding:12px; overflow:auto; flex:1 }
+
+.req-item{
+  background:#0f213b; border:1px solid rgba(128,180,255,.25);
+  border-radius:12px; padding:10px; margin:8px 0;
+  display:flex; justify-content:space-between; align-items:center; gap:10px;
+}
+.req-meta{ font-weight:700 }
+.req-sub{ opacity:.85; font-size:12px }
+
+.req-actions{ display:flex; gap:8px }
+.req-accept{ background:linear-gradient(180deg,#22c55e,#16a34a); color:#fff; border:1px solid rgba(255,255,255,.2); border-radius:10px; padding:6px 10px; font-weight:800; cursor:pointer }
+.req-reject{ background:linear-gradient(180deg,#3b4b6d,#233450); color:#fff; border:1px solid rgba(255,255,255,.2); border-radius:10px; padding:6px 10px; font-weight:800; cursor:pointer }
 </style>
 </head>
 <body>
@@ -578,6 +624,11 @@
         <div class="room-code" id="roomCode">—</div>
         <button id="toggleCodeBtn" class="btn">👁️ Mostrar código</button>
         <button id="copyBtn" class="btn">Copiar</button>
+        <!-- Botón campana -->
+<button id="req-bell" class="icon-btn" aria-label="Solicitudes de ingreso">
+  🔔
+  <span id="req-badge" class="badge" hidden>0</span>
+</button>
       </div>
       <div class="user-area">
       <div class="userbox">
@@ -1942,5 +1993,13 @@ subscribeLobbyChat();
   }, 10000);
 })();
 </script>
+<!-- Drawer de solicitudes -->
+<div id="req-drawer" class="req-drawer" aria-hidden="true">
+  <div class="req-head">
+    <strong>Solicitudes de ingreso</strong>
+    <button id="req-close" class="icon-x" aria-label="Cerrar">✕</button>
+  </div>
+  <div id="req-list" class="req-body">Sin solicitudes por ahora.</div>
+</div>
 </body>
 </html>
