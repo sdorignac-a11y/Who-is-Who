@@ -774,13 +774,12 @@
   <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
 
-  <script type="module">
+  todo mi script type module
+
+<script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import {
-  getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection,
-  getDocs, writeBatch, serverTimestamp, deleteDoc, query, orderBy, limit
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs, writeBatch, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
@@ -1015,29 +1014,6 @@ function normalizeAvatarKey(k){
   render();
 
   const roomRef = doc(db,"rooms",state.code);
-
-  // === Me agrego al lobby como jugador ===
-const myName = getStoredName();
-const myAvatar = getStoredAvatar();
-meNameEl.textContent = myName;
-
-await setDoc(
-  doc(db, "rooms", state.code, "players", auth.currentUser.uid),
-  {
-    uid: auth.currentUser.uid,
-    name: myName,
-    avatarKey: myAvatar || null,
-    slot: Date.now(),     // para ordenar por ingreso
-    online: true
-  },
-  { merge: true }
-);
-
-  // === Jugadores (realtime) ===
-onSnapshot(collection(db, "rooms", state.code, "players"), (snapshot) => {
-  lastPlayers = snapshot.docs.map(d => d.data()); // <- fuente de verdad
-  drawPlayers(state.jugadores, lastPlayers);      // <- pinta la UI
-});
 
   const firstSnap = await getDoc(roomRef);
   if(!firstSnap.exists() && isHost){
@@ -1535,47 +1511,38 @@ function showGraffitiTurn(name){
     }, 250);
   }
 
- function subscribeChat(roundId){
-  if(unsubscribeChat) unsubscribeChat();
-  let lastByUid = new Map();
+  function subscribeChat(roundId){
+    if(unsubscribeChat) unsubscribeChat();
+    let lastByUid = new Map();
 
-  const chatRef = collection(db,"rooms",state.code,"rounds",String(roundId),"chat");
-  const q = query(chatRef, orderBy("at","asc"), limit(500)); // orden real desde el servidor
+    unsubscribeChat = onSnapshot(
+      collection(db,"rooms",state.code,"rounds",String(roundId),"chat"),
+      async snap=>{
+        const items = snap.docs
+          .map(d=>({ _doc:d, id:d.id, ...d.data() }))
+          .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
 
-  unsubscribeChat = onSnapshot(q, async snap=>{
-    const items = snap.docs.map(d=>({ _doc:d, id:d.id, ...d.data() }));
-
-    // Anti-spam (host) solo en DISCUSS
-    if(isHost && roundState?.status==="discuss"){
-      for(const m of items){
-        if(m.kind!=="chat") continue;
-        const prev = lastByUid.get(m.uid)||0;
-        const t = toMillis(m.at);
-        if(prev && (t - prev) < 3000){
-          try{ await deleteDoc(m._doc.ref); }catch(e){ console.warn("No pude borrar msg rápido", e); }
-          continue;
+        if(isHost && roundState?.status==="discuss"){
+          for(const m of items){
+            if(m.kind!=="chat") continue;
+            const prev = lastByUid.get(m.uid)||0;
+            const t = toMillis(m.at);
+            if(prev && (t - prev) < 3000){
+              try{ await deleteDoc(m._doc.ref); }catch(e){ console.warn("No pude borrar msg rápido", e); }
+              continue;
+            }
+            lastByUid.set(m.uid, t);
+          }
         }
-        lastByUid.set(m.uid, t);
+
+        ui.chatList.innerHTML = items.map(m=>{
+          const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
+          return `<div class="chat-row ${mine?'mine':'other'}"><div class="bubble"><div class="name">${sanitize(m.name)||"Jugador"}</div><div class="text">${sanitize(m.text||"")}</div></div></div>`;
+        }).join("");
+        ui.chatList.scrollTop = ui.chatList.scrollHeight;
       }
-    }
-
-    // Render sin invertir ni reemplazar con un único nodo
-    ui.chatList.innerHTML = items.map(m=>{
-      const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
-      return `<div class="chat-row ${mine?'mine':'other'}">
-                <div class="bubble">
-                  <div class="name">${sanitize(m.name)||"Jugador"}</div>
-                  <div class="text">${sanitize(m.text||"")}</div>
-                </div>
-              </div>`;
-    }).join("");
-
-    // autoscroll al final (si el usuario está cerca del fondo)
-    const nearBottom = ui.chatList.scrollHeight - ui.chatList.scrollTop - ui.chatList.clientHeight < 120;
-    if (nearBottom) ui.chatList.scrollTop = ui.chatList.scrollHeight;
-  });
-}
-
+    );
+  }
 
   function subscribeRoundPhase(roundId){
     if (unsubscribeRoundPhase) unsubscribeRoundPhase();
@@ -1946,29 +1913,21 @@ function renderLobbyMessages(items){
 
 function subscribeLobbyChat(){
   if (unsubLobbyChat) unsubLobbyChat();
-
-  const ref = collection(db, "rooms", state.code, "lobbyChat");
-  const q   = query(ref, orderBy("at","asc"), limit(500));
-
-  unsubLobbyChat = onSnapshot(q, (snap) => {
-    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-    lobbyUI.list.innerHTML = items.map(m => {
-      const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
-      return `
-        <div class="msg-row" style="${mine ? 'justify-content:flex-end' : 'justify-content:flex-start'}">
-          <div class="msg ${mine ? 'mine' : ''}">
-            <div class="name">${sanitize(m.name) || "Jugador"}</div>
-            <div>${sanitize(m.text || "")}</div>
-          </div>
-        </div>`;
-    }).join("");
-
-    const nearBottom = lobbyUI.list.scrollHeight - lobbyUI.list.scrollTop - lobbyUI.list.clientHeight < 120;
-    if (nearBottom) lobbyUI.list.scrollTop = lobbyUI.list.scrollHeight;
-  });
+  unsubLobbyChat = onSnapshot(
+    collection(db, "rooms", state.code, "lobbyChat"),
+    (snap) => {
+      const items = snap.docs
+        .map(d => ({ id: d.id, ...d.data() }))
+        // Ordenamos por timestamp ascendente (sin orderBy para evitar más imports)
+        .sort((a,b) => {
+          const ta = a.at?.seconds || 0;
+          const tb = b.at?.seconds || 0;
+          return ta - tb;
+        });
+      renderLobbyMessages(items);
+    }
+  );
 }
-
 
 lobbyUI.form.addEventListener("submit", async (e) => {
   e.preventDefault();
