@@ -799,10 +799,22 @@
 const AVATAR_MAP = {
   cristiano:  "avatars/cristiano.png",
   lamine:     "avatars/lamine.png",
-  odegar:     "avatars/odegar.png",
+  odegar:     "avatars/odegar.png",   // coincide con tu archivo
   ronaldinho: "avatars/ronaldinho.png",
   ronaldo:    "avatars/ronaldo.png"
 };
+
+const AVATAR_ALIASES = {
+  odegaard: "odegar",   // si en algún lado lo escribiste con 2 "a"
+  diego:    "maradona"  // sólo si tenés maradona.png
+};
+
+function normalizeAvatarKey(k){
+  const key = (k||"").toLowerCase();
+  if (AVATAR_MAP[key]) return key;
+  if (AVATAR_ALIASES[key] && AVATAR_MAP[AVATAR_ALIASES[key]]) return AVATAR_ALIASES[key];
+  return "";
+}
 
 
   const $ = s => document.querySelector(s);
@@ -872,12 +884,11 @@ const AVATAR_MAP = {
   }
   function getStoredAvatar(){
   const qp = new URLSearchParams(location.search);
-  const qAvatar = qp.get("avatar");             // viene de index.html
-  if (qAvatar && AVATAR_MAP[qAvatar]) {
-    localStorage.setItem("avatarKey", qAvatar);
-  }
-  const k = localStorage.getItem("avatarKey") || "";
-  return AVATAR_MAP[k] ? k : "";                // si no existe, vuelve vacío (placeholder)
+  const qAvatar = normalizeAvatarKey(qp.get("avatar")); // viene de index/ingresar
+  if (qAvatar) localStorage.setItem("avatarKey", qAvatar);
+
+  const saved = normalizeAvatarKey(localStorage.getItem("avatarKey"));
+  return saved || ""; // si queda vacío => placeholder
 }
 
 
