@@ -383,6 +383,13 @@
 .msg .name{ font-weight:800; font-size:12px; opacity:.9; margin-bottom:2px; }
 .msg.mine{ background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; border-color:rgba(255,255,255,.2); margin-left:auto; }
 
+/* Players: 3 por fila en desktop */
+.players{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap:12px;
+}
+
 /* Settings: se ven como 2 filas (arriba y abajo) */
 .settings-top{
   display:grid; grid-template-columns: repeat(3, minmax(180px,1fr)); gap:12px; margin-top:8px;
@@ -513,16 +520,6 @@
   .debate-side{ order:-1; }
 }
 .vote-item.chosen{ outline:2px solid #7cf062; outline-offset:2px; }
-.players{
-  display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(220px,1fr));
-  gap:12px;
-  padding:0 4px;
-}
-.player{ transition:transform .15s ease, opacity .15s ease; }
-.player.enter{ opacity:0; transform:scale(.96); }
-.player.enter.show{ opacity:1; transform:scale(1); }
-
 </style>
 </head>
 <body>
@@ -774,9 +771,7 @@
   <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
 
-  todo mi script type module
-
-<script type="module">
+  <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs, writeBatch, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -793,7 +788,7 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
-    
+
   await setPersistence(auth, browserLocalPersistence);
   async function ensureAuth(){
     const u = await new Promise(r=>{ const un = onAuthStateChanged(auth,(x)=>{un(); r(x);}); });
@@ -916,62 +911,50 @@ function normalizeAvatarKey(k){
   let lastPlayers=[];
   let hostUid = null; // <<< NUEVO: guardamos uid del host
 
-  function drawPlayers(maxCount, list){
-  const meUid = auth.currentUser && auth.currentUser.uid;
-  const ordered = (list||[])
-    .slice()
-    .sort((a,b)=>{
-      // host primero, luego yo, después por "slot" (hora de ingreso)
-      if (a.uid===hostUid && b.uid!==hostUid) return -1;
-      if (b.uid===hostUid && a.uid!==hostUid) return 1;
-      if (a.uid===meUid && b.uid!==meUid) return -1;
-      if (b.uid===meUid && a.uid!==meUid) return 1;
-      return (a.slot||0) - (b.slot||0);
-    });
+  function drawPlayers(maxCount,list){
+    const ordered=(list||[]).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
+    playersWrap.innerHTML="";
+    for(let i=0;i<maxCount;i++){
+      const p=ordered[i];
+      const card=document.createElement("div"); card.className="player";
+      const av=document.createElement("div"); const label=document.createElement("small");
+      if(p){
+        if(p.avatarKey && AVATAR_MAP[p.avatarKey]){
+          av.className="avatar";
+          const img=document.createElement("img"); img.className="avatar-img"; img.src=AVATAR_MAP[p.avatarKey]; img.alt=p.name||"avatar"; av.appendChild(img);
+        }else{ av.className="avatar placeholder"; }
+        const isMe = p.uid===(auth.currentUser&&auth.currentUser.uid);
+const isCap = hostUid && p.uid===hostUid;
 
-  // Render solo conectados
-  playersWrap.innerHTML = ordered.map(p=>{
-    const isMe  = p.uid===meUid;
-    const isCap = hostUid && p.uid===hostUid;
-    const hasAv = p.avatarKey && AVATAR_MAP[p.avatarKey];
-    return `
-      <div class="player enter">
-        ${isCap ? `<div class="badge-captain"><svg class="icon" style="width:16px;height:16px"><use href="#i-crown"></use></svg></div>` : ``}
-        <div class="avatar ${hasAv?'':'placeholder'}">
-          ${hasAv ? `<img class="avatar-img" src="${AVATAR_MAP[p.avatarKey]}" alt="${p.name||'avatar'}">` : ``}
-        </div>
-        <small>${sanitize(p.name||'Jugador')} ${isMe?`<span class="me-badge">(yo)</span>`:''}</small>
-      </div>`;
-  }).join("");
-
-  // 1 tarjeta de "Invitar" (si no está lleno)
-  if (ordered.length < maxCount){
-    playersWrap.insertAdjacentHTML("beforeend", `
-      <button class="player enter btn" id="inviteCard" style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center">
-        <svg class="icon" style="width:26px;height:26px"><use href="#i-globe"></use></svg>
-        <small>Invitar</small>
-      </button>
-    `);
-    document.getElementById("inviteCard")?.addEventListener("click", async ()=>{
-      const joinUrl=`${location.origin}/ingresar.html?code=${state.code}`;
-      if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); }catch{} }
-      else { try{ await navigator.clipboard.writeText(joinUrl); showToast("🔗 Enlace copiado"); }catch{ alert(joinUrl); } }
-    });
-  }
-
-  // animación de entrada
-  requestAnimationFrame(()=>{
-    document.querySelectorAll('.player.enter').forEach(el=>{
-      el.classList.add('show');
-    });
-  });
-
-  // contador dinámico  (3/8)
-  try{
-    jugadoresEl.textContent = `${ordered.length}/${state.jugadores}`;
-  }catch{}
+if(isCap){
+  const cap = document.createElement("div");
+  cap.className = "badge-captain";
+  cap.innerHTML = `<svg class="icon" style="width:16px;height:16px"><use href="#i-crown"></use></svg>`;
+  card.append(cap);
 }
 
+if(isMe){
+  card.classList.add("me-outline");
+  label.innerHTML = `${p.name||`Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
+}else{
+  label.textContent = p.name || `Jugador ${i+1}`;
+  if(isHost){
+    const kick=document.createElement("button");
+    kick.className="kick-btn";
+    kick.title="Expulsar";
+    kick.innerHTML = `<svg class="icon"><use href="#i-x"></use></svg>`;
+    kick.onclick=async()=>{
+      if(confirm(`Expulsar a ${p.name||'Jugador'}?`)){
+        try{ await deleteDoc(doc(db,"rooms",state.code,"players",p.uid)); }catch(e){ console.warn(e); }
+      }
+    };
+    label.append(kick);
+  }
+}
+      }else{ av.className="avatar placeholder"; label.textContent=`Jugador ${i+1}`; }
+      card.append(av,label); playersWrap.append(card);
+    }
+  }
 
   const impostoresEl = document.getElementById("impostoresVal");
   const jugadoresEl  = document.getElementById("jugadoresVal");
@@ -1093,47 +1076,7 @@ function normalizeAvatarKey(k){
     render();
   });
 
-    // === Frases graciosas de fútbol ===
-const frasesEntrada = [
-  "Se suma al equipo como fichaje estrella 🤑",
-  "¡Nuevo refuerzo! Esperemos que no venga libre por algo…",
-  "Llega al vestuario con toda la ilusión ✨",
-  "¡Ojito! Dicen que este jugador tiene buen pie ⚽"
-];
-
-const frasesSalida = [
-  "Expulsado por doble amarilla 🚩",
-  "VAR revisa… y lo echan 😭",
-  "Abandona el campo entre silbidos 👋",
-  "Sale lesionado, pide el cambio 😢"
-];
-
-function mensajeFutbolero(tipo, nombre){
-  const lista = tipo === "entrada" ? frasesEntrada : frasesSalida;
-  const frase = lista[Math.floor(Math.random() * lista.length)];
-  addChatMessage("Narrador", `${nombre} ${frase}`);
-}
-
-// === ESCUCHA EN TIEMPO REAL DE JUGADORES ===
-onSnapshot(collection(db, "rooms", state.code, "players"), (snapshot) => {
-  const nuevos = [];
-  const eliminados = [];
-
-  snapshot.docChanges().forEach(change => {
-    const data = change.doc.data();
-    if (change.type === "added") nuevos.push(data);
-    if (change.type === "removed") eliminados.push(data);
-  });
-
-  // Frases cuando entran o salen jugadores
-  nuevos.forEach(j => mensajeFutbolero("entrada", j.name || "Jugador"));
-  eliminados.forEach(j => mensajeFutbolero("salida", j.name || "Jugador"));
-
-  // Actualiza visualmente la lista de jugadores
-  lastPlayers = snapshot.docs.map(d => d.data());
-  drawPlayers(state.jugadores, lastPlayers);
-});
-
+  onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{ lastPlayers=snap.docs.map(d=>d.data()); drawPlayers(state.jugadores,lastPlayers); });
 
   /* ======= SOLICITUDES DE UNIÓN (solo host) ======= */
   onSnapshot(collection(db, "rooms", state.code, "requests"), snap=>{
