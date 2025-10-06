@@ -15,18 +15,26 @@
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
-    margin:0; color:var(--text);
-    font-family:"Outfit",system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
-    background: radial-gradient(1200px 420px at 15% 8%, rgba(61,126,217,.20) 0, transparent 60%),
-                radial-gradient(1200px 420px at 85% 8%, rgba(61,126,217,.20) 0, transparent 60%),
-                #0a1a2f;
-    background-attachment: fixed; background-size: cover; overflow:hidden;
-  }
-  body.has-bg{
-    background-image: url("fondo-favela.webp");
-    background-position: center; background-repeat: no-repeat;
-    background-size: cover; background-attachment: fixed;
-  }
+  margin:0;
+  color:var(--text);
+  font-family:"Outfit",system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,"Helvetica Neue",Arial,sans-serif;
+  background: radial-gradient(1200px 420px at 15% 8%, rgba(61,126,217,.20) 0, transparent 60%),
+              radial-gradient(1200px 420px at 85% 8%, rgba(61,126,217,.20) 0, transparent 60%),
+              #0a1a2f; /* color de respaldo mientras carga */
+  background-attachment: fixed;
+  background-size: cover;
+  overflow:hidden;
+}
+
+/* Cuando la imagen esté cargada */
+body.has-bg{
+  background-image: url("fondo-favela.webp");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-attachment: fixed;
+}
+
   body::before{
     content:""; position:fixed; inset:0;
     background:
@@ -40,9 +48,11 @@
   /* Header */
   .room-card{
     background: linear-gradient(180deg, rgba(7,28,56,.9), rgba(8,33,63,.88));
-    border:1.5px solid rgba(128,180,255,.25); border-radius:16px;
+    border:1.5px solid rgba(128,180,255,.25);
+    border-radius:16px;
     box-shadow: 0 10px 28px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
-    padding:16px 18px; display:flex; align-items:center; gap:16px; justify-content:space-between;
+    padding:16px 18px;
+    display:flex; align-items:center; gap:16px; justify-content:space-between;
   }
   .brand{ display:flex; align-items:center; gap:12px; white-space:nowrap }
   .brand .ball{
@@ -78,9 +88,7 @@
       radial-gradient(80px 40px at 50% 105%, #222 0 60%, transparent 61%),
       linear-gradient(180deg, #e23a3a, #a61e1e);
     box-shadow:0 3px 10px rgba(0,0,0,.35), 0 0 0 3px rgba(255,255,255,.06) inset;
-    transition:.15s ease;
   }
-  .avatar:hover{ transform:scale(1.05); filter:brightness(1.15); cursor:pointer; }
   .avatar.placeholder{
     background: radial-gradient(28px 28px at 50% 40%, #2f4b73 0 60%, #203a5e 61% 100%),
                 radial-gradient(48px 48px at 50% 110%, #162b4a 0 58%, transparent 59%);
@@ -131,64 +139,28 @@
     body{ overflow:auto }
   }
 
-  /* ===== Overlay base ===== */
-  .overlay{
-    position:fixed; inset:0; z-index:1000; display:none; place-items:center;
+  /* Overlay revelación */
+  #reveal{
+    position:fixed; inset:0; z-index:1000;
     background: radial-gradient(1200px 420px at 15% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
                 radial-gradient(1200px 420px at 85% 8%, rgba(61,126,217,.35) 0%, transparent 60%),
                 rgba(0,10,20,.9);
-    padding:16px;
+    display:none; place-items:center;
   }
-
-  /* ===== Tarjeta de rol con flip ===== */
-  .role-card{
-    width:min(720px, 96vw);
+  .rev-card{
+    width:min(680px, 92vw);
     background: linear-gradient(180deg, #0d2747, #0b203a);
     border:1px solid rgba(128,180,255,.30); border-radius:20px;
     box-shadow: 0 20px 60px rgba(0,0,0,.6);
-    padding: clamp(14px, 2.5vw, 24px);
-    text-align:center; perspective:1200px;
+    padding:24px; text-align:center;
   }
-  .role-head{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:10px}
-  .rev-title{margin:0; font-weight:900; letter-spacing:.5px; font-size: clamp(20px, 3vw, 28px)}
-  .rev-step{opacity:.8; font-size:12px; color:#cfe2ff}
-
-  .role-body{
-    position:relative; border-radius:16px; overflow:hidden;
-    background: linear-gradient(180deg, #102c4f, #0c2441);
-    border:1px solid rgba(128,180,255,.25);
-    min-height: clamp(140px, 28vw, 220px);
-    transform-style: preserve-3d; transition: transform .5s ease;
+  .rev-card h2{ margin:0 0 12px; font-size:28px; font-weight:900; letter-spacing:.5px }
+  .rev-content{
+    padding:18px; background: linear-gradient(180deg, #102c4f, #0c2441);
+    border:1px solid rgba(128,180,255,.25); border-radius:16px; font-size:26px; font-weight:800;
+    min-height:110px; display:grid; place-items:center;
   }
-  .face{position:absolute; inset:0; display:grid; place-items:center; padding:16px; backface-visibility:hidden}
-  .front{gap:12px}
-  .back{transform: rotateY(180deg); gap:10px}
-  .role-card.revealed .role-body{ transform: rotateY(180deg) }
-
-  .hint{opacity:.85; font-size: clamp(12px, 2.4vw, 14px)}
-  .secret-word{
-    font-weight:900; font-size: clamp(24px, 5.5vw, 40px); color:#7cf062;
-    text-shadow: 0 2px 0 rgba(0,0,0,.5); padding: 2px 8px;
-  }
-  .role-sub{opacity:.8; margin:0; font-size: clamp(12px, 2.6vw, 14px)}
-  .role-badge{
-    font-weight:900; letter-spacing:.6px;
-    padding:6px 10px; border-radius:999px; width:max-content; margin:0 auto 6px;
-    font-size: clamp(12px, 2.6vw, 14px);
-    background: linear-gradient(180deg,#1e68d6,#184fa5);
-    border:1px solid rgba(110,178,255,.7); color:#eaf2ff;
-  }
-  .role-card.is-imp .role-badge{
-    background: linear-gradient(180deg,#ff6b6b,#ea4335);
-    border-color: rgba(255,179,172,.85); color:#111;
-  }
-  .role-card.is-imp .secret-word{ display:none }
-  .role-card.is-civ .role-badge{
-    background: linear-gradient(180deg,#22c55e,#16a34a);
-    border-color: rgba(152,255,190,.85); color:#08260f
-  }
-
-  .rev-actions{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:14px }
+  .rev-actions{ display:flex; flex-wrap:wrap; gap:10px; justify-content:center; margin-top:16px }
   .btn-ghost{
     background: linear-gradient(180deg, #142840, #0f2237);
     border:1px solid rgba(128,180,255,.35); color:#cfe2ff; font-weight:700;
@@ -201,29 +173,44 @@
   }
   .btn-cta.small{ font-size:18px; padding:10px 16px }
 
-  /* TIMER & VOTE (iguales a tu versión) */
+  /* Overlay TIMER */
   #timerOverlay{
     position:fixed; inset:0; z-index:1100; display:none; place-items:center;
-    background: radial-gradient(1000px 360px at 20% 10%, rgba(255,255,255,.08), transparent 60%), rgba(0,10,20,.92);
+    background:
+      radial-gradient(1000px 360px at 20% 10%, rgba(255,255,255,.08), transparent 60%),
+      rgba(0,10,20,.92);
   }
   .timer-card{
     width:min(520px,92vw);
     background: linear-gradient(180deg,#0d2747,#0b203a);
     border:1px solid rgba(128,180,255,.30); border-radius:20px;
-    box-shadow:0 20px 60px rgba(0,0,0,.6); padding:24px; text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+    padding:24px; text-align:center;
   }
   .timer-big{ font-size:84px; font-weight:900; letter-spacing:2px; margin:6px 0 0 }
   .timer-sub{ opacity:.85; margin:0 0 8px }
 
-  #voteOverlay{ position:fixed; inset:0; z-index:1200; display:none; background: rgba(0,10,20,.92); padding:20px; }
-  .vote-wrap{
-    width:min(1100px,96vw); margin:0 auto; background: linear-gradient(180deg,#0d2747,#0b203a);
-    border:1px solid rgba(128,180,255,.30); border-radius:18px; padding:16px; box-shadow:0 20px 60px rgba(0,0,0,.6);
+  /* Overlay VOTACIÓN */
+  #voteOverlay{
+    position:fixed; inset:0; z-index:1200; display:none;
+    background: rgba(0,10,20,.92);
+    padding:20px;
   }
-  .vote-grid{ display:grid; gap:12px; margin-top:10px; grid-template-columns: repeat(auto-fill, minmax(160px,1fr)); }
+  .vote-wrap{
+    width:min(1100px,96vw); margin:0 auto;
+    background: linear-gradient(180deg,#0d2747,#0b203a);
+    border:1px solid rgba(128,180,255,.30); border-radius:18px; padding:16px;
+    box-shadow:0 20px 60px rgba(0,0,0,.6);
+  }
+  .vote-grid{
+    display:grid; gap:12px; margin-top:10px;
+    grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+  }
   .vote-card{
-    background: linear-gradient(180deg,#0f2b4b,#0c213a); border:1px solid rgba(128,180,255,.25); border-radius:14px;
-    padding:12px; display:flex; flex-direction:column; align-items:center; gap:10px; cursor:pointer; user-select:none;
+    background: linear-gradient(180deg,#0f2b4b,#0c213a);
+    border:1px solid rgba(128,180,255,.25); border-radius:14px;
+    padding:12px; display:flex; flex-direction:column; align-items:center; gap:10px;
+    cursor:pointer; user-select:none;
   }
   .vote-card .circle{ width:64px; height:64px; border-radius:50%; background:linear-gradient(180deg,#1e68d6,#184fa5) }
   .vote-card .name{ font-weight:800 }
@@ -234,12 +221,25 @@
     border:1px solid rgba(255,179,172,.75); color:#111; font-weight:900;
     padding:10px 16px; border-radius:12px; cursor:pointer;
   }
+  .mini{
+    margin-left:6px; padding:4px 8px; border-radius:10px;
+    background:linear-gradient(180deg,#1e68d6,#184fa5);
+    border:1px solid rgba(110,178,255,.65);
+    color:#eaf2ff; font-weight:700; font-size:12px; cursor:pointer;
+  }
+.avatar:hover{
+  transform:scale(1.05);
+  filter:brightness(1.15);
+  cursor:pointer;
+  transition:.15s ease;
+}
 </style>
 <link rel="preload" as="image" href="fondo-favela.webp" fetchpriority="high">
 </head>
 <body>
 
   <div class="container">
+
     <!-- Header -->
     <div class="room-card">
       <div class="brand">
@@ -303,56 +303,43 @@
     </div>
   </div>
 
-  <!-- Overlay REVELACIÓN (sin hold) -->
-  <div id="reveal" class="overlay">
-    <div id="roleCard" class="role-card">
-      <header class="role-head">
-        <h2 id="revTitle" class="rev-title">Jugador 1</h2>
-        <div class="rev-step" id="revStep"></div>
-      </header>
-
-      <div class="role-body">
-        <!-- Frente -->
-        <div class="face front" id="frontFace">
-          <div class="hint">Tocá “Mostrar” para ver tu rol</div>
-          <button id="btnMostrar" class="btn-primary">👁️ Mostrar</button>
-        </div>
-
-        <!-- Dorso -->
-        <div class="face back" id="backFace">
-          <div id="roleBadge" class="role-badge">CIVIL</div>
-          <p id="roleSub" class="role-sub">Palabra secreta (Clubes)</p>
-          <div id="secretWord" class="secret-word">Real Madrid</div>
-        </div>
-      </div>
-
-      <footer class="rev-actions">
-        <button id="btnOcultar" class="btn-ghost" style="display:none">🙈 Ocultar</button>
-        <button id="btnSiguiente" class="btn-primary" style="display:none">👉 Pasar al siguiente</button>
-        <button id="btnComenzarRonda" class="btn-cta small" style="display:none">🚀 Comenzar ronda</button>
-      </footer>
+<!-- Overlay REVELACIÓN -->
+<div id="reveal">
+  <div class="rev-card">
+    <h2 id="revTitle">Jugador 1</h2>
+    <div id="revContent" class="rev-content">
+      <p>Tocá <b>Mostrar</b> para ver tu rol</p>
+    </div>
+    <div class="rev-actions">
+      <button id="btnMostrar" class="btn-ghost">👁️ Mostrar</button>
+      <button id="btnOcultar" class="btn-ghost" style="display:none">🙈 Ocultar</button>
+      <button id="btnSiguiente" class="btn-primary" style="display:none">👉 Pasar al siguiente</button>
+      <button id="btnComenzarRonda" class="btn-cta small" style="display:none">🚀 Comenzar ronda</button>
     </div>
   </div>
+</div>
 
-  <!-- Overlay TIMER -->
-  <div id="timerOverlay"><div class="timer-card">
+<!-- Overlay TIMER -->
+<div id="timerOverlay">
+  <div class="timer-card">
     <p class="timer-sub">Tiempo de la ronda</p>
     <div id="timerText" class="timer-big">01:00</div>
-  </div></div>
+  </div>
+</div>
 
-  <!-- Overlay VOTACIÓN -->
-  <div id="voteOverlay">
-    <div class="vote-wrap">
-      <h2 style="margin:0;font-weight:900">Votación</h2>
-      <p style="margin:6px 0 0;opacity:.85">Toquen para acusar. Luego cerrá la votación para ver el resultado.</p>
-      <div id="voteGrid" class="vote-grid"></div>
-      <div class="vote-actions">
-        <button id="clearVotes" class="btn-ghost">Limpiar votos</button>
-        <div class="spacer"></div>
-        <button id="closeVote" class="btn-cta small">Cerrar votación</button>
-      </div>
+<!-- Overlay VOTACIÓN -->
+<div id="voteOverlay">
+  <div class="vote-wrap">
+    <h2 style="margin:0;font-weight:900">Votación</h2>
+    <p style="margin:6px 0 0;opacity:.85">Toquen para acusar. Luego cerrá la votación para ver el resultado.</p>
+    <div id="voteGrid" class="vote-grid"></div>
+    <div class="vote-actions">
+      <button id="clearVotes" class="btn-ghost">Limpiar votos</button>
+      <div class="spacer"></div>
+      <button id="closeVote" class="btn-cta small">Cerrar votación</button>
     </div>
   </div>
+</div>
 
 <script>
 /* ===== Estado general ===== */
@@ -396,16 +383,17 @@ function render(){
   // Ajustar cantidad de tarjetas visibles
   while (wrap.children.length > state.jugadores) wrap.removeChild(wrap.lastElementChild);
   while (wrap.children.length < state.jugadores){
-    const i = wrap.children.length + 1;
-    const card = document.createElement("div");
-    card.className = "player";
-    card.innerHTML = `
-      <div class="avatar ${i===1?'':'placeholder'}" data-slot="${i}" title="Tocar para cambiar nombre"></div>
-      <small class="pname">${getName(i)}</small>`;
-    wrap.appendChild(card);
-  }
+  const i = wrap.children.length + 1;
+  const card = document.createElement("div");
+  card.className = "player";
+  card.innerHTML = `
+    <div class="avatar ${i===1?'':'placeholder'}" data-slot="${i}" title="Tocar para cambiar nombre"></div>
+    <small class="pname">${getName(i)}</small>`;
+  wrap.appendChild(card);
+}
 
-  // Actualizar nombres y enganchar edición por avatar
+
+  // Actualizar nombres y enganchar los "Editar"
   Array.from(wrap.children).forEach((card, idx)=>{
     const slot = idx + 1;
     const nameSpan = card.querySelector(".pname");
@@ -413,16 +401,17 @@ function render(){
   });
 
   wrap.querySelectorAll(".avatar[data-slot]").forEach(avatar=>{
-    avatar.onclick = ()=>{
-      const slot = Number(avatar.dataset.slot);
-      const prev = getName(slot);
-      const nuevo = prompt(`Nombre para el jugador ${slot} (2–16 caracteres):`, prev) ?? "";
-      const v = nuevo.trim();
-      if(v.length < 2 || v.length > 16) return;
-      setName(slot, v);
-      render();
-    };
-  });
+  avatar.onclick = ()=>{
+    const slot = Number(avatar.dataset.slot);
+    const prev = getName(slot);
+    const nuevo = prompt(`Nombre para el jugador ${slot} (2–16 caracteres):`, prev) ?? "";
+    const v = nuevo.trim();
+    if(v.length < 2 || v.length > 16) return;
+    setName(slot, v);
+    render();
+  };
+});
+
 }
 
 /* ===== Selectores (flechas) ===== */
@@ -452,24 +441,15 @@ const POOLS = {
 /* ===== Utilidades ===== */
 const randInt=n=>Math.floor(Math.random()*n);
 const sampleOne=arr=>arr[randInt(arr.length)];
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=randInt(i+1); [a[i],a[j]]=[a[j]]=[a[i],a[j]]}return a} // safe
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=randInt(i+1); [a[i],a[j]]=[a[j],a[i]]}return a}
 function pickKUnique(k,n){const idx=Array.from({length:n},(_,i)=>i);shuffle(idx);return idx.slice(0,k)}
 
-/* ===== REVEAL (sin hold) ===== */
+/* ===== Revelación ===== */
 let assignments=[];   // {player, name, role, word, tema}
 let currentReveal=0;
 
-const $reveal       = document.getElementById("reveal");
-const $roleCard     = document.getElementById("roleCard");
-const $revTitle     = document.getElementById("revTitle");
-const $revStep      = document.getElementById("revStep");
-const $btnMostrar   = document.getElementById("btnMostrar");
-const $btnOcultar   = document.getElementById("btnOcultar");
-const $btnSiguiente = document.getElementById("btnSiguiente");
-const $btnComenzar  = document.getElementById("btnComenzarRonda");
-const $roleBadge    = document.getElementById("roleBadge");
-const $roleSub      = document.getElementById("roleSub");
-const $secretWord   = document.getElementById("secretWord");
+const $reveal=$("#reveal"), $revTitle=$("#revTitle"), $revContent=$("#revContent");
+const $btnMostrar=$("#btnMostrar"), $btnOcultar=$("#btnOcultar"), $btnSiguiente=$("#btnSiguiente"), $btnComenzarRonda=$("#btnComenzarRonda");
 
 function abrirOverlay(){ $reveal.style.display="grid"; }
 function cerrarOverlay(){ $reveal.style.display="none"; }
@@ -477,55 +457,10 @@ function cerrarOverlay(){ $reveal.style.display="none"; }
 function prepararPantallaReveal(){
   const a = assignments[currentReveal];
   $revTitle.textContent = a.name || `Jugador ${a.player}`;
-  $revStep.textContent  = `Jugador ${currentReveal+1} de ${assignments.length}`;
-
-  $roleCard.className = "role-card"; // reset
-  if(a.role === "IMPOSTOR"){
-    $roleCard.classList.add("is-imp");
-    $roleBadge.textContent = "IMPOSTOR";
-    $roleSub.textContent   = "No conocés la palabra";
-    $secretWord.textContent = "";
-  }else{
-    $roleCard.classList.add("is-civ");
-    $roleBadge.textContent = "CIVIL";
-    $roleSub.textContent   = `Palabra secreta (${a.tema})`;
-    $secretWord.textContent = a.word || "—";
-  }
-
-  // Estado de botones/flip
-  $roleCard.classList.remove("revealed");
-  $btnMostrar.style.display   = "";
-  $btnOcultar.style.display   = "none";
-  $btnSiguiente.style.display = "none";
-  $btnComenzar.style.display  = "none";
+  $revContent.innerHTML = `<p>Tocá <b>Mostrar</b> para ver tu rol</p>`;
+  $btnMostrar.style.display=""; $btnOcultar.style.display="none";
+  $btnSiguiente.style.display="none"; $btnComenzarRonda.style.display="none";
 }
-
-$btnMostrar.addEventListener("click", ()=>{
-  $roleCard.classList.add("revealed");
-  $btnMostrar.style.display = "none";
-  $btnOcultar.style.display = "";
-  $btnSiguiente.style.display = (currentReveal < assignments.length-1) ? "" : "none";
-  $btnComenzar.style.display  = (currentReveal === assignments.length-1) ? "" : "none";
-});
-$btnOcultar.addEventListener("click", ()=>{
-  $roleCard.classList.remove("revealed");
-  $btnMostrar.style.display = "";
-  $btnOcultar.style.display = "none";
-  $btnSiguiente.style.display = "none";
-  $btnComenzar.style.display  = "none";
-});
-$btnSiguiente.addEventListener("click", ()=>{
-  if(currentReveal<assignments.length-1){
-    currentReveal++;
-    prepararPantallaReveal();
-  }
-});
-
-$btnComenzar.addEventListener("click", ()=>{
-  cerrarOverlay();
-  const secs = state.tiempos[state.tiempoIndex];
-  startTimer(secs);
-});
 
 function iniciarPartida(){
   const N=state.jugadores, K=state.impostores, tema=state.temas[state.temaIndex];
@@ -544,10 +479,28 @@ function iniciarPartida(){
       tema
     });
   }
-  currentReveal=0;
-  abrirOverlay();
-  prepararPantallaReveal();
+  currentReveal=0; abrirOverlay(); prepararPantallaReveal();
 }
+
+$btnMostrar.addEventListener("click", ()=>{
+  const a = assignments[currentReveal];
+  if(a.role==="IMPOSTOR"){
+    $revContent.innerHTML = `<div><div style="font-size:38px;font-weight:900;color:#ff6b6b;margin-bottom:8px;">IMPOSTOR</div><div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div></div>`;
+  }else{
+    $revContent.innerHTML = `<div><div style="opacity:.75;font-size:14px;margin-bottom:6px;">Palabra secreta (${a.tema})</div><div style="font-size:34px;font-weight:900;color:#7cf062">${a.word}</div></div>`;
+  }
+  $btnMostrar.style.display="none";
+  $btnOcultar.style.display="";
+  $btnSiguiente.style.display = (currentReveal < assignments.length-1) ? "" : "none";
+  $btnComenzarRonda.style.display = (currentReveal === assignments.length-1) ? "" : "none";
+});
+$btnOcultar.addEventListener("click", ()=>{
+  $revContent.innerHTML = `<p>Pantalla oculta. Pasá el dispositivo al jugador siguiente.</p>`;
+  $btnOcultar.style.display="none"; $btnSiguiente.style.display="";
+});
+$btnSiguiente.addEventListener("click", ()=>{
+  if(currentReveal<assignments.length-1){ currentReveal++; prepararPantallaReveal(); }
+});
 
 /* ===== Timer y Votación ===== */
 const $timerOverlay=$("#timerOverlay"), $timerText=$("#timerText");
@@ -570,6 +523,12 @@ function startTimer(seconds){
     }
   },1000);
 }
+
+$btnComenzarRonda.addEventListener("click", ()=>{
+  cerrarOverlay();
+  const secs = state.tiempos[state.tiempoIndex];
+  startTimer(secs);
+});
 
 /* ===== Votación ===== */
 const $voteOverlay=$("#voteOverlay"), $voteGrid=$("#voteGrid"), $closeVote=$("#closeVote"), $clearVotes=$("#clearVotes");
@@ -634,14 +593,19 @@ document.getElementById("startBtn").addEventListener("click", iniciarPartida);
 
 /* Inicio */
 render();
-
-/* Carga de fondo */
+</script>
+  <script>
 (function(){
-  const BG = "fondo-favela.webp";
-  const img = new Image(); img.src = BG;
-  if (img.complete) { document.body.classList.add("has-bg"); return; }
+  const BG = "fondo-favela.webp"; // cambia si tu archivo tiene otro nombre
+  const img = new Image();
+  img.src = BG;
+  if (img.complete) {
+    document.body.classList.add("has-bg");
+    return;
+  }
   img.onload = () => document.body.classList.add("has-bg");
 })();
 </script>
+
 </body>
 </html>
