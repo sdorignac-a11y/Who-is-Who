@@ -791,30 +791,7 @@
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
-
-  // === Frases graciosas ===
-const frasesEntrada = [
-  "Se suma al equipo como fichaje estrella 🤑",
-  "¡Nuevo refuerzo! Esperemos que no venga libre por algo…",
-  "Llega al vestuario con toda la ilusión ✨",
-  "¡Ojito! Dicen que este jugador tiene buen pie ⚽"
-];
-
-const frasesSalida = [
-  "Expulsado por doble amarilla 🚩",
-  "VAR revisa… y lo echan 😭",
-  "Abandona el campo entre silbidos 👋",
-  "Sale lesionado, pide el cambio 😢"
-];
-
-// === Función para mostrar una frase random en el chat ===
-function mensajeFutbolero(tipo, nombre){
-  const lista = tipo === "entrada" ? frasesEntrada : frasesSalida;
-  const frase = lista[Math.floor(Math.random() * lista.length)];
-  addChatMessage("Narrador", `${nombre} ${frase}`);
-}
-
-
+    
   await setPersistence(auth, browserLocalPersistence);
   async function ensureAuth(){
     const u = await new Promise(r=>{ const un = onAuthStateChanged(auth,(x)=>{un(); r(x);}); });
@@ -1114,7 +1091,47 @@ function normalizeAvatarKey(k){
     render();
   });
 
-  onSnapshot(collection(db,"rooms",state.code,"players"), snap=>{ lastPlayers=snap.docs.map(d=>d.data()); drawPlayers(state.jugadores,lastPlayers); });
+    // === Frases graciosas de fútbol ===
+const frasesEntrada = [
+  "Se suma al equipo como fichaje estrella 🤑",
+  "¡Nuevo refuerzo! Esperemos que no venga libre por algo…",
+  "Llega al vestuario con toda la ilusión ✨",
+  "¡Ojito! Dicen que este jugador tiene buen pie ⚽"
+];
+
+const frasesSalida = [
+  "Expulsado por doble amarilla 🚩",
+  "VAR revisa… y lo echan 😭",
+  "Abandona el campo entre silbidos 👋",
+  "Sale lesionado, pide el cambio 😢"
+];
+
+function mensajeFutbolero(tipo, nombre){
+  const lista = tipo === "entrada" ? frasesEntrada : frasesSalida;
+  const frase = lista[Math.floor(Math.random() * lista.length)];
+  addChatMessage("Narrador", `${nombre} ${frase}`);
+}
+
+// === ESCUCHA EN TIEMPO REAL DE JUGADORES ===
+onSnapshot(collection(db, "rooms", state.code, "players"), (snapshot) => {
+  const nuevos = [];
+  const eliminados = [];
+
+  snapshot.docChanges().forEach(change => {
+    const data = change.doc.data();
+    if (change.type === "added") nuevos.push(data);
+    if (change.type === "removed") eliminados.push(data);
+  });
+
+  // Frases cuando entran o salen jugadores
+  nuevos.forEach(j => mensajeFutbolero("entrada", j.name || "Jugador"));
+  eliminados.forEach(j => mensajeFutbolero("salida", j.name || "Jugador"));
+
+  // Actualiza visualmente la lista de jugadores
+  lastPlayers = snapshot.docs.map(d => d.data());
+  drawPlayers(state.jugadores, lastPlayers);
+});
+
 
   /* ======= SOLICITUDES DE UNIÓN (solo host) ======= */
   onSnapshot(collection(db, "rooms", state.code, "requests"), snap=>{
