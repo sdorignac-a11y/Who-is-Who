@@ -227,6 +227,12 @@ body.has-bg{
     border:1px solid rgba(110,178,255,.65);
     color:#eaf2ff; font-weight:700; font-size:12px; cursor:pointer;
   }
+.avatar:hover{
+  transform:scale(1.05);
+  filter:brightness(1.15);
+  cursor:pointer;
+  transition:.15s ease;
+}
 </style>
 <link rel="preload" as="image" href="fondo-favela.webp" fetchpriority="high">
 </head>
@@ -377,17 +383,15 @@ function render(){
   // Ajustar cantidad de tarjetas visibles
   while (wrap.children.length > state.jugadores) wrap.removeChild(wrap.lastElementChild);
   while (wrap.children.length < state.jugadores){
-    const i = wrap.children.length + 1;
-    const card = document.createElement("div");
-    card.className = "player";
-    card.innerHTML = `
-      <div class="avatar ${i===1?'':'placeholder'}"></div>
-      <small>
-        <span class="pname">${getName(i)}</span>
-        <button class="mini" data-slot="${i}">Editar</button>
-      </small>`;
-    wrap.appendChild(card);
-  }
+  const i = wrap.children.length + 1;
+  const card = document.createElement("div");
+  card.className = "player";
+  card.innerHTML = `
+    <div class="avatar ${i===1?'':'placeholder'}" data-slot="${i}" title="Tocar para cambiar nombre"></div>
+    <small class="pname">${getName(i)}</small>`;
+  wrap.appendChild(card);
+}
+
 
   // Actualizar nombres y enganchar los "Editar"
   Array.from(wrap.children).forEach((card, idx)=>{
@@ -396,17 +400,17 @@ function render(){
     if (nameSpan) nameSpan.textContent = getName(slot);
   });
 
-  wrap.querySelectorAll("button[data-slot]").forEach(btn=>{
-    btn.onclick = ()=>{
-      const slot = Number(btn.dataset.slot);
-      const prev = getName(slot);
-      const nuevo = prompt(`Nombre para el jugador ${slot} (2–16 chars):`, prev) ?? "";
-      const v = nuevo.trim();
-      if(v.length < 2 || v.length > 16) return;
-      setName(slot, v);
-      render();
-    };
-  });
+  wrap.querySelectorAll(".avatar[data-slot]").forEach(avatar=>{
+  avatar.onclick = ()=>{
+    const slot = Number(avatar.dataset.slot);
+    const prev = getName(slot);
+    const nuevo = prompt(`Nombre para el jugador ${slot} (2–16 caracteres):`, prev) ?? "";
+    const v = nuevo.trim();
+    if(v.length < 2 || v.length > 16) return;
+    setName(slot, v);
+    render();
+  };
+});
 }
 
 /* ===== Selectores (flechas) ===== */
