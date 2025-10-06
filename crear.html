@@ -776,6 +776,12 @@
   import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs, writeBatch, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+  import {
+  getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs,
+  writeBatch, serverTimestamp, deleteDoc, query, orderBy
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+    
   const firebaseConfig = {
     apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
     authDomain: "who-is-who-6ea99.firebaseapp.com",
@@ -1249,6 +1255,26 @@ if(isMe){
   function toMillis(ts){ return ts?.toMillis?.() ?? (ts?.seconds ? ts.seconds*1000 : (typeof ts==="number" ? ts : 0)); }
   function fmtClock(ms){ const s=Math.max(0,Math.ceil(ms/1000)); const mm=String(Math.floor(s/60)).padStart(2,'0'); const ss=String(s%60).padStart(2,'0'); return `${mm}:${ss}`; }
 
+// === helpers de chat (debate) ===
+function createMsgRow(mine, name, text){
+  const row = document.createElement('div');
+  row.className = `chat-row ${mine?'mine':'other'}`;
+  row.dataset.msgId = m.id || ''; // opcional
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble';
+  bubble.innerHTML = `<div class="name">${sanitize(name)||'Jugador'}</div><div class="text">${sanitize(text||'')}</div>`;
+  row.appendChild(bubble);
+  return row;
+}
+
+function appendChatMessage(container, msg, isMine){
+  const wasAtBottom = (container.scrollTop + container.clientHeight + 8) >= container.scrollHeight;
+  const node = createMsgRow(isMine, msg.name, msg.text);
+  container.appendChild(node);
+  if (wasAtBottom) container.scrollTop = container.scrollHeight;
+}
+
+  
   // Sorteo animación — SOLO ronda 1
   async function startDrawAnimation(order){
     const draw=document.getElementById("drawOverlay"); const slip=document.getElementById("slip"); const list=document.getElementById("orderList");
@@ -1454,38 +1480,38 @@ function showGraffitiTurn(name){
     }, 250);
   }
 
-  function subscribeChat(roundId){
-    if(unsubscribeChat) unsubscribeChat();
-    let lastByUid = new Map();
+ function subscribeChat(roundId){
+  if (unsubscribeChat) unsubscribeChat();
 
-    unsubscribeChat = onSnapshot(
-      collection(db,"rooms",state.code,"rounds",String(roundId),"chat"),
-      async snap=>{
-        const items = snap.docs
-          .map(d=>({ _doc:d, id:d.id, ...d.data() }))
-          .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
+  // Consulta ordenada por 'at' ascendente para tener orden estable y nanosegundos
+  const q = query(
+    collection(db,"rooms",state.code,"rounds",String(roundId),"chat"),
+    orderBy('at','asc')
+  );
 
-        if(isHost && roundState?.status==="discuss"){
-          for(const m of items){
-            if(m.kind!=="chat") continue;
-            const prev = lastByUid.get(m.uid)||0;
-            const t = toMillis(m.at);
-            if(prev && (t - prev) < 3000){
-              try{ await deleteDoc(m._doc.ref); }catch(e){ console.warn("No pude borrar msg rápido", e); }
-              continue;
-            }
-            lastByUid.set(m.uid, t);
-          }
-        }
+  // Limpiá una sola vez al iniciar la ronda
+  ui.chatList.innerHTML = '';
 
-        ui.chatList.innerHTML = items.map(m=>{
-          const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
-          return `<div class="chat-row ${mine?'mine':'other'}"><div class="bubble"><div class="name">${sanitize(m.name)||"Jugador"}</div><div class="text">${sanitize(m.text||"")}</div></div></div>`;
-        }).join("");
-        ui.chatList.scrollTop = ui.chatList.scrollHeight;
+  unsubscribeChat = onSnapshot(q, (snap)=>{
+    snap.docChanges().forEach(change=>{
+      const d = change.doc;
+      const m = { id:d.id, ...d.data() };
+
+      if (change.type === 'added'){
+        const isMine = m.uid === (auth.currentUser && auth.currentUser.uid);
+        appendChatMessage(ui.chatList, m, isMine);
       }
-    );
-  }
+      else if (change.type === 'removed'){
+        const el = ui.chatList.querySelector(`[data-msg-id="${m.id}"]`);
+        if (el) el.remove();
+      }
+      else if (change.type === 'modified'){
+        // si querés, podrías actualizar el texto; lo usual es no modificar mensajes
+      }
+    });
+  });
+}
+
 
   function subscribeRoundPhase(roundId){
     if (unsubscribeRoundPhase) unsubscribeRoundPhase();
@@ -1856,21 +1882,38 @@ function renderLobbyMessages(items){
 
 function subscribeLobbyChat(){
   if (unsubLobbyChat) unsubLobbyChat();
-  unsubLobbyChat = onSnapshot(
-    collection(db, "rooms", state.code, "lobbyChat"),
-    (snap) => {
-      const items = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        // Ordenamos por timestamp ascendente (sin orderBy para evitar más imports)
-        .sort((a,b) => {
-          const ta = a.at?.seconds || 0;
-          const tb = b.at?.seconds || 0;
-          return ta - tb;
-        });
-      renderLobbyMessages(items);
-    }
-  );
+
+  const q = query(collection(db, "rooms", state.code, "lobbyChat"), orderBy('at','asc'));
+  lobbyUI.list.innerHTML = '';
+
+  unsubLobbyChat = onSnapshot(q, (snap)=>{
+    snap.docChanges().forEach(change=>{
+      const d = change.doc;
+      const m = { id:d.id, ...d.data() };
+
+      if (change.type === 'added'){
+        const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
+        const row = document.createElement('div');
+        row.className = 'msg-row';
+        row.style.justifyContent = mine ? 'flex-end' : 'flex-start';
+        row.dataset.msgId = m.id || '';
+
+        const bubble = document.createElement('div');
+        bubble.className = `msg ${mine ? 'mine' : ''}`;
+        bubble.innerHTML = `<div class="name">${sanitize(m.name)||'Jugador'}</div><div>${sanitize(m.text||'')}</div>`;
+        row.appendChild(bubble);
+
+        const wasAtBottom = (lobbyUI.list.scrollTop + lobbyUI.list.clientHeight + 8) >= lobbyUI.list.scrollHeight;
+        lobbyUI.list.appendChild(row);
+        if (wasAtBottom) lobbyUI.list.scrollTop = lobbyUI.list.scrollHeight;
+      }
+      else if (change.type === 'removed'){
+        lobbyUI.list.querySelector(`[data-msg-id="${m.id}"]`)?.remove();
+      }
+    });
+  });
 }
+
 
 lobbyUI.form.addEventListener("submit", async (e) => {
   e.preventDefault();
