@@ -1,804 +1,257 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<title>Impostor Fútbol – Lobby</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --panel:#0f2b4b;--panel-2:#0c213a;--yellow:#f6c11b;--yellow-2:#f39c12;--text:#eaf2ff;--muted:#a7c0e8;
-    --space:16px; /* espacio base adaptable */
-  }
-  *{box-sizing:border-box}
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Impostor Fútbol – Lobby</title>
 
-  /* ====== BASE ====== */
-  html,body{height:100%;margin:0}
-  body{
-    font-family:"Outfit",system-ui;
-    color:var(--text);
-    background:url("fondo-cancha.png") center/cover no-repeat fixed;
-    /* Altura real en móviles y safe-areas */
-    min-height:100dvh;
-    padding:
-      calc(env(safe-area-inset-top,0px) + 8px)
-      calc(env(safe-area-inset-right,0px) + 8px)
-      calc(env(safe-area-inset-bottom,0px) + 8px)
-      calc(env(safe-area-inset-left,0px) + 8px);
-    overflow:auto; /* Permite scroll en vertical */
-  }
+  <!-- Fuentes -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
 
-  .container{
-    width:min(1200px,96vw);
-    margin:0 auto;
-    padding:20px 0 28px;
-    display:flex;flex-direction:column;gap:18px;
-    min-height:calc(100dvh - 16px - 16px);
-  }
-
-  /* ====== ROOM CARD ====== */
-  .room-card{
-    background:linear-gradient(180deg,rgba(7,28,56,.9),rgba(8,33,63,.88));
-    border:1.5px solid rgba(128,180,255,.25);
-    border-radius:16px; box-shadow:0 10px 28px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.04);
-    padding:16px 18px;
-    display:grid;
-    grid-template-columns:auto 1fr auto;
-    align-items:center; gap:16px;
-  }
-  .brand{display:flex;align-items:center;gap:10px}
-  .brand .ball{width:44px;height:44px;border-radius:50%;background:radial-gradient(circle,#fff 0 48%,transparent 50%),conic-gradient(#111 0 60deg,#fff 0 120deg,#111 0 180deg,#fff 0 240deg,#111 0 300deg,#fff 0 360deg);box-shadow:0 0 14px rgba(255,255,255,.35)}
-  .brand h1{margin:0;letter-spacing:.5px;line-height:1;font-size:clamp(20px,4.8vw,28px);font-weight:800;text-transform:uppercase;text-shadow:0 3px 0 rgba(0,0,0,.5)}
-  .brand h1 span{color:#7cf062}
-
-  .code-box{
-    background:linear-gradient(180deg,#0c2747,#0a213b);
-    border:1px solid rgba(128,180,255,.28); border-radius:12px;
-    padding:10px 12px;
-    display:flex;gap:10px;align-items:center;justify-content:center;flex-wrap:wrap;
-  }
-  .room-code{font-size:clamp(22px,7vw,36px);font-weight:800;letter-spacing:2px}
-  .btn{
-    background:linear-gradient(180deg,#1e68d6,#184fa5);
-    border:1px solid rgba(110,178,255,.65);
-    color:#eaf2ff;font-weight:700;
-    padding:10px 14px;border-radius:12px;
-    box-shadow:0 6px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08);
-    cursor:pointer;
-    font-size:clamp(12px,3.6vw,14px);
-    touch-action:manipulation;
-  }
-
-  .user-area{display:flex;flex-direction:column;gap:10px;align-items:flex-end}
-  .userbox{
-    display:flex;align-items:center;gap:8px;
-    background:linear-gradient(180deg,#0c2747,#0a213b);
-    border:1px solid rgba(128,180,255,.28);border-radius:12px;
-    padding:8px 10px;font-weight:700;color:#cfe4ff
-  }
-  .mini-btn{padding:6px 10px;border-radius:10px;cursor:pointer;background:linear-gradient(180deg,#1e68d6,#184fa5);border:1px solid rgba(110,178,255,.65);color:#eaf2ff;font-weight:700}
-  .me-badge{color:#ffd166;font-weight:900;margin-left:4px}
-  .me-outline{outline:2px solid #f6c11b;outline-offset:2px;border-radius:16px}
-
-  /* ====== PLAYERS GRID (auto-fit) ====== */
-  .players{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(110px, 1fr));
-    gap:12px;
-    padding:0 4px;
-  }
-  .player{
-    background:linear-gradient(180deg,rgba(14,39,70,.9),rgba(10,30,53,.85));
-    border:1px solid rgba(128,180,255,.25);border-radius:16px;
-    padding:10px 8px;display:flex;flex-direction:column;align-items:center;gap:8px;min-height:108px
-  }
-  .avatar{width:56px;height:56px;border-radius:50%;background:radial-gradient(36px 24px at 50% 30%,#ffd6b4 0 60%,#e9b089 61% 100%),radial-gradient(80px 40px at 50% 105%,#222 0 60%,transparent 61%),linear-gradient(180deg,#e23a3a,#a61e1e);display:grid;place-items:center;overflow:hidden}
-  .avatar.placeholder{background:radial-gradient(28px 28px at 50% 40%,#2f4b73 0 60%,#203a5e 61% 100%),radial-gradient(48px 48px at 50% 110%,#162b4a 0 58%,transparent 59%)}
-  .avatar-img{width:100%;height:100%;object-fit:cover;display:block}
-  .player small{color:var(--muted);font-weight:600;font-size:clamp(11px,3.2vw,12px)}
-
-  /* ====== SETTINGS GRID (auto-fit) ====== */
-  .settings{
-    display:grid;
-    grid-template-columns:repeat(auto-fit, minmax(180px, 1fr));
-    gap:12px;
-  }
-  .card{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid rgba(128,180,255,.25);border-radius:16px;padding:14px}
-  .card h3{margin:0 0 8px;font-size:clamp(14px,3.8vw,16px);letter-spacing:.3px;color:#cce0ff;text-transform:uppercase;font-weight:800}
-  .selector{display:flex;align-items:center;justify-content:space-between;gap:8px;background:linear-gradient(180deg,#0b2441,#0a213b);border:1px solid rgba(128,180,255,.28);border-radius:12px;padding:10px}
-  .selector .value{font-size:clamp(20px,6.5vw,28px);font-weight:800}
-  .selector .arrow{width:40px;height:40px;border-radius:10px;background:linear-gradient(180deg,#1e68d6,#184fa5);border:1px solid rgba(110,178,255,.7);display:grid;place-items:center;cursor:pointer;font-size:20px;font-weight:900}
-
-  /* ====== CTA ====== */
-  .cta{display:flex;justify-content:center;flex-wrap:wrap;gap:12px}
-  .btn-cta{
-    background:linear-gradient(180deg,var(--yellow),var(--yellow-2));
-    border:1px solid rgba(255,210,80,.9);
-    color:#10223b;font-weight:900;
-    font-size:clamp(18px,6.5vw,28px);
-    padding:14px 24px;border-radius:16px
-  }
-  /* Empujar los 3 botones hacia abajo (más aire respecto a los settings) */
-.cta{
-  margin-top: clamp(24px, 5.5vh, 80px); /* ⬅️ ajustá a gusto */
-}
-
-/* En mobile, aún más espacio */
-@media (max-width: 900px){
-  .cta{ margin-top: clamp(28px, 7.5vh, 96px); }
-}
-  
-  /* ====== Overlay rol ====== */
-  #reveal{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,10,20,.9);z-index:1000;padding:16px}
-  .rev-card{width:min(680px,96vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:20px;text-align:center}
-  .rev-content{padding:16px;background:linear-gradient(180deg,#102c4f,#0c2441);border:1px solid rgba(128,180,255,.25);border-radius:16px;min-height:100px;display:grid;place-items:center;font-size:clamp(18px,5.8vw,26px);font-weight:800}
-  .rev-avatar{width:80px;height:80px;border-radius:50%;overflow:hidden;border:2px solid rgba(255,255,255,.35);margin:0 auto 10px;background:#0b203a;display:grid;place-items:center}
-  .rev-name{font-weight:800;margin-top:4px;opacity:.9}
-  .tip{background:#08213a;border:1px solid rgba(128,180,255,.25);padding:8px 12px;border-radius:12px;margin:10px;opacity:.9}
-
-  /* ====== Sorteo ====== */
-  #drawOverlay{position:fixed;inset:0;display:none;place-items:center;background:rgba(0,12,24,.9);z-index:1200;padding:16px}
-  .draw-card{width:min(760px,96vw);background:linear-gradient(180deg,#0d2747,#0b203a);border:1px solid rgba(128,180,255,.3);border-radius:20px;box-shadow:0 20px 60px rgba(0,0,0,.6);padding:16px}
-  .draw-title{margin:0 0 10px;text-align:center}
-  .bowl{position:relative;height:220px;border-radius:16px;background:radial-gradient(circle at 50% 0%, rgba(255,255,255,.09), transparent 60%), linear-gradient(180deg,#0a2340,#0a1f37);border:1px solid rgba(128,180,255,.25);overflow:hidden;display:flex;align-items:flex-end;justify-content:center;padding-bottom:16px}
-  .ball{position:absolute;bottom:-40px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 30% 30%,#fff,#cfe1ff 55%,#82a8ff);opacity:.7;animation:float 3s ease-in-out infinite}
-  .ball:nth-child(2){left:20%;animation-delay:.2s}.ball:nth-child(3){left:40%;animation-delay:.4s}.ball:nth-child(4){left:60%;animation-delay:.6s}.ball:nth-child(5){left:80%;animation-delay:.8s}
-  @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-18px)}}
-  .slip{position:absolute;bottom:12px;left:50%;transform:translateX(-50%) translateY(120%);background:#fff;color:#0c2441;border-radius:8px;padding:8px 12px;font-weight:900;box-shadow:0 6px 18px rgba(0,0,0,.45);opacity:0;white-space:nowrap}
-  .slip.reveal{animation:popUp .6s ease-out forwards}
-  @keyframes popUp{0%{transform:translateX(-50%) translateY(120%) rotate(-6deg);opacity:0}
-                   60%{transform:translateX(-50%) translateY(-26%) rotate(1deg);opacity:1}
-                   100%{transform:translateX(-50%) translateY(-10%) rotate(0);opacity:1}}
-  .order-list{margin:12px 4px 0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
-  .order-item{background:linear-gradient(180deg,#0c2747,#0a213b);border:1px solid rgba(128,180,255,.28);border-radius:10px;padding:8px 10px;display:flex;align-items:center;gap:8px}
-  .order-badge{width:26px;height:26px;border-radius:8px;background:linear-gradient(180deg,#1e68d6,#184fa5);border:1px solid rgba(110,178,255,.7);display:grid;place-items:center;font-weight:900}
-  .order-name{font-weight:800}
-
-  /* ====== Cartel de turno ====== */
-  #turnBanner{
-    position:absolute; top:38%; left:50%; transform:translate(-50%,-50%) scale(.92);
-    display:none; padding:12px 18px; border-radius:16px;
-    background:linear-gradient(135deg,#1e68d6,#4ade80);
-    color:#fff; font-weight:900; font-size:clamp(16px,5.5vw,26px); letter-spacing:.3px;
-    text-shadow:0 2px 10px rgba(0,0,0,.35);
-    box-shadow:0 10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.15);
-    border:1px solid rgba(255,255,255,.2);
-    pointer-events:none; z-index:5; opacity:0;
-    transition:transform .35s ease, opacity .35s ease;
-  }
-  #turnBanner.show{display:block;opacity:1;transform:translate(-50%,-50%) scale(1);}
-  #turnBanner.hide{opacity:0;transform:translate(-50%,-50%) scale(.92);}
-  #turnBanner .who{font-size:clamp(18px,6vw,30px);text-transform:uppercase;}
-
-  /* === Cartel graffiti "Le toca verdulear a..." === */
-#graffitiBanner{
-  position:absolute;
-  top:48%;
-  left:50%;
-  transform:translate(-50%,-50%) scale(.95);
-  display:none;
-  z-index:10;
-  padding:20px 32px;
-  border-radius:20px;
-  background:linear-gradient(135deg,#f6c11b,#ff4444);
-  color:#0a0a0a;
-  font-family:'Press Start 2P', 'Outfit', sans-serif;
-  font-weight:900;
-  font-size:clamp(18px,6vw,28px);
-  text-transform:uppercase;
-  text-shadow:
-    -2px -2px 0 #fff,
-    2px -2px 0 #fff,
-    -2px 2px 0 #fff,
-    2px 2px 0 #fff;
-  letter-spacing:1px;
-  box-shadow:0 10px 40px rgba(0,0,0,.55);
-  animation:popGraffiti .6s ease-out;
-}
-@keyframes popGraffiti{
-  0%{transform:translate(-50%,-50%) scale(0.8);opacity:0;}
-  60%{transform:translate(-50%,-50%) scale(1.05);opacity:1;}
-  100%{transform:translate(-50%,-50%) scale(1);}
-}
-
-  
-  /* ====== Chat (fase debate) ====== */
-  #chatList{ padding:14px; }
-  .chat-row{ display:flex; margin:8px 0; }
-  .chat-row.mine{ justify-content:flex-end; }
-  .chat-row.other{ justify-content:flex-start; }
-  .bubble{
-    max-width:80%;
-    padding:10px 14px; border-radius:16px;
-    background:#142946; border:1px solid rgba(128,180,255,.18);
-    color:#cfe4ff; box-shadow:0 4px 12px rgba(0,0,0,.25);
-    animation:fadeUp .25s ease;
-    font-size:clamp(13px,4vw,16px);
-  }
-  .chat-row.mine .bubble{
-    background:linear-gradient(135deg,#22c55e,#16a34a);
-    color:#fff; border-color:rgba(255,255,255,.2);
-  }
-  .bubble .name{ font-weight:800; opacity:.9; margin-bottom:2px; font-size:clamp(11px,3.2vw,13px); }
-  .bubble .text{ font-size:inherit }
-  @keyframes fadeUp{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:translateY(0)}}
-
-  /* ====== RESPONSIVE LAYOUT ====== */
-  @media (max-width: 900px){
-    body{ background-attachment:scroll; }
-    .room-card{
-      grid-template-columns:1fr;
-      grid-auto-rows:auto;
-      gap:12px;
-      text-align:center;
-    }
-    .user-area{align-items:center}
-  }
-  @media (max-width: 420px){
-    .selector .arrow{width:36px;height:36px}
-    .avatar{width:52px;height:52px}
-    .order-list{grid-template-columns:1fr}
-  }
-
-  /* ====== MEJORAS VISUALES (FIFA-like) ====== */
-  :root{ --glow:#7cf062; --shine:rgba(255,255,255,.18); }
-  .room-card,.card,.selector,.userbox,.code-box{
-    backdrop-filter:saturate(1.2) blur(6px);
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 10px 26px rgba(0,0,0,.35);
-  }
-  .card:hover,.player:hover{
-    box-shadow:inset 0 1px 0 rgba(255,255,255,.08), 0 14px 34px rgba(0,0,0,.45);
-    transform:translateY(-1px);
-    transition:transform .18s ease, box-shadow .18s ease;
-  }
-  .btn,.btn-cta{transition:transform .15s ease, box-shadow .15s ease, filter .15s ease}
-  .btn:hover,.btn-cta:hover{transform:translateY(-1px)}
-  .btn:active,.btn-cta:active{transform:translateY(0)}
-  .btn:focus-visible,.btn-cta:focus-visible{ outline:2px solid var(--glow); outline-offset:2px; }
-  .btn-cta{ position:relative; overflow:hidden; box-shadow:0 10px 26px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.2); }
-  .btn-cta::after{
-    content:""; position:absolute; inset:0; translate:-120% 0;
-    background:linear-gradient(110deg, transparent 0 40%, var(--shine) 50%, transparent 60% 100%);
-    animation:shine 2.8s linear infinite;
-  }
-  @keyframes shine{ to{ translate:120% 0 } }
-  .me-outline{ box-shadow:0 0 0 2px #f6c11b, 0 0 22px rgba(246,193,27,.25) !important; }
-  #toast{
-    position:fixed; left:50%; bottom:18px; transform:translateX(-50%) translateY(20px);
-    background:linear-gradient(180deg,#0d2747,#0b203a);
-    border:1px solid rgba(128,180,255,.35); color:#eaf2ff;
-    padding:10px 14px; border-radius:12px; z-index:2000; opacity:0; pointer-events:none;
-    box-shadow:0 12px 28px rgba(0,0,0,.45);
-    transition:opacity .22s ease, transform .22s ease; font-weight:800
-  }
-  #toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
-  body::before{
-  content:"";
-  position:fixed;
-  inset:0;
-  background:url("fondo-favela.jpg") center/cover no-repeat;
-  filter:blur(8px) brightness(0.8);
-  z-index:-1;
-}
-
-  @keyframes lights{ from{opacity:.55; filter:blur(0)} to{opacity:.85; filter:blur(1px)} }
-  .container{ position:relative; z-index:1 }
-  .icon { width:1.1em; height:1.1em; display:inline-block; vertical-align:-0.15em; }
-.icon-btn { display:inline-flex; align-items:center; gap:8px; }
-.player{
-  position:relative;
-  background:
-    linear-gradient(180deg,rgba(14,39,70,.92),rgba(10,30,53,.88)),
-    radial-gradient(120% 60% at 50% -10%, rgba(124,240,98,.15), transparent 60%);
-  border-radius:18px;
-  border:1px solid rgba(128,180,255,.28);
-}
-.player::before{
-  content:"";
-  position:absolute; inset:1px;
-  background:linear-gradient(120deg,transparent 30%, rgba(255,255,255,.08) 50%, transparent 70%);
-  border-radius:16px; pointer-events:none;
-}
-.badge-captain{
-  position:absolute; top:8px; right:8px;
-  width:22px; height:22px; border-radius:6px;
-  display:grid; place-items:center;
-  background:linear-gradient(180deg,#f6c11b,#f39c12);
-  color:#10223b; box-shadow:0 4px 10px rgba(0,0,0,.35);
-}
-.kick-btn{
-  margin-left:6px; border:none; background:transparent; cursor:pointer;
-  color:#ff6b6b; display:inline-flex; align-items:center;
-}
-.btn-cta{
-  background:
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,.2), transparent 40%),
-    repeating-conic-gradient(from 0deg, rgba(255,255,255,.08) 0 12deg, transparent 12deg 24deg),
-    linear-gradient(180deg,var(--yellow),var(--yellow-2)) !important;
-}
-.btn-cta:hover{ filter:saturate(1.05) brightness(1.03); }
-/* === LOADER OVERLAY (5s) === */
-#loader-overlay{
-  position:fixed; inset:0; z-index:9999;
-  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:18px;
-  background: linear-gradient(180deg, rgba(3,12,30,.96), rgba(8,22,40,.96));
-  transition: opacity 400ms ease, visibility 400ms ease;
-  opacity:1; visibility:visible;
-}
-#loader-overlay.hidden{ opacity:0; visibility:hidden; pointer-events:none; }
-
-.loader-card{
-  display:flex; align-items:center; gap:14px;
-  padding:18px 22px; border-radius:14px;
-  background: rgba(255,255,255,0.04);
-  box-shadow: 0 10px 30px rgba(2,6,20,0.6);
-  backdrop-filter: blur(6px);
-}
-.spinner{
-  width:56px; height:56px; border-radius:50%;
-  border:6px solid rgba(255,255,255,0.12);
-  border-top-color: var(--yellow);
-  animation: spin 1s linear infinite;
-}
-@keyframes spin{ to{ transform: rotate(360deg); } }
-
-#app-wrapper{ opacity:1; transition: opacity 350ms ease; }
-#app-wrapper.hidden{ opacity:0; pointer-events:none; user-select:none; }
-/* ===== Lobby layout (main + sidebar) ===== */
-.lobby-layout{
-  display:grid;
-  grid-template-columns: 2fr 1fr;  /* izquierda más ancha */
-  gap:16px;
-}
-
-/* Sidebar */
-.side-col .chat-card{
-  height:100%;
-  background:linear-gradient(180deg,#0d2747,#0b203a);
-  border:1px solid rgba(128,180,255,.3);
-  border-radius:16px;
-  display:flex; flex-direction:column;
-  min-height:420px;
-}
-.chat-head{ padding:12px 14px; border-bottom:1px solid rgba(128,180,255,.18); }
-.chat-head h3{ margin:0; font-size:clamp(14px,3.6vw,16px); }
-.chat-list{
-  flex:1; overflow:auto; padding:12px 12px 6px;
-}
-.chat-form{
-  display:flex; gap:8px; padding:10px 12px; border-top:1px solid rgba(128,180,255,.18);
-}
-.chat-form input{
-  flex:1; padding:10px 12px; border-radius:12px;
-  border:1px solid rgba(128,180,255,.35);
-  background:#0a213b; color:#eaf2ff; font-size:14px;
-}
-
-/* Mensajes lobby (aprovechamos tu estilo de burbujas) */
-.msg-row{ display:flex; margin:6px 0; }
-.msg{ max-width:88%; padding:8px 12px; border-radius:12px;
-      background:#142946; border:1px solid rgba(128,180,255,.18);
-      color:#cfe4ff; box-shadow:0 4px 12px rgba(0,0,0,.25); }
-.msg .name{ font-weight:800; font-size:12px; opacity:.9; margin-bottom:2px; }
-.msg.mine{ background:linear-gradient(135deg,#22c55e,#16a34a); color:#fff; border-color:rgba(255,255,255,.2); margin-left:auto; }
-
-/* Players: 3 por fila en desktop */
-.players{
-  display:grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap:12px;
-}
-
-/* Settings: se ven como 2 filas (arriba y abajo) */
-.settings-top{
-  display:grid; grid-template-columns: repeat(3, minmax(180px,1fr)); gap:12px; margin-top:8px;
-}
-.settings-bottom{
-  display:grid; grid-template-columns: repeat(2, minmax(180px,1fr)); gap:12px; margin-top:8px;
-}
-
-/* Responsivo */
-@media (max-width: 1100px){
-  .lobby-layout{ grid-template-columns: 1.6fr 1fr; }
-}
-@media (max-width: 900px){
-  .lobby-layout{ grid-template-columns: 1fr; }
-  .side-col{ order: 3; }         /* sidebar baja en mobile */
-  .settings-top{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-  .players{ grid-template-columns: repeat(2, minmax(0,1fr)); }
-}
-@media (max-width: 520px){
-  .players{ grid-template-columns: 1fr; }
-  .settings-top, .settings-bottom{ grid-template-columns: 1fr; }
-}
-/* 1) La columna principal se vuelve flex vertical */
-.main-col{
-  display:flex;
-  flex-direction:column;
-  /* opcional: fuerza una altura mínima para que se note el empuje */
-  min-height: 68vh;
-}
-
-/* 2) Empuja la CTA hacia abajo ocupando el espacio libre */
-.cta{
-  margin-top:auto;           /* ⬅︎ clave */
-  padding-top: clamp(16px, 2vh, 28px);
-}
-
-/* 3) Un pelín de separación extra bajo los settings */
-.settings-bottom{ margin-bottom: 8px; }
-/* ====== DEBATE: 70% chat / 30% panel lateral ====== */
-.debate-shell{
-  position:fixed; inset:0;
-  background:linear-gradient(180deg, rgba(0,10,20,.88), rgba(0,10,20,.92));
-  padding:clamp(12px,2.5vw,24px);
-  z-index:1200;
-}
-.debate-card{
-  max-width:min(1200px,96vw);
-  margin:0 auto;
-  border:1px solid rgba(128,180,255,.28);
-  border-radius:18px; overflow:hidden;
-  background:
-    radial-gradient(140% 80% at 0% 0%, rgba(255,215,0,.06), transparent 50%),
-    radial-gradient(140% 80% at 100% 100%, rgba(124,240,98,.08), transparent 55%),
-    rgba(8,22,40,.86);
-  backdrop-filter: blur(8px) saturate(1.05);
-  box-shadow: 0 20px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
-}
-.debate-head{
-  display:flex; align-items:center; justify-content:space-between;
-  padding:14px 16px;
-  border-bottom:1px solid rgba(128,180,255,.16);
-}
-.debate-title{ margin:0; font-size:clamp(18px,6vw,22px); font-weight:900; letter-spacing:.3px; }
-.debate-meta{ display:flex; flex-direction:column; align-items:flex-end; gap:2px; font-size:clamp(11px,3.4vw,13px); }
-.debate-meta small{ opacity:.85 }
-
-/* Grid 70/30 */
-.debate-wrap{ display:grid; grid-template-columns: 7fr 3fr; gap:0; min-height:min(72vh, calc(100dvh - 160px)); }
-
-/* 70% chat */
-.debate-chat{ display:flex; flex-direction:column; border-right:1px solid rgba(128,180,255,.12);
-  background:linear-gradient(180deg,#071a33cc,#081b35cc); }
-.debate-tips{ padding:10px 16px; }
-.debate-list{ flex:1; overflow:auto; -webkit-overflow-scrolling:touch; padding:14px 16px 10px; }
-.debate-form{ display:flex; gap:10px; padding:12px; border-top:1px solid rgba(128,180,255,.12);
-  background:linear-gradient(180deg,#0b203acc,#091a31cc); }
-.debate-input{ flex:1; padding:12px; border-radius:12px; border:1px solid rgba(128,180,255,.35);
-  background:#0a213b; color:#eaf2ff; font-size:clamp(14px,4.2vw,16px); }
-
-/* 30% lateral */
-.debate-side{ display:flex; flex-direction:column; gap:10px;
-  background:radial-gradient(120% 70% at 100% 0%, rgba(255,210,80,.06), transparent 55%), linear-gradient(180deg,#0e2442cc,#0a1e37cc); }
-.side-section{ padding:12px 14px; border-bottom:1px solid rgba(128,180,255,.12); }
-.side-title{ margin:0 0 8px; font-size:clamp(13px,3.6vw,15px); color:#cfe4ff; text-transform:uppercase; letter-spacing:.4px; font-weight:800; }
-.side-row{ display:flex; align-items:center; justify-content:space-between; gap:8px; }
-
-.side-players{ display:grid; grid-template-columns:1fr; gap:8px; max-height:28vh; overflow:auto; padding-right:2px; }
-.side-player{ display:flex; align-items:center; gap:10px; background:linear-gradient(180deg,#0c2747,#0a213b);
-  border:1px solid rgba(128,180,255,.22); border-radius:12px; padding:8px 10px; }
-.side-player .ava{ width:34px; height:34px; border-radius:50%; overflow:hidden; background:#162a48; flex:0 0 34px; }
-.side-player .name{ font-weight:800 } .side-player .state{ font-size:12px; opacity:.85 }
-.dot{ width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:6px; }
-.dot.alive{ background:#22c55e } .dot.dead{ background:#ff6b6b }
-
-.side-player.dead .name{
-  text-decoration: line-through;
-  opacity: .75;
-}
-.side-player .state-badge{
-  font-size: 11px;
-  font-weight: 800;
-  padding: 3px 8px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,255,255,.12);
-}
-.state-badge.alive{
-  color:#16a34a;
-  background: rgba(34,197,94,.10);
-  border-color: rgba(34,197,94,.25);
-}
-.state-badge.dead{
-  color:#ff6b6b;
-  background: rgba(255,107,107,.10);
-  border-color: rgba(255,107,107,.25);
-}
-
-  
-#voteBar{ display:grid; grid-template-columns:1fr; gap:8px; }  /* en lateral */
-.vote-item{ display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:12px; width:100%; justify-content:flex-start; }
-.vote-avatar{ width:28px; height:28px; border-radius:50%; overflow:hidden; background:#163257; display:grid; place-items:center; }
-
-/* Mantener tu banner de turno encima */
-#turnBanner{ z-index:5; }
-
-/* Responsive: panel arriba en mobile */
-@media (max-width: 960px){
-  .debate-wrap{ grid-template-columns:1fr; }
-  .debate-side{ order:-1; }
-}
-.vote-item.chosen{ outline:2px solid #7cf062; outline-offset:2px; }
-</style>
+  <!-- Estilos externos -->
+  <link rel="stylesheet" href="./crear.css">
 </head>
 <body>
-<script>window.__loaderStart = performance.now();</script>
+  <script>window.__loaderStart = performance.now();</script>
 
-<div id="loader-overlay" aria-hidden="false" role="status">
-  <div class="loader-card">
-    <div class="spinner" aria-hidden="true"></div>
-    <div>
-      <div style="font-weight:800">Cargando el sitio…</div>
-      <div style="opacity:.8;font-size:12px">Preparando todo (5s)</div>
+  <!-- Overlay de carga -->
+  <div id="loader-overlay" aria-hidden="false" role="status">
+    <div class="loader-card">
+      <div class="spinner" aria-hidden="true"></div>
+      <div>
+        <div style="font-weight:800">Cargando el sitio…</div>
+        <div style="opacity:.8;font-size:12px">Preparando todo (5s)</div>
+      </div>
     </div>
   </div>
-</div>
 
-<div id="app-wrapper" class="hidden">
-<!-- Sprite de íconos -->
-<svg width="0" height="0" style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
-  <symbol id="i-user" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5"/>
-  </symbol>
-  <symbol id="i-crown" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M2 7l4 3l4-5l4 5l4-3l2 12H0z"/>
-  </symbol>
-  <symbol id="i-eye" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M12 5c7 0 10 7 10 7s-3 7-10 7S2 12 2 12s3-7 10-7m0 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8"/>
-  </symbol>
-  <symbol id="i-eye-off" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M2 4.27L3.28 3L21 20.72L19.73 22l-3.03-3.03A10.9 10.9 0 0 1 12 19c-7 0-10-7-10-7a18.7 18.7 0 0 1 5.31-6.04L2 4.27M12 7a5 5 0 0 1 5 5c0 .88-.24 1.69-.66 2.39L9.61 7.66A4.9 4.9 0 0 1 12 7Z"/>
-  </symbol>
-  <symbol id="i-lock" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M12 1a5 5 0 0 1 5 5v3h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h1V6a5 5 0 0 1 5-5m3 8V6a3 3 0 1 0-6 0v3z"/>
-  </symbol>
-  <symbol id="i-globe" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2m6.92 6h-3.26A14.4 14.4 0 0 0 15 4.46A8 8 0 0 1 18.92 8M12 4a12.5 12.5 0 0 1 1.84 4H10.2A12.5 12.5 0 0 1 12 4M5.08 8A8 8 0 0 1 9 4.46A14.4 14.4 0 0 0 8.34 8zm13.84 8h-3.26c.26-.9.45-1.9.58-3h3.5a8 8 0 0 1-.82 3M10.2 17H13.8a12.5 12.5 0 0 1-1.8 3a12.5 12.5 0 0 1-1.8-3M4.58 13h3.5c.12 1.1.32 2.1.58 3H5.42A8 8 0 0 1 4.58 13"/>
-  </symbol>
-  <symbol id="i-whistle" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M17 6h5v5h-2a7 7 0 1 1-7-7h4z"/>
-  </symbol>
-  <symbol id="i-ball" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2m1 3l3 2l-1 3l-3 1l-3-1l-1-3l3-2zm-8 7l2-3l3 1l1 3l-2 2l-3-1zm14 0l-3 1l-2-2l1-3l3-1l1 3zM9 19l1-3l3-1l3 1l-1 3l-3 1z"/>
-  </symbol>
-  <symbol id="i-x" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z"/>
-  </symbol>
-  <symbol id="i-chevron" viewBox="0 0 24 24">
-    <path fill="currentColor" d="M9 6l6 6l-6 6"/>
-  </symbol>
-</svg>
+  <div id="app-wrapper" class="hidden">
+    <!-- Sprite de íconos (dejado acá para evitar rutas adicionales) -->
+    <svg width="0" height="0" style="position:absolute;left:-9999px;top:-9999px" aria-hidden="true">
+      <symbol id="i-user" viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a5 5 0 1 0-5-5a5 5 0 0 0 5 5m0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5"/></symbol>
+      <symbol id="i-crown" viewBox="0 0 24 24"><path fill="currentColor" d="M2 7l4 3l4-5l4 5l4-3l2 12H0z"/></symbol>
+      <symbol id="i-eye" viewBox="0 0 24 24"><path fill="currentColor" d="M12 5c7 0 10 7 10 7s-3 7-10 7S2 12 2 12s3-7 10-7m0 3a4 4 0 1 0 0 8a4 4 0 0 0 0-8"/></symbol>
+      <symbol id="i-eye-off" viewBox="0 0 24 24"><path fill="currentColor" d="M2 4.27L3.28 3L21 20.72L19.73 22l-3.03-3.03A10.9 10.9 0 0 1 12 19c-7 0-10-7-10-7a18.7 18.7 0 0 1 5.31-6.04L2 4.27M12 7a5 5 0 0 1 5 5c0 .88-.24 1.69-.66 2.39L9.61 7.66A4.9 4.9 0 0 1 12 7Z"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><path fill="currentColor" d="M12 1a5 5 0 0 1 5 5v3h1a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2h1V6a5 5 0 0 1 5-5m3 8V6a3 3 0 1 0-6 0v3z"/></symbol>
+      <symbol id="i-globe" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2m6.92 6h-3.26A14.4 14.4 0 0 0 15 4.46A8 8 0 0 1 18.92 8M12 4a12.5 12.5 0 0 1 1.84 4H10.2A12.5 12.5 0 0 1 12 4M5.08 8A8 8 0 0 1 9 4.46A14.4 14.4 0 0 0 8.34 8zm13.84 8h-3.26c.26-.9.45-1.9.58-3h3.5a8 8 0 0 1-.82 3M10.2 17H13.8a12.5 12.5 0 0 1-1.8 3a12.5 12.5 0 0 1-1.8-3M4.58 13h3.5c.12 1.1.32 2.1.58 3H5.42A8 8 0 0 1 4.58 13"/></symbol>
+      <symbol id="i-whistle" viewBox="0 0 24 24"><path fill="currentColor" d="M17 6h5v5h-2a7 7 0 1 1-7-7h4z"/></symbol>
+      <symbol id="i-ball" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2m1 3l3 2l-1 3l-3 1l-3-1l-1-3l3-2zm-8 7l2-3l3 1l1 3l-2 2l-3-1zm14 0l-3 1l-2-2l1-3l3-1l1 3zM9 19l1-3l3-1l3 1l-1 3l-3 1z"/></symbol>
+      <symbol id="i-x" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5L12 10.59L6.41 5L5 6.41L10.59 12L5 17.59L6.41 19L12 13.41L17.59 19L19 17.59L13.41 12z"/></symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path fill="currentColor" d="M9 6l6 6l-6 6"/></symbol>
+    </svg>
 
-  <div class="container">
-    <div class="room-card">
-      <div class="brand"><div class="ball"></div><h1>Impostor <span>Fútbol</span></h1></div>
-      <div class="code-box">
-        <strong style="opacity:.7">CÓDIGO:</strong>
-        <div class="room-code" id="roomCode">—</div>
-        <button id="toggleCodeBtn" class="btn">👁️ Mostrar código</button>
-        <button id="copyBtn" class="btn">Copiar</button>
-      </div>
-      <div class="user-area">
-      <div class="userbox">
-  <svg class="icon"><use href="#i-user"></use></svg>
-  <span id="meName">—</span>
-  <button id="editName" class="mini-btn">Editar</button>
-</div>
-        <button id="shareBtn" class="btn">Compartir enlace</button>
-      </div>
-    </div>
-
-    <!-- ====== LOBBY LAYOUT: IZQ (jugadores/settings) + DER (chat) ====== -->
-<div class="lobby-layout">
-  <!-- Columna izquierda -->
-  <main class="main-col">
-    <!-- Jugadores (3 por fila) -->
-    <div class="players" id="players"></div>
-
-    <!-- Settings (fila 1) -->
-    <div class="settings settings-top">
-      <div class="card">
-        <h3>Impostores</h3>
-        <div class="selector">
-          <div class="arrow" data-dec="impostores">‹</div>
-          <div class="value" id="impostoresVal">1</div>
-          <div class="arrow" data-inc="impostores">›</div>
+    <!-- ====== CONTENIDO ====== -->
+    <div class="container">
+      <div class="room-card">
+        <div class="brand"><div class="ball"></div><h1>Impostor <span>Fútbol</span></h1></div>
+        <div class="code-box">
+          <strong style="opacity:.7">CÓDIGO:</strong>
+          <div class="room-code" id="roomCode">—</div>
+          <button id="toggleCodeBtn" class="btn">👁️ Mostrar código</button>
+          <button id="copyBtn" class="btn">Copiar</button>
+        </div>
+        <div class="user-area">
+          <div class="userbox">
+            <svg class="icon"><use href="#i-user"></use></svg>
+            <span id="meName">—</span>
+            <button id="editName" class="mini-btn">Editar</button>
+          </div>
+          <button id="shareBtn" class="btn">Compartir enlace</button>
         </div>
       </div>
 
-      <div class="card">
-        <h3>Jugadores</h3>
-        <div class="selector">
-          <div class="arrow" data-dec="jugadores">‹</div>
-          <div class="value" id="jugadoresVal">8</div>
-          <div class="arrow" data-inc="jugadores">›</div>
+      <!-- Layout principal -->
+      <div class="lobby-layout">
+        <main class="main-col">
+          <div class="players" id="players"></div>
+
+          <div class="settings settings-top">
+            <div class="card">
+              <h3>Impostores</h3>
+              <div class="selector">
+                <div class="arrow" data-dec="impostores">‹</div>
+                <div class="value" id="impostoresVal">1</div>
+                <div class="arrow" data-inc="impostores">›</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Jugadores</h3>
+              <div class="selector">
+                <div class="arrow" data-dec="jugadores">‹</div>
+                <div class="value" id="jugadoresVal">8</div>
+                <div class="arrow" data-inc="jugadores">›</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Tema</h3>
+              <div class="selector">
+                <div class="arrow" data-dec="tema">‹</div>
+                <div class="value" id="temaVal">Clubes</div>
+                <div class="arrow" data-inc="tema">›</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="settings settings-bottom">
+            <div class="card">
+              <h3>Tiempo</h3>
+              <div class="selector">
+                <div class="arrow" data-dec="tiempo">‹</div>
+                <div class="value" id="tiempoVal">60s</div>
+                <div class="arrow" data-inc="tiempo">›</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Privacidad</h3>
+              <div class="selector" style="justify-content:center">
+                <button id="togglePrivacyBtn" class="btn icon-btn">
+                  <svg class="icon"><use href="#i-lock"></use></svg> Privada
+                </button>
+                <small id="privacyHint" style="opacity:.8;font-weight:700">Solo con código</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="cta">
+            <button id="startBtn" class="btn-cta">EMPEZAR PARTIDA</button>
+            <button id="leaveBtn" class="btn" style="display:none">ABANDONAR PARTIDA</button>
+            <button id="deleteRoomBtn" class="btn" style="display:none;background:linear-gradient(180deg,#ea4335,#c92e21);border-color:#ffb3ac">ELIMINAR SALA</button>
+          </div>
+        </main>
+
+        <!-- Chat de lobby -->
+        <aside class="side-col">
+          <div class="chat-card">
+            <div class="chat-head">
+              <h3>Chat de la sala</h3>
+              <small id="lobbyChatHint">Chateá mientras esperan</small>
+            </div>
+            <div id="lobbyChatList" class="chat-list"></div>
+            <form id="lobbyChatForm" class="chat-form">
+              <input id="lobbyChatInput" maxlength="180" placeholder="Escribí un mensaje…">
+              <button class="btn" type="submit">Enviar</button>
+            </form>
+          </div>
+        </aside>
+      </div>
+
+      <!-- Overlays / Debate -->
+      <div id="reveal">
+        <div class="rev-card">
+          <h2 style="margin:0 0 10px;font-size:clamp(18px,6vw,24px)">Tu rol</h2>
+          <div id="revContent" class="rev-content"></div>
+          <div id="countdown" style="margin-top:12px;font-size:clamp(16px,5.3vw,22px);font-weight:700;color:#f6c11b">Pasando en 10s...</div>
         </div>
       </div>
 
-      <div class="card">
-        <h3>Tema</h3>
-        <div class="selector">
-          <div class="arrow" data-dec="tema">‹</div>
-          <div class="value" id="temaVal">Clubes</div>
-          <div class="arrow" data-inc="tema">›</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Settings (fila 2 – ABAJO A LA IZQUIERDA) -->
-    <div class="settings settings-bottom">
-      <div class="card">
-        <h3>Tiempo</h3>
-        <div class="selector">
-          <div class="arrow" data-dec="tiempo">‹</div>
-          <div class="value" id="tiempoVal">60s</div>
-          <div class="arrow" data-inc="tiempo">›</div>
+      <div id="drawOverlay">
+        <div class="draw-card">
+          <h2 class="draw-title" style="font-size:clamp(18px,6vw,24px)">Sorteo del orden</h2>
+          <div class="bowl" id="bowl">
+            <div class="ball"></div><div class="ball"></div><div class="ball"></div><div class="ball"></div><div class="ball"></div>
+            <div class="slip" id="slip">—</div>
+          </div>
+          <div id="orderList" class="order-list"></div>
         </div>
       </div>
 
-      <div class="card">
-        <h3>Privacidad</h3>
-        <div class="selector" style="justify-content:center">
-          <button id="togglePrivacyBtn" class="btn icon-btn">
-            <svg class="icon"><use href="#i-lock"></use></svg> Privada
-          </button>
-          <small id="privacyHint" style="opacity:.8;font-weight:700">Solo con código</small>
+      <div id="resultsOverlay" style="display:none;position:fixed;inset:0;z-index:1400;place-items:center;background:rgba(0,10,20,.9);padding:16px">
+        <div class="rev-card" style="width:min(680px,96vw)">
+          <h2 style="margin:0 0 10px;font-size:clamp(18px,6vw,24px)">Resultados</h2>
+          <div id="resultsBox" class="rev-content"></div>
+          <div class="tip" id="resultsSub" style="margin-top:10px;opacity:.9"></div>
         </div>
       </div>
-    </div>
 
-    <!-- CTA -->
-    <div class="cta">
-      <button id="startBtn" class="btn-cta">EMPEZAR PARTIDA</button>
-      <button id="leaveBtn" class="btn" style="display:none">ABANDONAR PARTIDA</button>
-      <button id="deleteRoomBtn" class="btn" style="display:none;background:linear-gradient(180deg,#ea4335,#c92e21);border-color:#ffb3ac">ELIMINAR SALA</button>
-    </div>
-  </main>
+      <!-- Fase debate -->
+      <div id="phaseDiscuss" class="debate-shell" style="display:none">
+        <div class="debate-card">
+          <div id="turnBanner">
+            <svg class="icon" style="width:1.1em;height:1.1em;vertical-align:-.15em"><use href="#i-ball"></use></svg>
+            Va <span id="turnName" class="who">—</span>
+          </div>
 
-  <!-- Columna derecha: CHAT DE LOBBY -->
-  <aside class="side-col">
-    <div class="chat-card">
-      <div class="chat-head">
-        <h3>Chat de la sala</h3>
-        <small id="lobbyChatHint">Chateá mientras esperan</small>
-      </div>
+          <div id="graffitiBanner"><span id="graffitiText"></span></div>
 
-      <div id="lobbyChatList" class="chat-list"></div>
+          <div class="debate-head">
+            <h2 class="debate-title">Debate</h2>
+            <div class="debate-meta">
+              <small id="timer" style="font-weight:800"></small>
+              <small id="turnHint"></small>
+              <small id="cooldownHint"></small>
+            </div>
+          </div>
 
-      <form id="lobbyChatForm" class="chat-form">
-        <input id="lobbyChatInput" maxlength="180" placeholder="Escribí un mensaje…">
-        <button class="btn" type="submit">Enviar</button>
-      </form>
-    </div>
-  </aside>
-</div>
+          <div class="debate-wrap">
+            <section class="debate-chat">
+              <div id="firstWordTip" class="tip debate-tips" style="display:none">
+                Primero, cada jugador debe enviar <strong>UNA</strong> palabra (2–24 letras). Después, chat libre.
+              </div>
+              <div id="chatList" class="debate-list"></div>
+              <form id="chatForm" class="debate-form">
+                <input id="chatInput" maxlength="140" class="debate-input" placeholder="Primero UNA palabra (2–24 letras)…">
+                <button class="btn" type="submit">Enviar</button>
+              </form>
+            </section>
 
+            <aside class="debate-side">
+              <div class="side-section">
+                <h3 class="side-title">Ronda</h3>
+                <div class="side-row">
+                  <small>Tiempo</small>
+                  <small id="timerMirror"></small>
+                </div>
+              </div>
 
-  <!-- Overlay: rol + countdown -->
-  <div id="reveal">
-    <div class="rev-card">
-      <h2 style="margin:0 0 10px;font-size:clamp(18px,6vw,24px)">Tu rol</h2>
-      <div id="revContent" class="rev-content"></div>
-      <div id="countdown" style="margin-top:12px;font-size:clamp(16px,5.3vw,22px);font-weight:700;color:#f6c11b">Pasando en 10s...</div>
-    </div>
-  </div>
+              <div class="side-section" style="border-bottom:0">
+                <h3 class="side-title">Jugadores</h3>
+                <div id="sidePlayers" class="side-players"></div>
+              </div>
 
-  <!-- Overlay: Sorteo del orden -->
-  <div id="drawOverlay">
-    <div class="draw-card">
-      <h2 class="draw-title" style="font-size:clamp(18px,6vw,24px)">Sorteo del orden</h2>
-      <div class="bowl" id="bowl">
-        <div class="ball"></div><div class="ball"></div><div class="ball"></div><div class="ball"></div><div class="ball"></div>
-        <div class="slip" id="slip">—</div>
-      </div>
-      <div id="orderList" class="order-list"></div>
-    </div>
-  </div>
-
-  <!-- Overlay: Resultados -->
-  <div id="resultsOverlay" style="display:none;position:fixed;inset:0;z-index:1400;place-items:center;background:rgba(0,10,20,.9);padding:16px">
-    <div class="rev-card" style="width:min(680px,96vw)">
-      <h2 style="margin:0 0 10px;font-size:clamp(18px,6vw,24px)">Resultados</h2>
-      <div id="resultsBox" class="rev-content"></div>
-      <div class="tip" id="resultsSub" style="margin-top:10px;opacity:.9"></div>
-    </div>
-  </div>
-
- <!-- FASE: DEBATE (chat) – layout 70/30 -->
-<div id="phaseDiscuss" class="debate-shell" style="display:none">
-  <div class="debate-card">
-    <div id="turnBanner">
-      <svg class="icon" style="width:1.1em;height:1.1em;vertical-align:-.15em"><use href="#i-ball"></use></svg>
-      Va <span id="turnName" class="who">—</span>
-    </div>
-
-    <div id="graffitiBanner">
-  <span id="graffitiText"></span>
-</div>
-
-
-    <div class="debate-head">
-      <h2 class="debate-title">Debate</h2>
-      <div class="debate-meta">
-        <small id="timer" style="font-weight:800"></small>
-        <small id="turnHint"></small>
-        <small id="cooldownHint"></small>
-      </div>
-    </div>
-
-    <div class="debate-wrap">
-      <!-- 70%: CHAT -->
-      <section class="debate-chat">
-        <div id="firstWordTip" class="tip debate-tips" style="display:none">
-          Primero, cada jugador debe enviar <strong>UNA</strong> palabra (2–24 letras). Después, chat libre.
+              <div class="side-section" id="voteSection">
+                <h3 class="side-title">Votar</h3>
+                <div id="voteBar"></div>
+              </div>
+            </aside>
+          </div>
         </div>
+      </div>
 
-        <div id="chatList" class="debate-list"></div>
-
-        <form id="chatForm" class="debate-form">
-          <input id="chatInput" maxlength="140" class="debate-input"
-                 placeholder="Primero UNA palabra (2–24 letras)…">
-          <button class="btn" type="submit">Enviar</button>
-        </form>
-      </section>
-
-      <!-- 30%: PANEL LATERAL -->
-     <aside class="debate-side">
-  <div class="side-section">
-    <h3 class="side-title">Ronda</h3>
-    <div class="side-row">
-      <small>Tiempo</small>
-      <small id="timerMirror"></small>
+      <!-- Toast -->
+      <div id="toast" role="status" aria-live="polite"></div>
     </div>
   </div>
 
-  <div class="side-section" style="border-bottom:0">
-    <h3 class="side-title">Jugadores</h3>
-    <div id="sidePlayers" class="side-players"></div>
-  </div>
-  <div class="side-section" id="voteSection">
-  <h3 class="side-title">Votar</h3>
-  <div id="voteBar"></div>
-</div>
-
-</aside>
-    </div>
-  </div>
-</div>
-
-
-  <!-- Toast -->
-  <div id="toast" role="status" aria-live="polite"></div>
-
-  </div>
+  <!-- Loader minimal JS (queda inline a propósito) -->
   <script>
-(function(){
-  // 5 segundos mínimo
-  const MIN_LOADING_MS = 5000;
+    (function(){
+      const MIN_LOADING_MS = 5000;
+      const overlay = document.getElementById('loader-overlay');
+      const app = document.getElementById('app-wrapper');
+      const start = window.__loaderStart || performance.now();
 
-  const overlay = document.getElementById('loader-overlay');
-  const app = document.getElementById('app-wrapper');
-  const start = window.__loaderStart || performance.now();
+      function finishLoading(){
+        overlay.classList.add('hidden');
+        app.classList.remove('hidden');
+        setTimeout(()=>{ overlay?.parentNode?.removeChild(overlay); }, 500);
+      }
 
-  function finishLoading(){
-    overlay.classList.add('hidden');
-    app.classList.remove('hidden');
-    setTimeout(()=>{ overlay?.parentNode?.removeChild(overlay); }, 500);
-  }
+      window.addEventListener('load', () => {
+        const elapsed = performance.now() - start;
+        const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
+        setTimeout(finishLoading, remaining);
+      });
 
-  // Espera a que termine de cargar + cumplir los 5s
-  window.addEventListener('load', () => {
-    const elapsed = performance.now() - start;
-    const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
-    setTimeout(finishLoading, remaining);
-  });
+      setTimeout(() => { if (!overlay.classList.contains('hidden')) finishLoading(); }, 10000);
+    })();
+  </script>
 
-  // Fallback por si 'load' no dispara
-  setTimeout(() => {
-    if (!overlay.classList.contains('hidden')) finishLoading();
-  }, 10000);
-})();
-</script>
+  <!-- Firebase + lógica -->
+  <script type="module" src="./firebase-config.js"></script>
+  <script type="module" src="./crear.js"></script>
 </body>
 </html>
