@@ -1182,5 +1182,4 @@ lobbyUI.form.addEventListener("submit", async (e) => {
 
 // arrancamos la suscripción cuando ya tenemos código de sala
 subscribeLobbyChat();
-
-  </script>
+</script>
