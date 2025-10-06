@@ -520,6 +520,16 @@
   .debate-side{ order:-1; }
 }
 .vote-item.chosen{ outline:2px solid #7cf062; outline-offset:2px; }
+.players{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(220px,1fr));
+  gap:12px;
+  padding:0 4px;
+}
+.player{ transition:transform .15s ease, opacity .15s ease; }
+.player.enter{ opacity:0; transform:scale(.96); }
+.player.enter.show{ opacity:1; transform:scale(1); }
+
 </style>
 </head>
 <body>
@@ -911,50 +921,62 @@ function normalizeAvatarKey(k){
   let lastPlayers=[];
   let hostUid = null; // <<< NUEVO: guardamos uid del host
 
-  function drawPlayers(maxCount,list){
-    const ordered=(list||[]).slice().sort((a,b)=>(a.slot||0)-(b.slot||0));
-    playersWrap.innerHTML="";
-    for(let i=0;i<maxCount;i++){
-      const p=ordered[i];
-      const card=document.createElement("div"); card.className="player";
-      const av=document.createElement("div"); const label=document.createElement("small");
-      if(p){
-        if(p.avatarKey && AVATAR_MAP[p.avatarKey]){
-          av.className="avatar";
-          const img=document.createElement("img"); img.className="avatar-img"; img.src=AVATAR_MAP[p.avatarKey]; img.alt=p.name||"avatar"; av.appendChild(img);
-        }else{ av.className="avatar placeholder"; }
-        const isMe = p.uid===(auth.currentUser&&auth.currentUser.uid);
-const isCap = hostUid && p.uid===hostUid;
+  function drawPlayers(maxCount, list){
+  const meUid = auth.currentUser && auth.currentUser.uid;
+  const ordered = (list||[])
+    .slice()
+    .sort((a,b)=>{
+      // host primero, luego yo, después por "slot" (hora de ingreso)
+      if (a.uid===hostUid && b.uid!==hostUid) return -1;
+      if (b.uid===hostUid && a.uid!==hostUid) return 1;
+      if (a.uid===meUid && b.uid!==meUid) return -1;
+      if (b.uid===meUid && a.uid!==meUid) return 1;
+      return (a.slot||0) - (b.slot||0);
+    });
 
-if(isCap){
-  const cap = document.createElement("div");
-  cap.className = "badge-captain";
-  cap.innerHTML = `<svg class="icon" style="width:16px;height:16px"><use href="#i-crown"></use></svg>`;
-  card.append(cap);
+  // Render solo conectados
+  playersWrap.innerHTML = ordered.map(p=>{
+    const isMe  = p.uid===meUid;
+    const isCap = hostUid && p.uid===hostUid;
+    const hasAv = p.avatarKey && AVATAR_MAP[p.avatarKey];
+    return `
+      <div class="player enter">
+        ${isCap ? `<div class="badge-captain"><svg class="icon" style="width:16px;height:16px"><use href="#i-crown"></use></svg></div>` : ``}
+        <div class="avatar ${hasAv?'':'placeholder'}">
+          ${hasAv ? `<img class="avatar-img" src="${AVATAR_MAP[p.avatarKey]}" alt="${p.name||'avatar'}">` : ``}
+        </div>
+        <small>${sanitize(p.name||'Jugador')} ${isMe?`<span class="me-badge">(yo)</span>`:''}</small>
+      </div>`;
+  }).join("");
+
+  // 1 tarjeta de "Invitar" (si no está lleno)
+  if (ordered.length < maxCount){
+    playersWrap.insertAdjacentHTML("beforeend", `
+      <button class="player enter btn" id="inviteCard" style="display:flex;flex-direction:column;align-items:center;gap:8px;justify-content:center">
+        <svg class="icon" style="width:26px;height:26px"><use href="#i-globe"></use></svg>
+        <small>Invitar</small>
+      </button>
+    `);
+    document.getElementById("inviteCard")?.addEventListener("click", async ()=>{
+      const joinUrl=`${location.origin}/ingresar.html?code=${state.code}`;
+      if(navigator.share){ try{ await navigator.share({title:"Unite a mi sala", text:`Código ${state.code}`, url:joinUrl}); }catch{} }
+      else { try{ await navigator.clipboard.writeText(joinUrl); showToast("🔗 Enlace copiado"); }catch{ alert(joinUrl); } }
+    });
+  }
+
+  // animación de entrada
+  requestAnimationFrame(()=>{
+    document.querySelectorAll('.player.enter').forEach(el=>{
+      el.classList.add('show');
+    });
+  });
+
+  // contador dinámico  (3/8)
+  try{
+    jugadoresEl.textContent = `${ordered.length}/${state.jugadores}`;
+  }catch{}
 }
 
-if(isMe){
-  card.classList.add("me-outline");
-  label.innerHTML = `${p.name||`Jugador ${i+1}`} <span class="me-badge">(yo)</span>`;
-}else{
-  label.textContent = p.name || `Jugador ${i+1}`;
-  if(isHost){
-    const kick=document.createElement("button");
-    kick.className="kick-btn";
-    kick.title="Expulsar";
-    kick.innerHTML = `<svg class="icon"><use href="#i-x"></use></svg>`;
-    kick.onclick=async()=>{
-      if(confirm(`Expulsar a ${p.name||'Jugador'}?`)){
-        try{ await deleteDoc(doc(db,"rooms",state.code,"players",p.uid)); }catch(e){ console.warn(e); }
-      }
-    };
-    label.append(kick);
-  }
-}
-      }else{ av.className="avatar placeholder"; label.textContent=`Jugador ${i+1}`; }
-      card.append(av,label); playersWrap.append(card);
-    }
-  }
 
   const impostoresEl = document.getElementById("impostoresVal");
   const jugadoresEl  = document.getElementById("jugadoresVal");
