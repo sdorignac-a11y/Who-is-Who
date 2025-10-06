@@ -1016,6 +1016,29 @@ function normalizeAvatarKey(k){
 
   const roomRef = doc(db,"rooms",state.code);
 
+  // === Me agrego al lobby como jugador ===
+const myName = getStoredName();
+const myAvatar = getStoredAvatar();
+meNameEl.textContent = myName;
+
+await setDoc(
+  doc(db, "rooms", state.code, "players", auth.currentUser.uid),
+  {
+    uid: auth.currentUser.uid,
+    name: myName,
+    avatarKey: myAvatar || null,
+    slot: Date.now(),     // para ordenar por ingreso
+    online: true
+  },
+  { merge: true }
+);
+
+  // === Jugadores (realtime) ===
+onSnapshot(collection(db, "rooms", state.code, "players"), (snapshot) => {
+  lastPlayers = snapshot.docs.map(d => d.data()); // <- fuente de verdad
+  drawPlayers(state.jugadores, lastPlayers);      // <- pinta la UI
+});
+
   const firstSnap = await getDoc(roomRef);
   if(!firstSnap.exists() && isHost){
     await setDoc(roomRef,{ hostUid:auth.currentUser.uid, status:"lobby", isPublic:false, createdAt:Date.now(), settings:{maxPlayers:state.jugadores,impostors:state.impostores,tema:state.temas[state.temaIndex], timeSec: state.tiempos[state.tiempoIndex]} },{merge:true});
