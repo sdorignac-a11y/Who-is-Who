@@ -611,7 +611,7 @@
         <h3>Jugadores</h3>
         <div class="selector">
           <div class="arrow" data-dec="jugadores">‹</div>
-          <div class="value" id="jugadoresVal">8</div>
+          <div class="value" id="jugadoresVal">6</div>
           <div class="arrow" data-inc="jugadores">›</div>
         </div>
       </div>
@@ -961,16 +961,15 @@ if(isMe){
   const temaEl       = document.getElementById("temaVal");
   const tiempoEl     = document.getElementById("tiempoVal");
 
-  // Estado
-  const state={ 
-    code:"",
-    impostores:1, 
-    jugadores:8, 
-    temas:["Clubes","Jugadores","Mundiales"], 
-    temaIndex:0,
-    tiempos:[30,45,60,90,120],
-    tiempoIndex:2 // 60s
-  };
+ const state = {
+  code:"",
+  impostores:1,
+  jugadores:6,          // ⬅️ ahora arranca en 6
+  temas:["Clubes","Jugadores","Mundiales"],
+  temaIndex:0,
+  tiempos:[30,45,60,90,120],
+  tiempoIndex:2
+};
 
   function render(){
     roomCodeEl.textContent = showCode ? (state.code || "—") : "••••••";
