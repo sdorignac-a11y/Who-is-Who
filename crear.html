@@ -1256,8 +1256,10 @@ function normalizeAvatarKey(k){
     if(!s.exists()) return;
     const a=s.data();
     const currentR = a.round || 0;
-    const already = localStorage.getItem("roleShownOnce")==="1";
-    if (currentR > 1 || already) return;
+    const roundToShow = currentR || 1;
+const roleKey = `roleShownOnce:${state.code}:${roundToShow}`;
+const already = localStorage.getItem(roleKey) === "1";
+if (roundToShow > 1 || already) return;
 
     const overlay=document.getElementById("reveal"); const box=document.getElementById("revContent");
     let avatarHtml=""; if(a.avatarKey && AVATAR_MAP[a.avatarKey]) avatarHtml=`<div class="rev-avatar"><img src="${AVATAR_MAP[a.avatarKey]}" alt="${a.name||'avatar'}"></div>`;
@@ -1266,7 +1268,8 @@ function normalizeAvatarKey(k){
     if(a.role==="IMPOSTOR"){ box.innerHTML=`${avatarHtml}${nameHtml}<div style="font-size:clamp(24px,7vw,38px);font-weight:900;color:#ff6b6b;margin:6px 0 8px">IMPOSTOR</div><div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>`; }
     else{ box.innerHTML=`${avatarHtml}${nameHtml}<div style="opacity:.75;font-size:clamp(12px,3.8vw,14px);margin:6px 0">Palabra secreta (${a.tema})</div><div style="font-size:clamp(22px,7vw,34px);font-weight:900;color:#7cf062">${a.word}</div>`; }
     let secs=10; const countdownEl=document.getElementById("countdown");
-    countdownEl.textContent=`Pasando en ${secs}s...`; const interval=setInterval(()=>{ secs--; countdownEl.textContent=`Pasando en ${secs}s...`; if(secs<=0){ clearInterval(interval); overlay.style.display="none"; localStorage.setItem("roleShownOnce","1"); } },1000);
+    countdownEl.textContent=`Pasando en ${secs}s...`; const interval=setInterval(()=>{ secs--; countdownEl.textContent=`Pasando en ${secs}s...`; if(secs<=0){ clearInterval(interval); overlay.style.display="none"; localStorage.setItem(roleKey, "1");
+ } },1000);
   });
 
   // Utils
