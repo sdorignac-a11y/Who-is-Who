@@ -786,10 +786,11 @@
 
   <!-- Toast -->
   <div id="toast" role="status" aria-live="polite"></div>
-<script type="module">
+
+  <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-  import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs, writeBatch, serverTimestamp, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+  import { getFirestore, doc, setDoc, getDoc, updateDoc, onSnapshot, collection, getDocs, writeBatch, serverTimestamp, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyAegeue7A8qFFW4IScFFgtvT4P1g2GLkCM",
@@ -1481,43 +1482,60 @@ function showGraffitiTurn(name){
     }, 250);
   }
 
-  import { query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+ import { query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
+// Reemplazá toda tu función subscribeChat por esta:
 function subscribeChat(roundId){
   if (unsubscribeChat) unsubscribeChat();
-
-  const list = ui.chatList;
   const q = query(
     collection(db, "rooms", state.code, "rounds", String(roundId), "chat"),
-    orderBy("at","asc")
+    orderBy("at", "asc") // 👈 orden real en Firestore
   );
 
-  const nodeById = new Map();
-  const isAtBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 6;
-  let stickToBottom = true;
-  list.addEventListener("scroll", () => { stickToBottom = isAtBottom(); });
+  // memoria por usuario para el anti-spam visual
+  const lastByUid = new Map();
 
-  unsubscribeChat = onSnapshot(q, (snap)=>{
-    snap.docChanges().forEach(ch => {
-      const m = { id: ch.doc.id, ...ch.doc.data() };
-      if (ch.type === "added") {
-        if (!nodeById.has(m.id)) {
-          const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
-          const row = document.createElement("div");
-          row.className = `chat-row ${mine?'mine':'other'}`;
-          row.innerHTML = `<div class="bubble"><div class="name">${sanitize(m.name)||"Jugador"}</div><div class="text">${sanitize(m.text||"")}</div></div>`;
-          list.appendChild(row);
-          nodeById.set(m.id, row);
+  unsubscribeChat = onSnapshot(q, (snap) => {
+    // en vez de re-renderizar todo, construimos incrementalmente
+    // (tu versión simple que reescribe todo también sirve, pero mantengo tu estilo)
+    const fr = document.createDocumentFragment();
+
+    snap.docChanges().forEach((chg) => {
+      if (chg.type !== "added") return;
+
+      const m = { id: chg.doc.id, ...chg.doc.data() };
+
+      // anti-spam visual: NO borrar de la DB, solo no mostrar
+      if (roundState?.status === "discuss") {
+        const t = toMillis(m.at);
+        const prev = lastByUid.get(m.uid) || 0;
+        if (prev && t - prev < 3000) {
+          // skip render (no deleteDoc)
+          return;
         }
-      } else if (ch.type === "modified") {
-        const row = nodeById.get(m.id);
-        if (row) row.querySelector(".text").innerHTML = sanitize(m.text||"");
-      } else if (ch.type === "removed") {
-        const row = nodeById.get(m.id);
-        if (row) { row.remove(); nodeById.delete(m.id); }
+        lastByUid.set(m.uid, t);
       }
+
+      const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
+      const row = document.createElement("div");
+      row.className = `chat-row ${mine ? "mine" : "other"}`;
+      row.innerHTML = `
+        <div class="bubble">
+          <div class="name">${sanitize(m.name)||"Jugador"}</div>
+          <div class="text">${sanitize(m.text||"")}</div>
+        </div>`;
+      fr.appendChild(row);
     });
-    if (stickToBottom) list.scrollTop = list.scrollHeight;
+
+    if (fr.childNodes.length) {
+      ui.chatList.appendChild(fr);
+      ui.chatList.scrollTop = ui.chatList.scrollHeight; // auto-scroll
+    }
+
+    // 🧹 Si preferís tu render completo:
+    // const items = snap.docs.map(d => d.data());
+    // ui.chatList.innerHTML = items.map(...).join("");
+    // ui.chatList.scrollTop = ui.chatList.scrollHeight;
   });
 }
 
@@ -1891,21 +1909,16 @@ function renderLobbyMessages(items){
 
 function subscribeLobbyChat(){
   if (unsubLobbyChat) unsubLobbyChat();
-  unsubLobbyChat = onSnapshot(
-    collection(db, "rooms", state.code, "lobbyChat"),
-    (snap) => {
-      const items = snap.docs
-        .map(d => ({ id: d.id, ...d.data() }))
-        // Ordenamos por timestamp ascendente (sin orderBy para evitar más imports)
-        .sort((a,b) => {
-          const ta = a.at?.seconds || 0;
-          const tb = b.at?.seconds || 0;
-          return ta - tb;
-        });
-      renderLobbyMessages(items);
-    }
+  const q = query(
+    collection(db,"rooms",state.code,"lobbyChat"),
+    orderBy("at","asc")
   );
+  unsubLobbyChat = onSnapshot(q, (snap) => {
+    const items = snap.docs.map(d => ({ id:d.id, ...d.data() }));
+    renderLobbyMessages(items);
+  });
 }
+
 
 lobbyUI.form.addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -1949,7 +1962,6 @@ lobbyUI.form.addEventListener("submit", async (e) => {
 subscribeLobbyChat();
 
   </script>
-    
   </div>
   <script>
 (function(){
