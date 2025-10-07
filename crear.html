@@ -1251,32 +1251,23 @@ function normalizeAvatarKey(k){
   }
   deleteRoomBtn.addEventListener("click", deleteRoomDeep);
 
-  // Overlay rol — SOLO 1ª RONDA y 1 vez por dispositivo (scoped por sala+ronda)
-onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), async s=>{
-  if(!s.exists()) return;
-  const a = s.data();
-  const currentR = a.round || 1;
+  // Overlay rol — SOLO 1ª RONDA y 1 vez por dispositivo
+  onSnapshot(doc(db,"rooms",state.code,"assignments",auth.currentUser.uid), async s=>{
+    if(!s.exists()) return;
+    const a=s.data();
+    const currentR = a.round || 0;
+    const already = localStorage.getItem("roleShownOnce")==="1";
+    if (currentR > 1 || already) return;
 
-  // ⬇️ KEY por sala + ronda (evita que un reveal viejo bloquee este)
-  const roleKey = `roleShownOnce:${state.code}:${currentR}`;
-  const already = localStorage.getItem(roleKey) === "1";
-
-  // ⬇️ NO mostrar hasta tener datos completos
-  if (!a.role) return;
-  // si los civiles necesitan palabra, chequeá también:
-  if (a.role !== "IMPOSTOR" && !a.word) return;
-
-  // ⬇️ Solo mostrar en ronda 1 y si aún no se mostró en esta sala/ronda
-  if (currentR > 1 || already) return;
-
-  // 🔓 TU LÓGICA DE ABRIR OVERLAY/ANIMACIÓN DEL ROL AQUÍ
-  openRoleOverlay({ role: a.role, word: a.word, avatarKey: a.avatarKey });
-
-  // 🧭 cuando cierre la animación/contador del overlay, marcá mostrado
-  // (si ya tenías un callback, ponelo allí. Si no, acá mismo al final):
-  localStorage.setItem(roleKey, "1");
-});
-
+    const overlay=document.getElementById("reveal"); const box=document.getElementById("revContent");
+    let avatarHtml=""; if(a.avatarKey && AVATAR_MAP[a.avatarKey]) avatarHtml=`<div class="rev-avatar"><img src="${AVATAR_MAP[a.avatarKey]}" alt="${a.name||'avatar'}"></div>`;
+    const nameHtml=`<div class="rev-name">${a.name||"Jugador"}</div>`;
+    overlay.style.display="grid";
+    if(a.role==="IMPOSTOR"){ box.innerHTML=`${avatarHtml}${nameHtml}<div style="font-size:clamp(24px,7vw,38px);font-weight:900;color:#ff6b6b;margin:6px 0 8px">IMPOSTOR</div><div style="opacity:.85">Tu objetivo es camuflarte. No conocés la palabra.</div>`; }
+    else{ box.innerHTML=`${avatarHtml}${nameHtml}<div style="opacity:.75;font-size:clamp(12px,3.8vw,14px);margin:6px 0">Palabra secreta (${a.tema})</div><div style="font-size:clamp(22px,7vw,34px);font-weight:900;color:#7cf062">${a.word}</div>`; }
+    let secs=10; const countdownEl=document.getElementById("countdown");
+    countdownEl.textContent=`Pasando en ${secs}s...`; const interval=setInterval(()=>{ secs--; countdownEl.textContent=`Pasando en ${secs}s...`; if(secs<=0){ clearInterval(interval); overlay.style.display="none"; localStorage.setItem("roleShownOnce","1"); } },1000);
+  });
 
   // Utils
   function sanitize(str){ return (str||"").replace(/[<>&]/g, s=>({ '<':'&lt;','>':'&gt;','&':'&amp;' }[s])); }
