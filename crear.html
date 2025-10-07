@@ -1481,38 +1481,46 @@ function showGraffitiTurn(name){
     }, 250);
   }
 
-  function subscribeChat(roundId){
-    if(unsubscribeChat) unsubscribeChat();
-    let lastByUid = new Map();
+  import { query, orderBy, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    unsubscribeChat = onSnapshot(
-      collection(db,"rooms",state.code,"rounds",String(roundId),"chat"),
-      async snap=>{
-        const items = snap.docs
-          .map(d=>({ _doc:d, id:d.id, ...d.data() }))
-          .sort((a,b)=>(a.at?.seconds||0)-(b.at?.seconds||0));
+function subscribeChat(roundId){
+  if (unsubscribeChat) unsubscribeChat();
 
-        if(isHost && roundState?.status==="discuss"){
-          for(const m of items){
-            if(m.kind!=="chat") continue;
-            const prev = lastByUid.get(m.uid)||0;
-            const t = toMillis(m.at);
-            if(prev && (t - prev) < 3000){
-              try{ await deleteDoc(m._doc.ref); }catch(e){ console.warn("No pude borrar msg rápido", e); }
-              continue;
-            }
-            lastByUid.set(m.uid, t);
-          }
-        }
+  const list = ui.chatList;
+  const q = query(
+    collection(db, "rooms", state.code, "rounds", String(roundId), "chat"),
+    orderBy("at","asc")
+  );
 
-        ui.chatList.innerHTML = items.map(m=>{
+  const nodeById = new Map();
+  const isAtBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 6;
+  let stickToBottom = true;
+  list.addEventListener("scroll", () => { stickToBottom = isAtBottom(); });
+
+  unsubscribeChat = onSnapshot(q, (snap)=>{
+    snap.docChanges().forEach(ch => {
+      const m = { id: ch.doc.id, ...ch.doc.data() };
+      if (ch.type === "added") {
+        if (!nodeById.has(m.id)) {
           const mine = m.uid === (auth.currentUser && auth.currentUser.uid);
-          return `<div class="chat-row ${mine?'mine':'other'}"><div class="bubble"><div class="name">${sanitize(m.name)||"Jugador"}</div><div class="text">${sanitize(m.text||"")}</div></div></div>`;
-        }).join("");
-        ui.chatList.scrollTop = ui.chatList.scrollHeight;
+          const row = document.createElement("div");
+          row.className = `chat-row ${mine?'mine':'other'}`;
+          row.innerHTML = `<div class="bubble"><div class="name">${sanitize(m.name)||"Jugador"}</div><div class="text">${sanitize(m.text||"")}</div></div>`;
+          list.appendChild(row);
+          nodeById.set(m.id, row);
+        }
+      } else if (ch.type === "modified") {
+        const row = nodeById.get(m.id);
+        if (row) row.querySelector(".text").innerHTML = sanitize(m.text||"");
+      } else if (ch.type === "removed") {
+        const row = nodeById.get(m.id);
+        if (row) { row.remove(); nodeById.delete(m.id); }
       }
-    );
-  }
+    });
+    if (stickToBottom) list.scrollTop = list.scrollHeight;
+  });
+}
+
 
   function subscribeRoundPhase(roundId){
     if (unsubscribeRoundPhase) unsubscribeRoundPhase();
